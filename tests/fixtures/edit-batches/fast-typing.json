@@ -1,0 +1,3310 @@
+{
+  "scenario": "fast-typing",
+  "description": "Type 40 characters at the end of a paragraph with no delay between keys.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Go:</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "b77c247c-ed28-4071-ba1a-2bc5fb8397a8"
+  ],
+  "clientIdsInEditorAtStart": [
+    "b77c247c-ed28-4071-ba1a-2bc5fb8397a8"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go:",
+              "text": "Go:"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 859.9
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 872.7
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1167
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1173.9
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Go:",
+          "text": "Go:"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8"
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1798.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1896
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2097.5
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go:",
+              "text": "Go:"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: ",
+              "text": "Go: "
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go:",
+              "text": "Go:"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: ",
+              "text": "Go: "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2328.6,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: ",
+              "text": "Go: "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: t",
+              "text": "Go: t"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: ",
+              "text": "Go: "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: t",
+              "text": "Go: t"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2343.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: t",
+              "text": "Go: t"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: th",
+              "text": "Go: th"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 6
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 6
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: t",
+              "text": "Go: t"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: th",
+              "text": "Go: th"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 9,
+      "time": 2352.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: th",
+              "text": "Go: th"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the",
+              "text": "Go: the"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: th",
+              "text": "Go: th"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the",
+              "text": "Go: the"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 10,
+      "time": 2361.5
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the",
+              "text": "Go: the"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the ",
+              "text": "Go: the "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the",
+              "text": "Go: the"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the ",
+              "text": "Go: the "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 11,
+      "time": 2370.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the ",
+              "text": "Go: the "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the q",
+              "text": "Go: the q"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the ",
+              "text": "Go: the "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the q",
+              "text": "Go: the q"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 12,
+      "time": 2378.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the q",
+              "text": "Go: the q"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the qu",
+              "text": "Go: the qu"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the q",
+              "text": "Go: the q"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the qu",
+              "text": "Go: the qu"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 13,
+      "time": 2386.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the qu",
+              "text": "Go: the qu"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the qui",
+              "text": "Go: the qui"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the qu",
+              "text": "Go: the qu"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the qui",
+              "text": "Go: the qui"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 14,
+      "time": 2394.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the qui",
+              "text": "Go: the qui"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quic",
+              "text": "Go: the quic"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the qui",
+              "text": "Go: the qui"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quic",
+              "text": "Go: the quic"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 15,
+      "time": 2402.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quic",
+              "text": "Go: the quic"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick",
+              "text": "Go: the quick"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quic",
+              "text": "Go: the quic"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick",
+              "text": "Go: the quick"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 16,
+      "time": 2412
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick",
+              "text": "Go: the quick"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick ",
+              "text": "Go: the quick "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick",
+              "text": "Go: the quick"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick ",
+              "text": "Go: the quick "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 17,
+      "time": 2420.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick ",
+              "text": "Go: the quick "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick b",
+              "text": "Go: the quick b"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 15
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 15
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick ",
+              "text": "Go: the quick "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick b",
+              "text": "Go: the quick b"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 18,
+      "time": 2427.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick b",
+              "text": "Go: the quick b"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick br",
+              "text": "Go: the quick br"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 16
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 16
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick b",
+              "text": "Go: the quick b"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick br",
+              "text": "Go: the quick br"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 19,
+      "time": 2435.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick br",
+              "text": "Go: the quick br"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick bro",
+              "text": "Go: the quick bro"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 17
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 17
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick br",
+              "text": "Go: the quick br"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick bro",
+              "text": "Go: the quick bro"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 20,
+      "time": 2444.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick bro",
+              "text": "Go: the quick bro"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brow",
+              "text": "Go: the quick brow"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 18
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 18
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick bro",
+              "text": "Go: the quick bro"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brow",
+              "text": "Go: the quick brow"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 21,
+      "time": 2452.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brow",
+              "text": "Go: the quick brow"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown",
+              "text": "Go: the quick brown"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 19
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 19
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brow",
+              "text": "Go: the quick brow"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown",
+              "text": "Go: the quick brown"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 22,
+      "time": 2461
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown",
+              "text": "Go: the quick brown"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown ",
+              "text": "Go: the quick brown "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 20
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 20
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown",
+              "text": "Go: the quick brown"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown ",
+              "text": "Go: the quick brown "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 23,
+      "time": 2468.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown ",
+              "text": "Go: the quick brown "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown f",
+              "text": "Go: the quick brown f"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 21
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 21
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown ",
+              "text": "Go: the quick brown "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown f",
+              "text": "Go: the quick brown f"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 24,
+      "time": 2475.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown f",
+              "text": "Go: the quick brown f"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fo",
+              "text": "Go: the quick brown fo"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 22
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 22
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown f",
+              "text": "Go: the quick brown f"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox",
+              "text": "Go: the quick brown fox"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 25,
+      "time": 2483
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fo",
+              "text": "Go: the quick brown fo"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox",
+              "text": "Go: the quick brown fox"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 23
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 23
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fo",
+              "text": "Go: the quick brown fo"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox",
+              "text": "Go: the quick brown fox"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 26,
+      "time": 2487.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox",
+              "text": "Go: the quick brown fox"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ",
+              "text": "Go: the quick brown fox "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 24
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 24
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox",
+              "text": "Go: the quick brown fox"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox j",
+              "text": "Go: the quick brown fox j"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 27,
+      "time": 2491.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ",
+              "text": "Go: the quick brown fox "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox j",
+              "text": "Go: the quick brown fox j"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 25
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 25
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ",
+              "text": "Go: the quick brown fox "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox j",
+              "text": "Go: the quick brown fox j"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 28,
+      "time": 2496.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox j",
+              "text": "Go: the quick brown fox j"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ju",
+              "text": "Go: the quick brown fox ju"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 26
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 26
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox j",
+              "text": "Go: the quick brown fox j"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jum",
+              "text": "Go: the quick brown fox jum"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 29,
+      "time": 2501.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ju",
+              "text": "Go: the quick brown fox ju"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jum",
+              "text": "Go: the quick brown fox jum"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 27
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 27
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox ju",
+              "text": "Go: the quick brown fox ju"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jum",
+              "text": "Go: the quick brown fox jum"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 30,
+      "time": 2504.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jum",
+              "text": "Go: the quick brown fox jum"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jump",
+              "text": "Go: the quick brown fox jump"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 28
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 28
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jum",
+              "text": "Go: the quick brown fox jum"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps",
+              "text": "Go: the quick brown fox jumps"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 31,
+      "time": 2509.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jump",
+              "text": "Go: the quick brown fox jump"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps",
+              "text": "Go: the quick brown fox jumps"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 29
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 29
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jump",
+              "text": "Go: the quick brown fox jump"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps",
+              "text": "Go: the quick brown fox jumps"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 32,
+      "time": 2513.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps",
+              "text": "Go: the quick brown fox jumps"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ",
+              "text": "Go: the quick brown fox jumps "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 30
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 30
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps",
+              "text": "Go: the quick brown fox jumps"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps o",
+              "text": "Go: the quick brown fox jumps o"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 33,
+      "time": 2517.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ",
+              "text": "Go: the quick brown fox jumps "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps o",
+              "text": "Go: the quick brown fox jumps o"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 31
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 31
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ",
+              "text": "Go: the quick brown fox jumps "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps o",
+              "text": "Go: the quick brown fox jumps o"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 34,
+      "time": 2521
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps o",
+              "text": "Go: the quick brown fox jumps o"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ov",
+              "text": "Go: the quick brown fox jumps ov"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 32
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 32
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps o",
+              "text": "Go: the quick brown fox jumps o"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ove",
+              "text": "Go: the quick brown fox jumps ove"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 35,
+      "time": 2526.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ov",
+              "text": "Go: the quick brown fox jumps ov"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ove",
+              "text": "Go: the quick brown fox jumps ove"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 33
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 33
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ov",
+              "text": "Go: the quick brown fox jumps ov"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ove",
+              "text": "Go: the quick brown fox jumps ove"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 36,
+      "time": 2530.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ove",
+              "text": "Go: the quick brown fox jumps ove"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over",
+              "text": "Go: the quick brown fox jumps over"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 34
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 34
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps ove",
+              "text": "Go: the quick brown fox jumps ove"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over ",
+              "text": "Go: the quick brown fox jumps over "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 37,
+      "time": 2534.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over",
+              "text": "Go: the quick brown fox jumps over"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over ",
+              "text": "Go: the quick brown fox jumps over "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 35
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 35
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over",
+              "text": "Go: the quick brown fox jumps over"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over ",
+              "text": "Go: the quick brown fox jumps over "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 38,
+      "time": 2538.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over ",
+              "text": "Go: the quick brown fox jumps over "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over t",
+              "text": "Go: the quick brown fox jumps over t"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 36
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 36
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over ",
+              "text": "Go: the quick brown fox jumps over "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over th",
+              "text": "Go: the quick brown fox jumps over th"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 39,
+      "time": 2542.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over t",
+              "text": "Go: the quick brown fox jumps over t"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over th",
+              "text": "Go: the quick brown fox jumps over th"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 37
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 37
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over t",
+              "text": "Go: the quick brown fox jumps over t"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over th",
+              "text": "Go: the quick brown fox jumps over th"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 40,
+      "time": 2546.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over th",
+              "text": "Go: the quick brown fox jumps over th"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the",
+              "text": "Go: the quick brown fox jumps over the"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 38
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 38
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over th",
+              "text": "Go: the quick brown fox jumps over th"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the ",
+              "text": "Go: the quick brown fox jumps over the "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 41,
+      "time": 2550.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the",
+              "text": "Go: the quick brown fox jumps over the"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the ",
+              "text": "Go: the quick brown fox jumps over the "
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 39
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 39
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the",
+              "text": "Go: the quick brown fox jumps over the"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the ",
+              "text": "Go: the quick brown fox jumps over the "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 42,
+      "time": 2554.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the ",
+              "text": "Go: the quick brown fox jumps over the "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the l",
+              "text": "Go: the quick brown fox jumps over the l"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 40
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 40
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the ",
+              "text": "Go: the quick brown fox jumps over the "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the la",
+              "text": "Go: the quick brown fox jumps over the la"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 43,
+      "time": 2557.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the l",
+              "text": "Go: the quick brown fox jumps over the l"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the la",
+              "text": "Go: the quick brown fox jumps over the la"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 41
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 41
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the l",
+              "text": "Go: the quick brown fox jumps over the l"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the la",
+              "text": "Go: the quick brown fox jumps over the la"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 44,
+      "time": 2561.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the la",
+              "text": "Go: the quick brown fox jumps over the la"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the laz",
+              "text": "Go: the quick brown fox jumps over the laz"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 42
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 42
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the la",
+              "text": "Go: the quick brown fox jumps over the la"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the lazy",
+              "text": "Go: the quick brown fox jumps over the lazy"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 45,
+      "time": 2565.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 69,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the laz",
+              "text": "Go: the quick brown fox jumps over the laz"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the lazy",
+              "text": "Go: the quick brown fox jumps over the lazy"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 43
+          },
+          "selectionEnd": {
+            "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+            "attributeKey": "content",
+            "offset": 43
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the laz",
+              "text": "Go: the quick brown fox jumps over the laz"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Go: the quick brown fox jumps over the lazy",
+              "text": "Go: the quick brown fox jumps over the lazy"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 46,
+      "time": 2569.6
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "b77c247c-ed28-4071-ba1a-2bc5fb8397a8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Go: the quick brown fox jumps over the lazy",
+          "text": "Go: the quick brown fox jumps over the lazy"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Go: the quick brown fox jumps over the lazy</p>\n<!-- /wp:paragraph -->"
+}

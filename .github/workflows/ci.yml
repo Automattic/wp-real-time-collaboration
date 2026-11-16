@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches:
-      - trunk
+      - main
   pull_request:
 
 permissions:
@@ -59,6 +59,17 @@ jobs:
 
       - name: Jest
         run: npm run test:js
+
+      # The engine core exists twice, in JavaScript and in PHP, and JSON
+      # vector files keep the two equal. Run the generators again and
+      # fail if a stored copy differs from fresh output.
+      - name: Test vectors match the generators
+        run: npm run test:vectors
+
+      # The simulator sweep: many seeded sessions through the engine
+      # core, with every check on. No WordPress needed.
+      - name: Simulator sweep
+        run: npm run test:sweep
 
       # The vendored subtree carries one change on top of its pin, the
       # revisions differ exported for the plugin's conflict review UI

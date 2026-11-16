@@ -1,0 +1,538 @@
+{
+  "scenario": "emoji",
+  "description": "In \"Hi 😀 there\", put the caret after the emoji, insert \"😁\", type \"x\", then press Backspace twice.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hi 😀 there</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "9ad32631-ae51-4822-9e08-fd128693d3ca"
+  ],
+  "clientIdsInEditorAtStart": [
+    "9ad32631-ae51-4822-9e08-fd128693d3ca"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀 there",
+              "text": "Hi 😀 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 885.4
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 897.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1193.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1201.7
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hi 😀 there",
+          "text": "Hi 😀 there"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca"
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1831.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1929
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2130.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hi 😀 there",
+              "text": "Hi 😀 there"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀 there",
+              "text": "Hi 😀 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2355.6,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁x there",
+              "text": "Hi 😀😁x there"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁x there",
+              "text": "Hi 😀😁x there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2648.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁x there",
+              "text": "Hi 😀😁x there"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁x there",
+              "text": "Hi 😀😁x there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 9,
+      "time": 2930.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 26,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hi 😀 there",
+              "text": "Hi 😀 there"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀😁 there",
+              "text": "Hi 😀😁 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hi 😀 there",
+              "text": "Hi 😀 there"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 10,
+      "time": 3207.9
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "9ad32631-ae51-4822-9e08-fd128693d3ca",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hi 😀 there",
+          "text": "Hi 😀 there"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Hi 😀 there</p>\n<!-- /wp:paragraph -->"
+}

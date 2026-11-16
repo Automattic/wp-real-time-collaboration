@@ -1,0 +1,307 @@
+{
+  "scenario": "paste-inline-text",
+  "description": "In \"Hello world\", paste the plain word \" big\" after \"Hello\".",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "b7689df2-4e28-4d14-9670-02b0685a319d"
+  ],
+  "clientIdsInEditorAtStart": [
+    "b7689df2-4e28-4d14-9670-02b0685a319d"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 38,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 861.4
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 873.8
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1171.9
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1175.9
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 38,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d"
+          },
+          "selectionEnd": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1764.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 38,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1889.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 38,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2091
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 38,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hellobig world",
+              "text": "Hellobig world"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "selectionEnd": {
+            "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hellobig world",
+              "text": "Hellobig world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2335,
+      "openedUndoLevel": true
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "b7689df2-4e28-4d14-9670-02b0685a319d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hellobig world",
+          "text": "Hellobig world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Hellobig world</p>\n<!-- /wp:paragraph -->"
+}

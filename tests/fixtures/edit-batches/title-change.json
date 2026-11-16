@@ -1,0 +1,270 @@
+{
+  "scenario": "title-change",
+  "description": "Type \" More\" at the end of the title.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "b6375f29-ff71-4491-90fd-f7f3cc3e5ce8"
+  ],
+  "clientIdsInEditorAtStart": [
+    "b6375f29-ff71-4491-90fd-f7f3cc3e5ce8"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "b6375f29-ff71-4491-90fd-f7f3cc3e5ce8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 876.1
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 888.5
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1184.2
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1192.7
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "b6375f29-ff71-4491-90fd-f7f3cc3e5ce8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "title",
+            "previousValue": "Edit batch recording",
+            "value": "Edit batch recording "
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1808.6,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "title",
+            "previousValue": "Edit batch recording ",
+            "value": "Edit batch recording M"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1864.6,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "title",
+            "previousValue": "Edit batch recording M",
+            "value": "Edit batch recording Mo"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 1917.5,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "title",
+            "previousValue": "Edit batch recording Mo",
+            "value": "Edit batch recording Mor"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 7,
+      "time": 1970.7,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 51,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "title",
+            "previousValue": "Edit batch recording Mor",
+            "value": "Edit batch recording More"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 8,
+      "time": 2023.2,
+      "openedUndoLevel": true
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "b6375f29-ff71-4491-90fd-f7f3cc3e5ce8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->"
+}

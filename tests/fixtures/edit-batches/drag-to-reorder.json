@@ -1,0 +1,419 @@
+{
+  "scenario": "drag-to-reorder",
+  "description": "With \"One\", \"Two\", \"Three\", drag the first block below the third with the mouse.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Three</p>\n<!-- /wp:paragraph -->",
+  "notes": {
+    "orderAfter": [
+      "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+      "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+      "28cb0354-2439-4082-9a6b-a73ee6e2cbf5"
+    ],
+    "first": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+    "third": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b"
+  },
+  "clientIdsFromLoad": [
+    "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+    "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+    "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b"
+  ],
+  "clientIdsInEditorAtStart": [
+    "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+    "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+    "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 40,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Three",
+              "text": "Three"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 867.9
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 880.3
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1179.7
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1183.6
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Three",
+          "text": "Three"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 40,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5"
+          },
+          "selectionEnd": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1764.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 40,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1897.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 40,
+      "batch": {
+        "operations": [
+          {
+            "type": "move",
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+            "parent": null,
+            "before": null
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Three",
+              "text": "Three"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Three",
+              "text": "Three"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 6,
+      "time": 2550.8,
+      "openedUndoLevel": true
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "5d1fb290-e5a5-4605-a06d-6882b80229b8",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "b4f12872-890f-4a0b-8a4c-ab2dd3f26a1b",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Three",
+          "text": "Three"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "28cb0354-2439-4082-9a6b-a73ee6e2cbf5",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Three</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->"
+}

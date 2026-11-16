@@ -1,0 +1,597 @@
+{
+  "scenario": "paste-blocks-into-empty-paragraph",
+  "description": "With \"One\", an empty paragraph, and \"Two\", paste a paragraph, a heading and a list into the empty one.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p></p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "3e7266b2-100f-4d54-ada4-4270b818564d",
+    "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+    "a192a0aa-7a05-4031-9e79-447a4e00b32a"
+  ],
+  "clientIdsInEditorAtStart": [
+    "3e7266b2-100f-4d54-ada4-4270b818564d",
+    "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+    "a192a0aa-7a05-4031-9e79-447a4e00b32a"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 36,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "3e7266b2-100f-4d54-ada4-4270b818564d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 864.4
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 877.2
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1175.3
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1179.3
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "3e7266b2-100f-4d54-ada4-4270b818564d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "",
+          "text": ""
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 36,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b"
+          },
+          "selectionEnd": {
+            "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1746.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 36,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1855.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 36,
+      "batch": {
+        "operations": [
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "81cfd6cc-635a-4c03-96ff-fbbb89044b74",
+              "name": "core/paragraph",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pasted A",
+                  "text": "Pasted A"
+                },
+                "dropCap": false
+              },
+              "innerBlocks": []
+            },
+            "parent": null,
+            "before": null
+          },
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "83b0cd04-f05a-4607-b4ed-1e9e4fe96fd1",
+              "name": "core/heading",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pasted B",
+                  "text": "Pasted B"
+                },
+                "level": 2
+              },
+              "innerBlocks": []
+            },
+            "parent": null,
+            "before": null
+          },
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+              "name": "core/list",
+              "isValid": true,
+              "attributes": {
+                "ordered": false,
+                "values": ""
+              },
+              "innerBlocks": []
+            },
+            "parent": null,
+            "before": null
+          },
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "4d2e85da-9a2d-495d-a55c-2b99e247c94a",
+              "name": "core/list-item",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pasted C",
+                  "text": "Pasted C"
+                }
+              },
+              "innerBlocks": []
+            },
+            "parent": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+            "before": null
+          },
+          {
+            "type": "remove",
+            "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b"
+          },
+          {
+            "type": "move",
+            "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+            "parent": null,
+            "before": null
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde"
+          },
+          "selectionEnd": {
+            "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde"
+          },
+          "initialPosition": -1
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "3e7266b2-100f-4d54-ada4-4270b818564d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "26df6817-6a9a-44c9-8121-5cb6c0a4fd3b",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "3e7266b2-100f-4d54-ada4-4270b818564d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "81cfd6cc-635a-4c03-96ff-fbbb89044b74",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pasted A",
+              "text": "Pasted A"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "83b0cd04-f05a-4607-b4ed-1e9e4fe96fd1",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pasted B",
+              "text": "Pasted B"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+          "name": "core/list",
+          "isValid": true,
+          "attributes": {
+            "ordered": false,
+            "values": ""
+          },
+          "innerBlocks": [
+            {
+              "clientId": "4d2e85da-9a2d-495d-a55c-2b99e247c94a",
+              "name": "core/list-item",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pasted C",
+                  "text": "Pasted C"
+                }
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 6,
+      "time": 2064.7,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 36,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+            "attributeKey": {
+              "__type": "undefined"
+            },
+            "offset": {
+              "__type": "undefined"
+            }
+          },
+          "selectionEnd": {
+            "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+            "attributeKey": {
+              "__type": "undefined"
+            },
+            "offset": {
+              "__type": "undefined"
+            }
+          },
+          "initialPosition": -1
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "core-data",
+      "treeAfter": null,
+      "index": 7,
+      "time": 2097.2
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "3e7266b2-100f-4d54-ada4-4270b818564d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "81cfd6cc-635a-4c03-96ff-fbbb89044b74",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Pasted A",
+          "text": "Pasted A"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "83b0cd04-f05a-4607-b4ed-1e9e4fe96fd1",
+      "name": "core/heading",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Pasted B",
+          "text": "Pasted B"
+        },
+        "level": 2
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "ae0a24e0-fa08-4c90-bc7f-3c8dcc69dcde",
+      "name": "core/list",
+      "isValid": true,
+      "attributes": {
+        "ordered": false,
+        "values": ""
+      },
+      "innerBlocks": [
+        {
+          "clientId": "4d2e85da-9a2d-495d-a55c-2b99e247c94a",
+          "name": "core/list-item",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pasted C",
+              "text": "Pasted C"
+            }
+          },
+          "innerBlocks": []
+        }
+      ]
+    },
+    {
+      "clientId": "a192a0aa-7a05-4031-9e79-447a4e00b32a",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Pasted A</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pasted B</h2>\n<!-- /wp:heading -->\n\n<!-- wp:list -->\n<ul class=\"wp-block-list\"><!-- wp:list-item -->\n<li>Pasted C</li>\n<!-- /wp:list-item --></ul>\n<!-- /wp:list -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->"
+}

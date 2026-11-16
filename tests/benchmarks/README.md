@@ -263,6 +263,7 @@ a real decision (how the engine behaves, which transport):
 | ------------------- | ------------------------------------------------------------- |
 | `--suite=engines`   | The engine scenario matrix and invariant sweeps — the harness documented in the rest of this README. `--scenarios=`, `--certify=`, and `--concurrency=` exist only in this suite, so passing any of them selects it without `--suite=` (CI's certify job invokes it that way). |
 | `--suite=transport` | Two-browser edit-to-visible latency + wire traffic per transport (`transport/README.md`). |
+| `--suite=long-history` | The cost of one commit, and of one idle read, on a room that already holds many stored edits. See "One request on a long history" below. |
 
 The **debugging and analysis tools** — lanes that generate load or
 validate projections rather than answer a decision — live in
@@ -899,3 +900,29 @@ format range, then reports JavaScript CPU and wall time, sampled heap growth,
 accepted row size, and document snapshot size. Heap growth is not peak PHP
 memory. This small core benchmark needs no WordPress site; the engine suite
 remains the source for server and storage costs.
+
+## One request on a long history
+
+`npm run bench -- --suite=long-history` answers one question: what does a
+single request cost when the room already holds many stored edits? The
+engine suite reports an average over a whole session, which hides this.
+
+It runs `tests/benchmarks/long-history.php` in the tests environment,
+against the real table storage. For each history size it fills a new room
+with that many accepted edits, then measures two kinds of request. Each
+measured request builds new storage and engine objects, as a polling web
+request does:
+
+- a commit that carries one typed character,
+- an idle read that carries nothing and asks for rows after the newest.
+
+```bash
+npm run bench -- --suite=long-history
+npm run bench -- --suite=long-history --history=0,450,950 --samples=30 --json=out.json
+```
+
+The engine saves a full snapshot every 500 accepted edits and trims the
+rows before the previous snapshot, so stored history tops out near 1,000
+edits. Keep `history + samples` away from a multiple of 500, or a measured
+commit also pays for a snapshot. There is no HTTP and no transport in
+these numbers.

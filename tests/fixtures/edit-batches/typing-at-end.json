@@ -1,0 +1,692 @@
+{
+  "scenario": "typing-at-end",
+  "description": "Type \" again\" at the end of a paragraph, one key at a time.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "c419c37e-3ff5-431f-a5da-b980908403ce"
+  ],
+  "clientIdsInEditorAtStart": [
+    "c419c37e-3ff5-431f-a5da-b980908403ce"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 1272.3
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 1274.2
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1594
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1601
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce"
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 2260.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 2379
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2593
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world ",
+              "text": "Hello world "
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world ",
+              "text": "Hello world "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2816.5,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world ",
+              "text": "Hello world "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world a",
+              "text": "Hello world a"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world ",
+              "text": "Hello world "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world a",
+              "text": "Hello world a"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2867.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world a",
+              "text": "Hello world a"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world ag",
+              "text": "Hello world ag"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world a",
+              "text": "Hello world a"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world ag",
+              "text": "Hello world ag"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 9,
+      "time": 2914.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world ag",
+              "text": "Hello world ag"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world aga",
+              "text": "Hello world aga"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 15
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 15
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world ag",
+              "text": "Hello world ag"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world aga",
+              "text": "Hello world aga"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 10,
+      "time": 2963.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world aga",
+              "text": "Hello world aga"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world agai",
+              "text": "Hello world agai"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 16
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 16
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world aga",
+              "text": "Hello world aga"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world agai",
+              "text": "Hello world agai"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 11,
+      "time": 3010.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 24,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world agai",
+              "text": "Hello world agai"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world again",
+              "text": "Hello world again"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 17
+          },
+          "selectionEnd": {
+            "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+            "attributeKey": "content",
+            "offset": 17
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world agai",
+              "text": "Hello world agai"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world again",
+              "text": "Hello world again"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 12,
+      "time": 3057.8
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "c419c37e-3ff5-431f-a5da-b980908403ce",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world again",
+          "text": "Hello world again"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Hello world again</p>\n<!-- /wp:paragraph -->"
+}

@@ -13,6 +13,9 @@ a usage block in its header.
 - `generate-planner-vectors.js`, `generate-rich-text-vectors.js`,
   `generate-sync-id-vectors.js` — the test-vector generators. The intent-log vectors are
   written to two places (Jest and PHPUnit); always update both.
+- `check-vectors.mjs` — runs the three generators again and fails when
+  a stored vector file differs from fresh output
+  (`npm run test:vectors`, run by CI).
 - `doc-lint.mjs` — checks the prose files against the code
   (`npm run lint:docs`, run by CI): backticked paths exist, documented
   option, filter, class and constant names appear in the code, links
@@ -21,6 +24,10 @@ a usage block in its header.
   `const:` comment match the source. Its header lists the rules.
 - `check-presence-api.php` — checks the Presence API awareness backend
   against the real plugin instead of the test stand-in.
+- `edit-batch-recorder/` — records what the newer Gutenberg sync contract
+  sends for a fixed list of editor actions, into
+  `tests/fixtures/edit-batches/`. It runs against its own scratch site.
+  See `tests/tools/edit-batch-recorder/README.md`.
 
 ## Typing by yourself in a second window
 

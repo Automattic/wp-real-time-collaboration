@@ -1,0 +1,488 @@
+{
+  "scenario": "insert-pattern",
+  "description": "With \"One\" and \"Two\", insert a pattern (a group holding a heading and two paragraphs) between them.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "a9a98c47-c831-481f-9ab8-81b10e475773",
+    "a8cfc8b1-d1a4-4695-98e8-8291400eacf3"
+  ],
+  "clientIdsInEditorAtStart": [
+    "a9a98c47-c831-481f-9ab8-81b10e475773",
+    "a8cfc8b1-d1a4-4695-98e8-8291400eacf3"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 42,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "a9a98c47-c831-481f-9ab8-81b10e475773",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 861.5
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 873.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1175.3
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1183.6
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "a9a98c47-c831-481f-9ab8-81b10e475773",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 42,
+      "batch": {
+        "operations": [
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292",
+              "name": "core/group",
+              "isValid": true,
+              "attributes": {
+                "tagName": "div",
+                "layout": {
+                  "type": "constrained"
+                }
+              },
+              "innerBlocks": [
+                {
+                  "clientId": "24f5c8a3-3c53-4281-8c1f-2ec46dd23561",
+                  "name": "core/heading",
+                  "isValid": true,
+                  "attributes": {
+                    "content": {
+                      "__type": "RichTextData",
+                      "html": "Pattern heading",
+                      "text": "Pattern heading"
+                    },
+                    "level": 2
+                  },
+                  "innerBlocks": [],
+                  "originalContent": "<h2 class=\"wp-block-heading\">Pattern heading</h2>",
+                  "validationIssues": []
+                },
+                {
+                  "clientId": "1d89f48c-105f-40f3-b7c0-eee42ba7bff0",
+                  "name": "core/paragraph",
+                  "isValid": true,
+                  "attributes": {
+                    "content": {
+                      "__type": "RichTextData",
+                      "html": "Pattern first",
+                      "text": "Pattern first"
+                    },
+                    "dropCap": false
+                  },
+                  "innerBlocks": [],
+                  "originalContent": "<p>Pattern first</p>",
+                  "validationIssues": []
+                },
+                {
+                  "clientId": "fc0dc8ef-b5f7-454a-a135-0ef3fbcc3eb7",
+                  "name": "core/paragraph",
+                  "isValid": true,
+                  "attributes": {
+                    "content": {
+                      "__type": "RichTextData",
+                      "html": "Pattern second",
+                      "text": "Pattern second"
+                    },
+                    "dropCap": false
+                  },
+                  "innerBlocks": [],
+                  "originalContent": "<p>Pattern second</p>",
+                  "validationIssues": []
+                }
+              ],
+              "originalContent": "<div class=\"wp-block-group\">\n\n\n\n</div>",
+              "validationIssues": []
+            },
+            "parent": null,
+            "before": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292"
+          },
+          "selectionEnd": {
+            "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292"
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "a9a98c47-c831-481f-9ab8-81b10e475773",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "a9a98c47-c831-481f-9ab8-81b10e475773",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "One",
+              "text": "One"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292",
+          "name": "core/group",
+          "isValid": true,
+          "attributes": {
+            "tagName": "div",
+            "layout": {
+              "type": "constrained"
+            }
+          },
+          "innerBlocks": [
+            {
+              "clientId": "24f5c8a3-3c53-4281-8c1f-2ec46dd23561",
+              "name": "core/heading",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pattern heading",
+                  "text": "Pattern heading"
+                },
+                "level": 2
+              },
+              "innerBlocks": []
+            },
+            {
+              "clientId": "1d89f48c-105f-40f3-b7c0-eee42ba7bff0",
+              "name": "core/paragraph",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pattern first",
+                  "text": "Pattern first"
+                },
+                "dropCap": false
+              },
+              "innerBlocks": []
+            },
+            {
+              "clientId": "fc0dc8ef-b5f7-454a-a135-0ef3fbcc3eb7",
+              "name": "core/paragraph",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "Pattern second",
+                  "text": "Pattern second"
+                },
+                "dropCap": false
+              },
+              "innerBlocks": []
+            }
+          ]
+        },
+        {
+          "clientId": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Two",
+              "text": "Two"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 4,
+      "time": 1745.4,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 42,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292",
+            "attributeKey": {
+              "__type": "undefined"
+            },
+            "offset": {
+              "__type": "undefined"
+            }
+          },
+          "selectionEnd": {
+            "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292",
+            "attributeKey": {
+              "__type": "undefined"
+            },
+            "offset": {
+              "__type": "undefined"
+            }
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "core-data",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1805.4
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "a9a98c47-c831-481f-9ab8-81b10e475773",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "One",
+          "text": "One"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "74e6bd29-fd41-437b-94ac-21d5eb72c292",
+      "name": "core/group",
+      "isValid": true,
+      "attributes": {
+        "tagName": "div",
+        "layout": {
+          "type": "constrained"
+        }
+      },
+      "innerBlocks": [
+        {
+          "clientId": "24f5c8a3-3c53-4281-8c1f-2ec46dd23561",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pattern heading",
+              "text": "Pattern heading"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "1d89f48c-105f-40f3-b7c0-eee42ba7bff0",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pattern first",
+              "text": "Pattern first"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "fc0dc8ef-b5f7-454a-a135-0ef3fbcc3eb7",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Pattern second",
+              "text": "Pattern second"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ]
+    },
+    {
+      "clientId": "a8cfc8b1-d1a4-4695-98e8-8291400eacf3",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Two",
+          "text": "Two"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>One</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:group {\"layout\":{\"type\":\"constrained\"}} -->\n<div class=\"wp-block-group\"><!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Pattern heading</h2>\n<!-- /wp:heading -->\n\n<!-- wp:paragraph -->\n<p>Pattern first</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Pattern second</p>\n<!-- /wp:paragraph --></div>\n<!-- /wp:group -->\n\n<!-- wp:paragraph -->\n<p>Two</p>\n<!-- /wp:paragraph -->"
+}

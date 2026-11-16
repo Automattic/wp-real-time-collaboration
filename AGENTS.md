@@ -108,6 +108,7 @@ random.
 
 ```bash
 npm run test:js             # Jest: engines/providers + frozen-core vectors
+npm run test:vectors        # stored test vectors equal fresh generator output
 npm run test:php            # PHPUnit in the wp-env tests container
 npm run test:e2e            # Playwright: two-browser collaboration (+ http-only)
 npm run test:e2e:websocket  # websocket-only suite (runs the daemon)
@@ -118,7 +119,7 @@ Iterate at the cheapest layer that can catch the change, fast to slow:
 
 1. `node tests/tools/sweep.js [seeds] [steps] [clients]` (defaults
    60/400/3; no WordPress): the first check for any intent-log planner
-   or merge change.
+   or merge change. `npm run test:sweep` runs it with the defaults.
 2. `npm run test:js` (needs only the built subtree).
 3. `npm run test:php`.
 4. `npm run test:e2e` (minutes).
@@ -263,6 +264,11 @@ before a big change. A durable lesson from an issue goes here.
   not tied to one post are reset when a tab speaking the new engine
   arrives; per-post rooms are not, because they can hold unsaved
   content.
+- **The server's first copy of a post (genesis) has no default
+  attribute values.** It is built from the block comments, which leave
+  defaults out, while the editor's blocks always carry them (a
+  paragraph's `dropCap: false`). Sending an unchanged default as an
+  edit makes two tabs' first edits clash on every such block.
 - **The storage's `get_cursor()` and `get_update_count()` are
   per-request caches refreshed only by `get_updates_after_cursor()`**,
   kept that way from the framework's post-meta default on purpose. Do
@@ -302,6 +308,17 @@ before a big change. A durable lesson from an issue goes here.
 
 ### Environment and test traps
 
+- **Some tests are expected failures on purpose.** Each states the
+  correct behavior for a known defect and passes while the defect is
+  there: `tests/js/known-defects/` (`it.failing`),
+  `tests/phpunit/wpIntentLogKnownDefects.php` (`assert_known_defect()`;
+  `RTC_KNOWN_DEFECTS_RAW=1` shows the real failures), and
+  `tests/e2e/specs/collaboration-known-defects.spec.ts` (`test.fail`).
+  A fix turns its test red. Remove the marker then, not the test.
+- The WordPress Playwright helpers fall back to port 8889 and to this
+  suite's saved login. A second Playwright setup in this repo must set
+  `WP_BASE_URL` and `STORAGE_STATE_PATH` itself, as
+  `tests/tools/edit-batch-recorder/playwright.config.mjs` does.
 - `jest.config.js` sets `roots: [src, tests]`; without it Jest recurses
   into the subtree's ~1030 suites. `phpcs.xml.dist` excludes
   `/gutenberg/*`.

@@ -1,0 +1,404 @@
+{
+  "scenario": "paste-blocks-into-text",
+  "description": "In \"Hello world\", paste two paragraphs after \"Hello\".",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>After</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "e366d384-916a-4db2-ab54-38443865054e",
+    "697d2142-8ef0-4a53-8539-d372b0564b4f"
+  ],
+  "clientIdsInEditorAtStart": [
+    "e366d384-916a-4db2-ab54-38443865054e",
+    "697d2142-8ef0-4a53-8539-d372b0564b4f"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 37,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "697d2142-8ef0-4a53-8539-d372b0564b4f",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "After",
+              "text": "After"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 886.6
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 899.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1168.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1222.8
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "697d2142-8ef0-4a53-8539-d372b0564b4f",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "After",
+          "text": "After"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 37,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e"
+          },
+          "selectionEnd": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1809
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 37,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1931.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 37,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2135.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 37,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "value": "HelloPasted A"
+          },
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "46a8d0b0-dbe4-4d15-ad63-044c3e770eb7",
+              "name": "core/paragraph",
+              "isValid": true,
+              "attributes": {
+                "content": "Pasted B world",
+                "dropCap": false
+              },
+              "innerBlocks": [],
+              "originalContent": "<p>Hello world</p>",
+              "validationIssues": []
+            },
+            "parent": null,
+            "before": "697d2142-8ef0-4a53-8539-d372b0564b4f"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "46a8d0b0-dbe4-4d15-ad63-044c3e770eb7",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "selectionEnd": {
+            "clientId": "46a8d0b0-dbe4-4d15-ad63-044c3e770eb7",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "697d2142-8ef0-4a53-8539-d372b0564b4f",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "After",
+              "text": "After"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": "HelloPasted A",
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "46a8d0b0-dbe4-4d15-ad63-044c3e770eb7",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": "Pasted B world",
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "697d2142-8ef0-4a53-8539-d372b0564b4f",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "After",
+              "text": "After"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2370.9,
+      "openedUndoLevel": true
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "e366d384-916a-4db2-ab54-38443865054e",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": "HelloPasted A",
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "46a8d0b0-dbe4-4d15-ad63-044c3e770eb7",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": "Pasted B world",
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "697d2142-8ef0-4a53-8539-d372b0564b4f",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "After",
+          "text": "After"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>HelloPasted A</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Pasted B world</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>After</p>\n<!-- /wp:paragraph -->"
+}

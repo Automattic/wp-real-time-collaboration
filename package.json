@@ -68,6 +68,8 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.ts",
     "test:e2e:websocket": "playwright test --config tests/e2e/playwright.rtc-websocket.config.ts",
     "test:js": "wp-scripts test-unit-js",
+    "test:sweep": "node --no-warnings tests/tools/sweep.js",
+    "test:vectors": "node tests/tools/check-vectors.mjs",
     "test:php": "wp-env --config .wp-env.tests.json run cli --env-cwd=wp-content/plugins/wp-real-time-collaboration vendor/bin/phpunit",
     "typecheck": "tsc --noEmit"
   }

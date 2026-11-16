@@ -1,0 +1,92 @@
+{
+  "pushDoesNotComeBackAsLocalBatch": {
+    "question": "Does a change pushed with editRecord come back through applyEditBatch?",
+    "batchesCausedByPush": 0,
+    "eventsCausedByPush": [],
+    "editorShowsPush": true,
+    "clientIdsKept": true
+  },
+  "whenTheBlockEditorHoldsAPush": {
+    "question": "After editRecord, when do the block editor store and the page show the pushed blocks?",
+    "summary": {
+      "sameTask": {
+        "blockEditorStoreHasPush": "0 of 20",
+        "domHasPush": "0 of 20"
+      },
+      "microtask": {
+        "blockEditorStoreHasPush": "20 of 20",
+        "domHasPush": "20 of 20"
+      },
+      "firstNextTask": {
+        "blockEditorStoreHasPush": "20 of 20",
+        "domHasPush": "20 of 20"
+      },
+      "secondNextTask": {
+        "blockEditorStoreHasPush": "20 of 20",
+        "domHasPush": "20 of 20"
+      },
+      "later": {
+        "blockEditorStoreHasPush": "20 of 20",
+        "domHasPush": "20 of 20"
+      }
+    }
+  },
+  "typingWhileChangesArePushed": {
+    "question": "When a push arrives between keystrokes, does the next keystroke report a previousValue that is behind the engine?",
+    "method": "A timer pushes a change every 7 ms while 220 keys are typed with no delay.",
+    "outcomes": {
+      "other-paragraph": {
+        "pushes": 84,
+        "localTextBatches": 220,
+        "batchesWherePreviousValueWasBehind": 0,
+        "firstMismatches": []
+      },
+      "same-paragraph": {
+        "pushes": 84,
+        "localTextBatches": 220,
+        "batchesWherePreviousValueWasBehind": 0,
+        "firstMismatches": []
+      }
+    }
+  },
+  "clientIdsFromLoad": {
+    "question": "Do the blocks passed to load have the clientId values the editor uses afterwards?",
+    "blocksInLoad": 6,
+    "blocksInEditor": 6,
+    "sameIdsInSameOrder": true,
+    "blockTypesRegisteredAtLoad": 116,
+    "everyLoadCall": [
+      {
+        "kind": "postType",
+        "name": "post",
+        "recordId": 62,
+        "hasBlocks": true,
+        "blocks": 6,
+        "blockTypesRegistered": 116
+      },
+      {
+        "kind": "root",
+        "name": "globalStyles",
+        "recordId": 6,
+        "hasBlocks": false,
+        "blocks": 0,
+        "blockTypesRegistered": 116
+      }
+    ]
+  },
+  "pushWhileComposing": {
+    "question": "Does a push cancel or damage text that is being composed with an input method?",
+    "outcomes": {
+      "pushToAnotherParagraph": {
+        "firstParagraphBefore": "Composing:",
+        "pageTextWhileComposing": "Composing:にほんOther pushed",
+        "firstParagraphAfterCommit": "Composing:日本"
+      },
+      "pushToTheSameParagraph": {
+        "firstParagraphBefore": "Composing:日本",
+        "pageTextWhileComposing": "Pushed Composing:日本Other pushed",
+        "firstParagraphAfterCommit": "Pushed Composing:日本"
+      }
+    }
+  }
+}

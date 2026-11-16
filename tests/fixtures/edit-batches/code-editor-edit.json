@@ -1,0 +1,356 @@
+{
+  "scenario": "code-editor-edit",
+  "description": "Switch to the code editor, type \"X\" at the end of the content, switch back, then type \"!\" in the first paragraph.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+  "notes": {
+    "firstBlockAfterSwitch": "1338961a-8d43-4c8c-87fb-a69d681c6db4"
+  },
+  "clientIdsFromLoad": [
+    "9540cc33-74b2-48d0-9aca-cc3d7ccc6272"
+  ],
+  "clientIdsInEditorAtStart": [
+    "9540cc33-74b2-48d0-9aca-cc3d7ccc6272"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "9540cc33-74b2-48d0-9aca-cc3d7ccc6272",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 859.2
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 871.5
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1168.4
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1172.4
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "9540cc33-74b2-48d0-9aca-cc3d7ccc6272",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-field",
+            "field": "content",
+            "previousValue": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+            "value": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->X"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "__type": "undefined"
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1811.2,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4"
+          },
+          "selectionEnd": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 3267.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 3393.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 7,
+      "time": 3596.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 71,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello world!",
+              "text": "Hello world!"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "selectionEnd": {
+            "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "9540cc33-74b2-48d0-9aca-cc3d7ccc6272",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world!",
+              "text": "Hello world!"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "690372ff-eb4f-4ae7-a96c-eac9069e10f2",
+          "name": "core/freeform",
+          "isValid": true,
+          "attributes": {
+            "content": "<p>X</p>"
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 3829.2,
+      "openedUndoLevel": true
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "1338961a-8d43-4c8c-87fb-a69d681c6db4",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world!",
+          "text": "Hello world!"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "690372ff-eb4f-4ae7-a96c-eac9069e10f2",
+      "name": "core/freeform",
+      "isValid": true,
+      "attributes": {
+        "content": "<p>X</p>"
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Hello world!</p>\n<!-- /wp:paragraph -->\n\n<p>X</p>"
+}

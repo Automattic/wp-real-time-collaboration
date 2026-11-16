@@ -52,6 +52,8 @@ tests_add_filter(
 		// Test fixture engine (naive opaque relay) used by the transport and
 		// registry machinery tests; registered per-test, never in production.
 		require __DIR__ . '/phpunit/fixtures/class-test-opaque-relay-engine.php';
+		// Test fixture marker for tests that prove a defect not yet fixed.
+		require __DIR__ . '/phpunit/fixtures/trait-known-defect-assertions.php';
 
 		/*
 		 * Turn real-time collaboration on for the whole suite. Since

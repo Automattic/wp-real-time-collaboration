@@ -1,0 +1,1767 @@
+{
+  "scenario": "slash-insert",
+  "description": "In an empty paragraph, type \"/heading\", press Enter, and type \"Title\".",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Before</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p></p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+    "8701a2f5-4d66-488b-8edb-e86da9848596"
+  ],
+  "clientIdsInEditorAtStart": [
+    "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+    "8701a2f5-4d66-488b-8edb-e86da9848596"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 864.4
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 876.8
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1174.4
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1178.1
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Before",
+          "text": "Before"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "",
+          "text": ""
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596"
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1758
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1872.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/",
+              "text": "/"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 1
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 1
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/",
+              "text": "/"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 6,
+      "time": 2077.5,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_block",
+      "index": 7,
+      "time": 2153.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/",
+              "text": "/"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/h",
+              "text": "/h"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 2
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 2
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/",
+              "text": "/"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/h",
+              "text": "/h"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2156.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/h",
+              "text": "/h"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/he",
+              "text": "/he"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/h",
+              "text": "/h"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/he",
+              "text": "/he"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 9,
+      "time": 2209.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/he",
+              "text": "/he"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/hea",
+              "text": "/hea"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/he",
+              "text": "/he"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/hea",
+              "text": "/hea"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 10,
+      "time": 2261.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/hea",
+              "text": "/hea"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/head",
+              "text": "/head"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/hea",
+              "text": "/hea"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/head",
+              "text": "/head"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 11,
+      "time": 2312.9
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/head",
+              "text": "/head"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/headi",
+              "text": "/headi"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 6
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 6
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/head",
+              "text": "/head"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/headi",
+              "text": "/headi"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 12,
+      "time": 2365.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/headi",
+              "text": "/headi"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/headin",
+              "text": "/headin"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 7
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/headi",
+              "text": "/headi"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/headin",
+              "text": "/headin"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 13,
+      "time": 2412.5
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "/headin",
+              "text": "/headin"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "/heading",
+              "text": "/heading"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "selectionEnd": {
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+            "attributeKey": "content",
+            "offset": 8
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/headin",
+              "text": "/headin"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/heading",
+              "text": "/heading"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 14,
+      "time": 2458.1
+    },
+    {
+      "call": "stopCapturing",
+      "index": 15,
+      "time": 2518
+    },
+    {
+      "call": "clearRedo",
+      "index": 16,
+      "time": 2518
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "insert",
+            "block": {
+              "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+              "name": "core/heading",
+              "isValid": true,
+              "attributes": {
+                "content": {
+                  "__type": "RichTextData",
+                  "html": "",
+                  "text": ""
+                },
+                "level": 2
+              },
+              "innerBlocks": []
+            },
+            "parent": null,
+            "before": null
+          },
+          {
+            "type": "remove",
+            "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596"
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78"
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78"
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8701a2f5-4d66-488b-8edb-e86da9848596",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "/heading",
+              "text": "/heading"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 17,
+      "time": 2519.3,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "core-data",
+      "treeAfter": null,
+      "index": 18,
+      "time": 2560.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "T",
+              "text": "T"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 1
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 1
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "",
+              "text": ""
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "T",
+              "text": "T"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 19,
+      "time": 2833.3,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "T",
+              "text": "T"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Ti",
+              "text": "Ti"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 2
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 2
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "T",
+              "text": "T"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Ti",
+              "text": "Ti"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 20,
+      "time": 2881.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Ti",
+              "text": "Ti"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Tit",
+              "text": "Tit"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 3
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Ti",
+              "text": "Ti"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Tit",
+              "text": "Tit"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 21,
+      "time": 2928.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Tit",
+              "text": "Tit"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Titl",
+              "text": "Titl"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 4
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Tit",
+              "text": "Tit"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Titl",
+              "text": "Titl"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 22,
+      "time": 2976.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 43,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Titl",
+              "text": "Titl"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Title",
+              "text": "Title"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "selectionEnd": {
+            "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+            "attributeKey": "content",
+            "offset": 5
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Titl",
+              "text": "Titl"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Before",
+              "text": "Before"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+          "name": "core/heading",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Title",
+              "text": "Title"
+            },
+            "level": 2
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 23,
+      "time": 3023.4
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "d9aeb0fa-b46f-4817-a51e-16f1d1d70f9d",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Before",
+          "text": "Before"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "8fd1419d-8531-48bc-bb1b-db4baf186c78",
+      "name": "core/heading",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Title",
+          "text": "Title"
+        },
+        "level": 2
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>Before</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:heading -->\n<h2 class=\"wp-block-heading\">Title</h2>\n<!-- /wp:heading -->"
+}

@@ -79,6 +79,9 @@ const HELP = `npm run bench -- [--suite=<name>] [--key=value …]
 
 Suites (--suite=; default: host):
   text-slices  JavaScript core cost after repeated paragraph splits; no WordPress.
+  long-history The cost of one commit, and of one idle read, on a room
+             that already holds many stored edits. Arguments:
+             --history= (sizes, comma-separated), --samples=, --json=.
   host       The host cost report: what the plugin adds to a server —
              baseline/sync/delta/delta-% tables plus summary stats, ONE
              engine per run. The baseline is the same people producing the
@@ -173,6 +176,7 @@ if ( positionals.length ) {
 // ---------------------------------------------------------------------
 const SUITE_SCRIPTS = {
 	'text-slices': 'tests/benchmarks/text-slices.mjs',
+	'long-history': 'tests/benchmarks/long-history.mjs',
 	host: 'tests/benchmarks/host/host-benchmark.mjs',
 	sweep: 'tests/benchmarks/host/sweep.mjs',
 	transport: 'tests/benchmarks/transport/benchmark-transport.mjs',
@@ -208,7 +212,7 @@ if ( 'engines' !== SUITE ) {
 			);
 		} else {
 			console.error(
-				`unknown suite "${ SUITE }" — known: host (default), sweep, engines, transport, text-slices`
+				`unknown suite "${ SUITE }" — known: host (default), sweep, engines, transport, text-slices, long-history`
 			);
 		}
 		process.exit( 1 );

@@ -1,0 +1,710 @@
+{
+  "scenario": "template-part-edit",
+  "description": "A post holds a template part block. Type \" edit\" in the paragraph inside the part.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:template-part {\"slug\":\"recorder-part\",\"theme\":\"emptytheme\"} /-->\n\n<!-- wp:paragraph -->\n<p>After</p>\n<!-- /wp:paragraph -->",
+  "notes": {
+    "innerId": "5a99f7e3-3f98-4554-99fd-3eedf1c5cb69"
+  },
+  "clientIdsFromLoad": [
+    "01d64c90-fa27-46ff-a5d5-84d4e8e5c789",
+    "8189764a-6820-4610-83cf-3d2b689accb0"
+  ],
+  "clientIdsInEditorAtStart": [
+    "01d64c90-fa27-46ff-a5d5-84d4e8e5c789",
+    "8189764a-6820-4610-83cf-3d2b689accb0"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 65,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "01d64c90-fa27-46ff-a5d5-84d4e8e5c789",
+          "name": "core/template-part",
+          "isValid": true,
+          "attributes": {
+            "slug": "recorder-part",
+            "theme": "emptytheme"
+          },
+          "innerBlocks": []
+        },
+        {
+          "clientId": "8189764a-6820-4610-83cf-3d2b689accb0",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "After",
+              "text": "After"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 871.2
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 883.5
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1187.6
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1193.6
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "01d64c90-fa27-46ff-a5d5-84d4e8e5c789",
+      "name": "core/template-part",
+      "isValid": true,
+      "attributes": {
+        "slug": "recorder-part",
+        "theme": "emptytheme"
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "8189764a-6820-4610-83cf-3d2b689accb0",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "After",
+          "text": "After"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 65,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "01d64c90-fa27-46ff-a5d5-84d4e8e5c789"
+          },
+          "selectionEnd": {
+            "clientId": "01d64c90-fa27-46ff-a5d5-84d4e8e5c789"
+          },
+          "initialPosition": 0
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1785.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 65,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8"
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 2183.8
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 65,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2224.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 65,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 7,
+      "time": 2417.2
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "wp_template_part",
+      "recordId": "emptytheme//recorder-part",
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Part text",
+              "text": "Part text"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Part text ",
+              "text": "Part text "
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text ",
+              "text": "Part text "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2647.2
+    },
+    {
+      "call": "stopCapturing",
+      "index": 9,
+      "time": 2647.3
+    },
+    {
+      "call": "clearRedo",
+      "index": 10,
+      "time": 2647.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "wp_template_part",
+      "recordId": "emptytheme//recorder-part",
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Part text ",
+              "text": "Part text "
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Part text e",
+              "text": "Part text e"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text ",
+              "text": "Part text "
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text e",
+              "text": "Part text e"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 11,
+      "time": 2701.5
+    },
+    {
+      "call": "stopCapturing",
+      "index": 12,
+      "time": 2701.6
+    },
+    {
+      "call": "clearRedo",
+      "index": 13,
+      "time": 2701.6
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "wp_template_part",
+      "recordId": "emptytheme//recorder-part",
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Part text e",
+              "text": "Part text e"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Part text ed",
+              "text": "Part text ed"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 12
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text e",
+              "text": "Part text e"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text ed",
+              "text": "Part text ed"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 14,
+      "time": 2752.1
+    },
+    {
+      "call": "stopCapturing",
+      "index": 15,
+      "time": 2752.1
+    },
+    {
+      "call": "clearRedo",
+      "index": 16,
+      "time": 2752.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "wp_template_part",
+      "recordId": "emptytheme//recorder-part",
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Part text ed",
+              "text": "Part text ed"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Part text edi",
+              "text": "Part text edi"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 13
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text ed",
+              "text": "Part text ed"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text edi",
+              "text": "Part text edi"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 17,
+      "time": 2801.3
+    },
+    {
+      "call": "stopCapturing",
+      "index": 18,
+      "time": 2801.3
+    },
+    {
+      "call": "clearRedo",
+      "index": 19,
+      "time": 2801.3
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "wp_template_part",
+      "recordId": "emptytheme//recorder-part",
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Part text edi",
+              "text": "Part text edi"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Part text edit",
+              "text": "Part text edit"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "selectionEnd": {
+            "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+            "attributeKey": "content",
+            "offset": 14
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text edi",
+              "text": "Part text edi"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1b729f18-fe32-47c2-a05c-77bfa31df2c8",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Part text edit",
+              "text": "Part text edit"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 20,
+      "time": 2851.2
+    },
+    {
+      "call": "stopCapturing",
+      "index": 21,
+      "time": 2851.2
+    },
+    {
+      "call": "clearRedo",
+      "index": 22,
+      "time": 2851.2
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "01d64c90-fa27-46ff-a5d5-84d4e8e5c789",
+      "name": "core/template-part",
+      "isValid": true,
+      "attributes": {
+        "slug": "recorder-part",
+        "theme": "emptytheme"
+      },
+      "innerBlocks": []
+    },
+    {
+      "clientId": "8189764a-6820-4610-83cf-3d2b689accb0",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "After",
+          "text": "After"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:template-part {\"slug\":\"recorder-part\",\"theme\":\"emptytheme\"} /-->\n\n<!-- wp:paragraph -->\n<p>After</p>\n<!-- /wp:paragraph -->"
+}

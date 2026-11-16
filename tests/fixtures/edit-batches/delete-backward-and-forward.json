@@ -1,0 +1,569 @@
+{
+  "scenario": "delete-backward-and-forward",
+  "description": "In \"Hello world\", press Backspace twice at the end, then Delete twice at the start.",
+  "gutenbergCommit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "initialContent": "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->",
+  "notes": {},
+  "clientIdsFromLoad": [
+    "1acffcc0-09fe-450b-9c93-927bd8718952"
+  ],
+  "clientIdsInEditorAtStart": [
+    "1acffcc0-09fe-450b-9c93-927bd8718952"
+  ],
+  "clientIdsStableFromLoad": true,
+  "startupEvents": [
+    {
+      "call": "load",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "recordFields": [
+        "_links",
+        "author",
+        "blocks",
+        "categories",
+        "class_list",
+        "comment_status",
+        "content",
+        "date",
+        "date_gmt",
+        "excerpt",
+        "featured_media",
+        "format",
+        "generated_slug",
+        "guid",
+        "id",
+        "link",
+        "meta",
+        "modified",
+        "modified_gmt",
+        "password",
+        "permalink_template",
+        "ping_status",
+        "slug",
+        "status",
+        "sticky",
+        "tags",
+        "template",
+        "title",
+        "type"
+      ],
+      "hasBlocks": true,
+      "blockTypesRegistered": 116,
+      "tree": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 0,
+      "time": 845.4
+    },
+    {
+      "call": "load",
+      "kind": "root",
+      "name": "globalStyles",
+      "recordId": 6,
+      "recordFields": [
+        "_links",
+        "id",
+        "settings",
+        "styles",
+        "title"
+      ],
+      "hasBlocks": false,
+      "blockTypesRegistered": 116,
+      "tree": null,
+      "index": 1,
+      "time": 857.4
+    },
+    {
+      "call": "loadCollection",
+      "kind": "root",
+      "name": "comment",
+      "index": 2,
+      "time": 1142.3
+    },
+    {
+      "call": "loadCollection",
+      "kind": "postType",
+      "name": "wp_template",
+      "index": 3,
+      "time": 1149.1
+    }
+  ],
+  "editorTreeAtStart": [
+    {
+      "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "Hello world",
+          "text": "Hello world"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "events": [
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952"
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952"
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 4,
+      "time": 1728.7
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 5,
+      "time": 1854.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 11
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "last-seen",
+      "treeAfter": null,
+      "index": 6,
+      "time": 2061.1
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello worl",
+              "text": "Hello worl"
+            }
+          }
+        ],
+        "options": {
+          "isCached": false,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 10
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello world",
+              "text": "Hello world"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "last-seen",
+      "treeAfter": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello worl",
+              "text": "Hello worl"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 7,
+      "time": 2285.9,
+      "openedUndoLevel": true
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello worl",
+              "text": "Hello worl"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "Hello wor",
+              "text": "Hello wor"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 9
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello worl",
+              "text": "Hello worl"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello wor",
+              "text": "Hello wor"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 8,
+      "time": 2569.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [],
+        "options": {
+          "isCached": false,
+          "undoIgnore": true
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": null,
+      "treeBeforeSource": "core-data",
+      "treeAfter": null,
+      "index": 9,
+      "time": 3040
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "Hello wor",
+              "text": "Hello wor"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "ello wor",
+              "text": "ello wor"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "Hello wor",
+              "text": "Hello wor"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "ello wor",
+              "text": "ello wor"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 10,
+      "time": 3266.4
+    },
+    {
+      "call": "applyEditBatch",
+      "kind": "postType",
+      "name": "post",
+      "recordId": 27,
+      "batch": {
+        "operations": [
+          {
+            "type": "set-attribute",
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attribute": "content",
+            "previousValue": {
+              "__type": "RichTextData",
+              "html": "ello wor",
+              "text": "ello wor"
+            },
+            "value": {
+              "__type": "RichTextData",
+              "html": "llo wor",
+              "text": "llo wor"
+            }
+          }
+        ],
+        "options": {
+          "isCached": true,
+          "undoIgnore": false
+        },
+        "selection": {
+          "selectionStart": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "selectionEnd": {
+            "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+            "attributeKey": "content",
+            "offset": 0
+          },
+          "initialPosition": null
+        }
+      },
+      "treeBefore": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "ello wor",
+              "text": "ello wor"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "treeBeforeSource": "core-data",
+      "treeAfter": [
+        {
+          "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+          "name": "core/paragraph",
+          "isValid": true,
+          "attributes": {
+            "content": {
+              "__type": "RichTextData",
+              "html": "llo wor",
+              "text": "llo wor"
+            },
+            "dropCap": false
+          },
+          "innerBlocks": []
+        }
+      ],
+      "index": 11,
+      "time": 3545.1
+    }
+  ],
+  "editorTreeAtEnd": [
+    {
+      "clientId": "1acffcc0-09fe-450b-9c93-927bd8718952",
+      "name": "core/paragraph",
+      "isValid": true,
+      "attributes": {
+        "content": {
+          "__type": "RichTextData",
+          "html": "llo wor",
+          "text": "llo wor"
+        },
+        "dropCap": false
+      },
+      "innerBlocks": []
+    }
+  ],
+  "editedContentAtEnd": "<!-- wp:paragraph -->\n<p>llo wor</p>\n<!-- /wp:paragraph -->"
+}
