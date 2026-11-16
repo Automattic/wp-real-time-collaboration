@@ -3,7 +3,7 @@
   "branch": "try/sync-engines",
   "commit": "ee3554096494d12fe7ce1d1722f610250bbd237b",
   "trunk": "0d3eefe596560204e99bb1047df65e2e666a9ad1",
-  "tree": "2cf1ab2f3ea393192dcdccb8c9972b48092b17fe",
+  "tree": "38416624dd200ed757aa156bd3e6b074b0750e76",
   "source": {
     "repository": "https://github.com/WordPress/gutenberg-sync-engines",
     "commit": "9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5"
@@ -14,6 +14,15 @@
     "packages/editor/CHANGELOG.md",
     "packages/editor/src/private-apis.js",
     "packages/editor/src/components/post-revisions-preview/revisions-canvas.jsx",
-    "packages/editor/src/components/post-revisions-preview/block-diff-view.jsx"
+    "packages/editor/src/components/post-revisions-preview/block-diff-view.jsx",
+    "lib/experimental/collaboration/collaboration.php",
+    "lib/experimental/collaboration/class-wp-sync-config.php (deleted)",
+    "lib/experimental/collaboration/class-wp-sync-engine-registry.php (deleted)",
+    "lib/experimental/collaboration/class-wp-sync-post-meta-storage.php (deleted)",
+    "lib/experimental/collaboration/class-wp-sync-save-server.php (deleted)",
+    "lib/experimental/collaboration/interface-wp-sync-engine.php (deleted)",
+    "lib/experimental/collaboration/interface-wp-sync-storage.php (deleted)",
+    "lib/experimental/collaboration/transports/class-wp-sync-transport-registry.php (deleted)",
+    "lib/experimental/collaboration/transports/interface-wp-sync-transport.php (deleted)"
   ]
 }

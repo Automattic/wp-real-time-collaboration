@@ -1,7 +1,7 @@
 <?php
 /**
  * Tests that prove server-side defects of the intent-log engine which
- * nobody has fixed yet (plan-rewrite-intent-log.md, Phase 0 step 3).
+ * nobody has fixed yet.
  *
  * Every test states the CORRECT behavior and wraps it in
  * assert_known_defect(). The test passes while the defect is there and
@@ -21,6 +21,14 @@
  */
 class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	use Known_Defect_Assertions;
+
+	/**
+	 * The change that is expected to fix every defect in this file. It is
+	 * named in the failure message of a test whose defect is gone.
+	 *
+	 * @var string
+	 */
+	const FIX = "the rework of the server's commit path";
 
 	const POST_CONTENT = "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->";
 
@@ -290,7 +298,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 */
 	private function daemon(): WP_WebSocket_Sync_Server {
 		return new WP_WebSocket_Sync_Server(
-			new WP_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
+			new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
 		);
 	}
 
@@ -417,7 +425,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * @return array|WP_Error The room's answer.
 	 */
 	private static function polling_request( array $room_request ) {
-		$server = new WP_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
+		$server = new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
 
 		return $server->process_room_request(
 			array_merge(
@@ -478,7 +486,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * that old copy, so a clash with the other process's edit is missed
 	 * and the edit is applied over it with nobody told.
 	 *
-	 * Plan item 9, first case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_daemon_combines_an_edit_with_what_another_process_wrote_since_its_first_read() {
 		list( $daemon, $tab, $room, $block ) = $this->daemon_room_another_process_wrote_to();
@@ -496,7 +504,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer ) {
 				$this->assertSame(
 					array(
@@ -516,7 +524,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * a position past the end of the old copy, so it is refused as
 	 * `invalid-payload` although it is a normal edit.
 	 *
-	 * Plan item 9, first case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_daemon_accepts_an_edit_based_on_what_another_process_wrote_since_its_first_read() {
 		list( $daemon, $tab, $room, $block ) = $this->daemon_room_another_process_wrote_to();
@@ -534,7 +542,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer ) {
 				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'ws-1' ) );
 			}
@@ -547,7 +555,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * (the daemon's, for example, when the tab tries again) is combined
 	 * against that copy and misses what another process wrote meanwhile.
 	 *
-	 * Plan item 9, second case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_commit_after_a_failed_commit_sees_what_another_process_wrote() {
 		list( , $room, $block ) = $this->make_room();
@@ -570,7 +578,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$answer = self::commit( $long_lived, $room, 101, array( self::align_edit( 'a-1', $block, 'full' ) ) );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer ) {
 				$this->assertSame(
 					array(
@@ -590,7 +598,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * that another request stores between the two steps is not seen, so
 	 * the script's change replaces it with nobody told.
 	 *
-	 * Plan item 9, third case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_script_save_sees_an_edit_that_arrives_between_its_read_and_its_commit() {
 		list( $post_id, $room, $block ) = $this->make_room();
@@ -637,7 +645,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$this->assertSame( array( 'session-1' ), array_slice( self::stored_edit_ids( $room ), 0, 1 ), 'The other edit was stored first.' );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $post_id ) {
 				$statuses = array_column( (array) WP_Intent_Log_Base_Seq_Preflight::last_dispositions(), 'status' );
 				$this->assertContains( 'escalated', $statuses, 'The clash is set aside for a person to decide.' );
@@ -657,7 +665,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * answer: no first document is built, because the engine thinks the
 	 * room is already loaded.
 	 *
-	 * Plan item 9, the inferred case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_daemon_gives_a_first_document_to_the_tab_that_opens_a_post_after_the_last_tab_left() {
 		list( , $room ) = $this->make_post();
@@ -695,7 +703,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $second ) {
 				$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
 				$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
@@ -713,7 +721,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * nothing. This happens even when the tab that left had typed, which
 	 * emptied the engine's own copy.
 	 *
-	 * Plan item 9, the inferred case. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_daemon_gives_a_first_document_after_another_process_reset_the_room() {
 		list( , $room, $block ) = $this->make_post();
@@ -763,7 +771,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $second ) {
 				$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
 				$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
@@ -817,7 +825,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * position just before the snapshot, is refused as `stale-base`,
 	 * although the rows needed to combine it are still stored.
 	 *
-	 * Plan item 10. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_edit_in_flight_across_a_snapshot_is_combined() {
 		list( , $room, $block ) = $this->make_room();
@@ -828,7 +836,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$answer = self::commit( self::engine(), $room, 202, array( self::text_edit( 'late-1', $block, 13, '!', 2 ) ) );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer ) {
 				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'late-1' ) );
 			}
@@ -841,7 +849,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * sent again (its answer was lost, say) gets `stale-base` instead of
 	 * its first verdict, `applied`.
 	 *
-	 * Plan item 10. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_applied_edit_sent_again_after_a_snapshot_gets_its_first_verdict() {
 		list( , $room, $block ) = $this->make_room();
@@ -850,7 +858,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$answer = self::commit( self::engine(), $room, 101, array( $third ) );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer ) {
 				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'typed-2' ) );
 			}
@@ -870,7 +878,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * Defect: a row whose edit id cannot be read is dropped without any
 	 * answer, so the sender never learns it was refused.
 	 *
-	 * Plan, "What is good and stays", first gap. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_row_with_no_usable_edit_id_gets_an_answer() {
 		list( , $room, $block ) = $this->make_room();
@@ -900,7 +908,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'good-1' ) );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer, $updates ) {
 				$this->assertCount( count( $updates ), $answer['dispositions'], 'Every row sent gets a verdict.' );
 			}
@@ -945,7 +953,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * tab may not send, fails the whole request with a 400. A good edit
 	 * sent in the same request is not stored.
 	 *
-	 * Plan, "What is good and stays", second gap. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 *
 	 * @dataProvider data_bad_rows_beside_a_good_edit
 	 *
@@ -962,7 +970,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer, $room ) {
 				$this->assertNotWPError( $answer, 'The request as a whole is answered.' );
 				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'good-1' ) );
@@ -977,7 +985,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * refused first, because its base is past the end of the history,
 	 * and applied on the repeat, once the history has grown.
 	 *
-	 * Plan, "What is good and stays", third gap. Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_refused_edit_sent_again_gets_the_same_verdict() {
 		list( , $room, $block ) = $this->make_room();
@@ -999,7 +1007,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$again = self::commit( self::engine(), $room, 101, array( $row ) );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $first, $again ) {
 				$this->assertSame( self::verdict( $first, 'early-1' ), self::verdict( $again, 'early-1' ) );
 			}
@@ -1015,7 +1023,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * checked. Here the block's text is a number, and the edit is applied
 	 * and stored as sent.
 	 *
-	 * Plan, "The server", "Check inserted blocks fully". Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_inserted_block_with_text_of_the_wrong_type_is_refused() {
 		list( , $room, $block ) = $this->make_room();
@@ -1034,7 +1042,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer, $room ) {
 				$this->assertSame(
 					array(
@@ -1053,13 +1061,13 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * the engine raise a TypeError while it combines the edit. Nothing in
 	 * the daemon catches it.
 	 *
-	 * Plan, "The server", "Check inserted blocks fully". Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_inserted_block_with_formats_of_the_wrong_type_is_refused_without_an_error() {
 		list( , $room, $block ) = $this->make_room();
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $room, $block ) {
 				$answer = self::commit(
 					self::engine(),
@@ -1098,7 +1106,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * content: materialize() raises an Error on every call, which breaks
 	 * every later script save of that post.
 	 *
-	 * Plan, "The server", "Check inserted blocks fully". Fixed in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_inserted_block_with_attributes_of_the_wrong_type_does_not_break_the_room() {
 		list( , $room, $block ) = $this->make_room();
@@ -1112,7 +1120,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$this->assertNotWPError( $answer );
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $room ) {
 				$this->assertStringContainsString( 'Hello world', (string) self::engine()->materialize( $room ) );
 			},
@@ -1135,8 +1143,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	 * the block") and the editor's own text ("Only someone allowed to
 	 * publish unfiltered HTML can approve this.").
 	 *
-	 * Plan, "The server", "Check a review decision on the server". Fixed
-	 * in Phase 4.
+	 * To be fixed by the rework of the server's commit path.
 	 */
 	public function test_held_markup_is_not_approved_by_a_user_who_may_not_publish_it() {
 		list( , $room, $block ) = $this->make_room();
@@ -1212,7 +1219,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		);
 
 		$this->assert_known_defect(
-			'Phase 4',
+			self::FIX,
 			function () use ( $answer, $room ) {
 				$this->assertSame(
 					array(),

@@ -27,8 +27,8 @@ if ( ! trait_exists( 'Known_Defect_Assertions' ) ) {
 		/**
 		 * Runs assertions that describe correct behavior for a known defect.
 		 *
-		 * @param string   $fixed_in   The plan phase that fixes the defect,
-		 *                             for example 'Phase 4'.
+		 * @param string   $fixed_by   The change expected to fix the defect,
+		 *                             in a few plain words.
 		 * @param callable $assertions Assertions that state the correct
 		 *                             behavior. Keep the test's setup and
 		 *                             its sanity checks outside of this.
@@ -36,7 +36,7 @@ if ( ! trait_exists( 'Known_Defect_Assertions' ) ) {
 		 *                             this class, raised by the code under
 		 *                             test, also counts as the defect.
 		 */
-		protected function assert_known_defect( string $fixed_in, callable $assertions, string $throwable = '' ): void {
+		protected function assert_known_defect( string $fixed_by, callable $assertions, string $throwable = '' ): void {
 			if ( getenv( 'RTC_KNOWN_DEFECTS_RAW' ) ) {
 				$assertions();
 				return;
@@ -61,7 +61,7 @@ if ( ! trait_exists( 'Known_Defect_Assertions' ) ) {
 
 			$this->assertTrue(
 				$still_present,
-				"This defect looks fixed. Remove the known-defect marker. (Fixed in {$fixed_in})"
+				"This defect looks fixed. Remove the known-defect marker. (It was expected to be fixed by {$fixed_by}.)"
 			);
 		}
 	}

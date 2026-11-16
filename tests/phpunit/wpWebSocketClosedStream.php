@@ -30,7 +30,7 @@ class Tests_Collaboration_WpWebSocketClosedStream extends WP_UnitTestCase {
 		parent::set_up();
 
 		$this->server = new WP_WebSocket_Sync_Server(
-			new WP_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
+			new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
 		);
 
 		// A real listener on a free port, so a loop pass has one to watch.

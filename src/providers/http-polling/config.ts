@@ -34,11 +34,11 @@ export const MAX_UPDATE_SIZE_IN_BYTES =
 	Math.floor( MAX_ENCODED_UPDATE_SIZE_IN_BYTES / 4 ) * 3;
 
 // Corresponds with server-side
-// WP_HTTP_Polling_Sync_Server::MAX_ROOMS_PER_REQUEST.
+// WP_RTC_HTTP_Polling_Sync_Server::MAX_ROOMS_PER_REQUEST.
 export const MAX_ROOMS_PER_REQUEST = 50;
 
 // Corresponds with server-side
-// WP_HTTP_Polling_Sync_Server::MAX_BODY_SIZE, with 1 MiB of headroom for
+// WP_RTC_HTTP_Polling_Sync_Server::MAX_BODY_SIZE, with 1 MiB of headroom for
 // serialization details and future metadata.
 export const MAX_SYNC_REQUEST_BODY_SIZE_IN_BYTES = 15 * 1024 * 1024;
 

@@ -18,7 +18,8 @@ connection (`sync.pollingProvider.maxClientsPerRoom`). The websocket
 transport falls back to polling when its connection fails, and comes
 back when it can. Every setting is explained on the Settings → Collaboration screen
 itself. The options are plain WordPress options, so WP-CLI and the REST
-settings endpoint can set them: the engine is `wp_sync_engine`, the
+settings endpoint can set them: the on/off switch is `wp_rtc_enabled`,
+the engine is `wp_sync_engine`, the
 transport `gutenberg_sync_engines_transport`, the advisory channel
 `gutenberg_sync_engines_advisory_channel`, and the rest start with
 `gutenberg_sync_engines_`. `WP_COLLABORATION_TRANSPORT` (constant or

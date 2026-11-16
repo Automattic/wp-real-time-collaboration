@@ -164,7 +164,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		 * tests; defaults to the plugin's).
 		 *
 		 * @since 0.0.1
-		 * @var WP_Sync_Storage|null
+		 * @var WP_RTC_Storage|null
 		 */
 		private $storage;
 
@@ -181,9 +181,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		 *
 		 * @since 0.0.1
 		 *
-		 * @param WP_Sync_Storage|null $storage Sync storage, or null for the plugin's.
+		 * @param WP_RTC_Storage|null $storage Sync storage, or null for the plugin's.
 		 */
-		public function __construct( ?WP_Sync_Storage $storage = null ) {
+		public function __construct( ?WP_RTC_Storage $storage = null ) {
 			$this->storage = $storage;
 		}
 
@@ -547,7 +547,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 					'cursor' => 0,
 				);
 			}
-			$meta_key = class_exists( 'WP_Sync_Post_Meta_Storage' ) ? WP_Sync_Post_Meta_Storage::SYNC_UPDATE_META_KEY : 'wp_sync_update_data';
+			$meta_key = class_exists( 'WP_RTC_Post_Meta_Storage' ) ? WP_RTC_Post_Meta_Storage::SYNC_UPDATE_META_KEY : 'wp_sync_update_data';
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- One indexed MAX(); the storage API's cursor is a per-request cache filled only by a read.
 			$cursor = (int) $wpdb->get_var(
 				$wpdb->prepare(
@@ -576,7 +576,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		private function storage_post_id( string $room ): ?int {
 			global $wpdb;
 
-			$post_type = class_exists( 'WP_Sync_Post_Meta_Storage' ) ? WP_Sync_Post_Meta_Storage::POST_TYPE : 'wp_sync_storage';
+			$post_type = class_exists( 'WP_RTC_Post_Meta_Storage' ) ? WP_RTC_Post_Meta_Storage::POST_TYPE : 'wp_sync_storage';
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery -- Non-creating existence check; see docblock.
 			$storage_post_id = $wpdb->get_var(
 				$wpdb->prepare(
@@ -802,9 +802,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		 *
 		 * @since 0.0.1
 		 *
-		 * @return WP_Sync_Storage|null
+		 * @return WP_RTC_Storage|null
 		 */
-		private function storage(): ?WP_Sync_Storage {
+		private function storage(): ?WP_RTC_Storage {
 			if ( null === $this->storage && function_exists( 'gutenberg_sync_engines_storage' ) ) {
 				$this->storage = gutenberg_sync_engines_storage();
 			}
@@ -840,14 +840,14 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		 * @return bool Allowed state.
 		 */
 		private function can_probe_room( string $room ): bool {
-			if ( ! class_exists( 'WP_Sync_Config' ) ) {
+			if ( ! class_exists( 'WP_RTC_Config' ) ) {
 				return false;
 			}
-			$parsed = WP_Sync_Config::parse_room( $room );
+			$parsed = WP_RTC_Config::parse_room( $room );
 			if ( null === $parsed || 'postType' !== $parsed['entity_kind'] || empty( $parsed['object_id'] ) ) {
 				return false;
 			}
-			return WP_Sync_Config::can_user_sync_entity_type( $parsed['entity_kind'], $parsed['entity_name'], $parsed['object_id'] );
+			return WP_RTC_Config::can_user_sync_entity_type( $parsed['entity_kind'], $parsed['entity_name'], $parsed['object_id'] );
 		}
 
 		/**

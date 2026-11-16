@@ -83,7 +83,7 @@ function gse_presence_row( $room, $client_id ) {
 gse_presence_check( WP_Sync_Presence_API_Awareness_Backend::is_available(), 'the backend reports itself available' );
 gse_presence_check( WP_Sync_Awareness::has_substitute_backend(), 'the seam picked the Presence API backend' );
 
-$gse_awareness = new WP_Sync_Awareness( wp_get_sync_storage() );
+$gse_awareness = new WP_Sync_Awareness( wp_rtc_get_storage() );
 
 // A write lands in the real table and comes back out of it unchanged.
 $gse_entries = $gse_awareness->put( $gse_room, 7, $gse_state, $gse_user_id, 30 );
@@ -91,7 +91,7 @@ gse_presence_check( array( 7 ) === array_column( $gse_entries, 'client_id' ), 'a
 gse_presence_check( $gse_state === $gse_entries[0]['state'], 'state round trips', wp_json_encode( $gse_entries[0]['state'] ) );
 gse_presence_check( $gse_user_id === $gse_entries[0]['wp_user_id'], 'the user id round trips' );
 gse_presence_check( null !== gse_presence_row( $gse_room, 'gse-7' ), 'the row is in wp_presence' );
-gse_presence_check( array() === wp_get_sync_storage()->get_awareness_state( $gse_room ), 'the room array stayed empty' );
+gse_presence_check( array() === wp_rtc_get_storage()->get_awareness_state( $gse_room ), 'the room array stayed empty' );
 
 // One client's write leaves another's row alone.
 $gse_entries = $gse_awareness->put( $gse_room, 9, array( 'name' => 'Grace' ), $gse_user_id, 30 );

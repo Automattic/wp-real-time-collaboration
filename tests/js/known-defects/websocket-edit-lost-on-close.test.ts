@@ -35,8 +35,7 @@ import {
 import { createDocument } from '../../../src/engines/intent-log/document.js';
 
 /*
- * Known defect, plan section "State in the browser" (the paragraph that
- * starts "One defect the single queue fixes by design").
+ * Known defect.
  *
  * An open WebSocket has no queue. An edit is written to the socket once
  * (sendUpdate in src/providers/websocket/websocket-manager.ts). If the
@@ -169,7 +168,7 @@ describe( 'known defect: an edit sent on a WebSocket that dies before the server
 	} );
 
 	it.failing(
-		'sends an unanswered edit again after the socket closes (known defect, fixed in Phase 5)',
+		'sends an unanswered edit again after the socket closes (known defect, to be fixed by keeping unsent edits in one place)',
 		async () => {
 			const session = createIntentLogSession( {
 				userId: 1,

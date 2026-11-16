@@ -91,6 +91,7 @@ const ROOT_FILE_PATTERN =
 const NAME_PATTERNS = [
 	/^gutenberg_sync_engines_[a-z0-9_]+$/,
 	/^wp_sync_[a-z0-9_]+$/,
+	/^wp_rtc_[a-z0-9_]+$/,
 	/^WP_SYNC_[A-Z0-9_]+$/,
 	/^WP_[A-Z][A-Za-z0-9_]+$/,
 	/^Gutenberg_Sync_Engines_[A-Za-z0-9_]+$/,

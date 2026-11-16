@@ -96,6 +96,9 @@
 				<element value="WP_HTTP_Long_Polling"/>
 				<element value="WP_WebSocket"/>
 				<element value="WP_Sync"/>
+				<!-- Names the plugin as a whole owns. -->
+				<element value="WP_RTC"/>
+				<element value="wp_rtc"/>
 			</property>
 		</properties>
 	</rule>

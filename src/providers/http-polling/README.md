@@ -17,7 +17,7 @@ What it does, and why, is documented once:
 
 ## Files
 
-- Server: `includes/transports/class-wp-http-polling-sync-server.php`
+- Server: `includes/transports/class-wp-rtc-http-polling-sync-server.php`
   registers the route, checks limits and permissions, and passes each
   post's data to the active engine.
 - Client: `http-polling-provider.ts` (per-room provider lifecycle),

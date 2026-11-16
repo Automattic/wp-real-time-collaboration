@@ -2,7 +2,7 @@
 /**
  * WP_Sync_Transport interface
  *
- * @package gutenberg
+ * @package GutenbergSyncEngines
  */
 
 if ( ! interface_exists( 'WP_Sync_Transport' ) ) {
@@ -17,7 +17,7 @@ if ( ! interface_exists( 'WP_Sync_Transport' ) ) {
 	 *
 	 * Each transport lives in its own sibling class under `transports/` and is
 	 * registered by slug in WP_Sync_Transport_Registry. A single site config
-	 * value (see `wp_get_collaboration_transport()`) selects the ACTIVE
+	 * value (see `wp_rtc_get_transport_slug()`) selects the ACTIVE
 	 * transport; the client negotiates against the announced list.
 	 *
 	 * @since 7.2.0

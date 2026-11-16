@@ -92,8 +92,8 @@ jobs:
       - uses: actions/checkout@v4
 
       # PHPUnit needs the Gutenberg build too: an unbuilt gutenberg.php
-      # skips its lib/, and the bootstrap dies with "Interface
-      # WP_Sync_Engine not found".
+      # skips its lib/, which holds the collaboration on/off switch, so
+      # every collaboration test would find collaboration off.
       - name: Set up dependencies and the Gutenberg build
         uses: ./.github/actions/setup
 

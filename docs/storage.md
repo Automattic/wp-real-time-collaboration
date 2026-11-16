@@ -8,9 +8,13 @@ other data otherwise.
 ## The two tables
 
 `WP_Sync_Table_Storage` (`includes/storage/class-wp-sync-table-storage.php`)
-replaces the framework's post-meta default through the
-`__unstable_wp_sync_storage` filter and is the only code that touches
-the tables. `WP_Sync_Table_Schema` creates, upgrades and drops them.
+is the default storage and the only code that touches the tables.
+`WP_Sync_Table_Schema` creates, upgrades and drops them. Everything in
+the plugin gets its storage from `wp_rtc_get_storage()`
+(`includes/server/functions.php`). A site that could not create the
+tables falls back to `WP_RTC_Post_Meta_Storage`, which keeps rows as
+post meta. The `wp_rtc_storage` filter lets a site substitute another
+backend that implements `WP_RTC_Storage`.
 
 **`{prefix}sync_updates`**, the update log: `id`, `room`, `data` (the
 encoded `{ type, data }` update), `created_gmt`, indexed on

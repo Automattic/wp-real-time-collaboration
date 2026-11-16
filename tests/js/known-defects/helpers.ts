@@ -20,7 +20,7 @@ import type {
 /*
  * Shared helpers for the known-defect tests. Each test in this folder
  * states the correct behavior and is marked with it.failing, so it passes
- * today only because the defect is still there. When a phase fixes a
+ * today only because the defect is still there. When a change fixes a
  * defect, change its it.failing to it.
  */
 

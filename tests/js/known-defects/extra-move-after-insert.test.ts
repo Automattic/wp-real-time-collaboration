@@ -20,7 +20,7 @@ import {
 } from './helpers';
 
 /*
- * Known defect, plan item 3 under "What is fragile today".
+ * Known defect.
  *
  * The engine records each block's place as "the block before me". When a
  * new block goes in front of block X, the block before X changes, so the
@@ -32,7 +32,7 @@ import {
 
 describe( 'known defect: the extra move after an insert', () => {
 	it.failing(
-		'captures a new block as one insert and no move (known defect, fixed in Phase 3)',
+		'captures a new block as one insert and no move (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		() => {
 			const doc = documentFromBlocks( [
 				paragraph( 'w', 'W' ),
@@ -55,7 +55,7 @@ describe( 'known defect: the extra move after an insert', () => {
 	// X at the same time. Each of them expects X to stay below the new
 	// block. The extra moves put X between the two new blocks.
 	it.failing(
-		'keeps the next block after both new blocks when two people insert at the same spot (known defect, fixed in Phase 3)',
+		'keeps the next block after both new blocks when two people insert at the same spot (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		() => {
 			const doc = documentFromBlocks( [
 				paragraph( 'w', 'W' ),

@@ -14,7 +14,6 @@ them meaning. The intent-log vocabulary itself is in
 | --- | --- |
 | `POST /wp-sync/v1/updates` | Polling: one request carries every open room. |
 | `POST /wp-sync/v1/ws-token` | Mints the daemon credential: a one-time token, or a signed access token when a secret is configured. Answer `{ token, expires_in }`. |
-| `POST /wp-sync/v1/save` | The bundled framework's own route for saving a CRDT document copy with a post. |
 | `POST /gutenberg-sync-engines/v1/advisory/leave` | The leave beacon a tab sends on `pagehide`, so its presence goes at once. |
 | `rtc-test/v1/*` | The per-request benchmark log, dev-only (`GUTENBERG_SYNC_ENGINES_DIAGNOSTICS`). |
 
@@ -93,7 +92,7 @@ people's edits.
 ## Who may do what
 
 Every route needs a logged-in user with `edit_posts`, and for each room
-the framework checks that the user may edit that entity (403 and the
+the plugin checks that the user may edit that entity (403 and the
 list of refused rooms otherwise). A tab's `client_id` and presence token
 are bound to the user who first used them. The engine checks each
 edit on the server before anyone else sees it. Markup the author may
@@ -117,7 +116,7 @@ cause extra polls or show false presence.
 An engine is two pieces, registered through one filter on each side:
 
 - A PHP class implementing `WP_Sync_Engine`
-  (`gutenberg/lib/experimental/collaboration/interface-wp-sync-engine.php`):
+  (`includes/server/interface-wp-sync-engine.php`):
   `get_slug`, `get_protocol_version`, `get_update_types`,
   `handle_updates`, `get_updates_since`. Register it on the
   `wp_sync_engines` filter.

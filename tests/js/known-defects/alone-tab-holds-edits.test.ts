@@ -33,8 +33,7 @@ import {
 import { createDocument } from '../../../src/engines/intent-log/document.js';
 
 /*
- * Known defect, plan section "Reference", the list "Further defects"
- * ("A tab editing alone holds its edits...").
+ * Known defect.
  *
  * On a post's editor screen the polling manager keeps the edits of a tab
  * that is alone in its own queue. It sends them only when another person
@@ -124,7 +123,7 @@ describe( 'known defect: a tab editing alone holds its edits', () => {
 	} );
 
 	it.failing(
-		'sends the edits of a tab that is alone within a normal poll interval (known defect, fixed in Phase 5)',
+		'sends the edits of a tab that is alone within a normal poll interval (known defect, to be fixed by keeping unsent edits in one place)',
 		async () => {
 			expect( isSignalingAvailable() ).toBe( true );
 			expect( othersPresent() ).toBe( false );

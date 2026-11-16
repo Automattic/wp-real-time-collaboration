@@ -129,7 +129,7 @@ class Tests_Collaboration_WpSyncAwareness extends WP_UnitTestCase {
 		$this->use_test_backend();
 		$room = $this->room();
 
-		$server = new WP_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
+		$server = new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
 
 		$map = $server->update_awareness( $room, 7, array( 'name' => 'Ada' ) );
 		$this->assertSame( array( 7 => array( 'name' => 'Ada' ) ), $map );

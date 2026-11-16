@@ -2,7 +2,7 @@
 /**
  * WP_Sync_Engine_Registry class
  *
- * @package gutenberg
+ * @package GutenbergSyncEngines
  */
 
 if ( ! class_exists( 'WP_Sync_Engine_Registry' ) ) {
@@ -45,16 +45,15 @@ if ( ! class_exists( 'WP_Sync_Engine_Registry' ) ) {
 		 *
 		 * @since 7.2.0
 		 *
-		 * @param WP_Sync_Storage $storage Storage backend engines should use.
+		 * @param WP_RTC_Storage $storage Storage backend engines should use.
 		 */
-		public function __construct( WP_Sync_Storage $storage ) {
+		public function __construct( WP_RTC_Storage $storage ) {
 			/**
 			 * Filters the registered sync engines.
 			 *
-			 * The framework ships NO engines of its own: a plugin (e.g.
-			 * Gutenberg Sync Engines) supplies them here. With none registered
-			 * the registry is empty, so real-time collaboration finds no
-			 * engine to negotiate and degrades to the classic post lock.
+			 * The plugin registers its own engine here, and other code can
+			 * add more. With none registered the registry is empty, so
+			 * the editor finds no engine and falls back to the post lock.
 			 *
 			 * Return an array of WP_Sync_Engine instances. Keys are ignored;
 			 * engines are indexed by their slug.
@@ -62,7 +61,7 @@ if ( ! class_exists( 'WP_Sync_Engine_Registry' ) ) {
 			 * @since 7.2.0
 			 *
 			 * @param WP_Sync_Engine[] $engines Engines to register.
-			 * @param WP_Sync_Storage  $storage Storage backend engines should use.
+			 * @param WP_RTC_Storage  $storage Storage backend engines should use.
 			 */
 			$extra_engines = apply_filters( 'wp_sync_engines', array(), $storage );
 			if ( is_array( $extra_engines ) ) {

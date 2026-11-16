@@ -11,14 +11,14 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 	 * Plugin bootstrap: loads and registers the sync engines and transports
 	 * this plugin provides, and the admin settings screen for selecting them.
 	 *
-	 * The collaborative-editing FRAMEWORK — the WP_Sync_Engine /
-	 * WP_Sync_Transport / WP_Sync_Storage contracts, the two registries, room
-	 * config, storage, and the client @wordpress/sync package — lives in
-	 * Gutenberg (WordPress core). This plugin supplies the IMPLEMENTATIONS
-	 * that register through the framework's extension filters
-	 * (`wp_sync_engines`, `wp_sync_transports`). With this plugin inactive the
-	 * framework registers nothing, so real-time collaboration degrades to the
-	 * classic post lock — effectively disabled.
+	 * The plugin owns the whole server side: the WP_Sync_Engine,
+	 * WP_Sync_Transport and WP_RTC_Storage contracts, the two registries,
+	 * room names and permissions, the REST routes, and the settings printed
+	 * for the browser (all under `includes/server/`), plus the engine and
+	 * the transports that register through the `wp_sync_engines` and
+	 * `wp_sync_transports` filters. The editor packages still come from the
+	 * bundled Gutenberg, so beside any other Gutenberg the plugin stays
+	 * dormant.
 	 *
 	 * @since 0.1.0
 	 */
@@ -32,7 +32,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		private static ?Gutenberg_Sync_Engines_Plugin $instance = null;
 
 		/**
-		 * Whether the collaborative-editing framework is present.
+		 * Whether the Gutenberg that is running is the bundled copy, whose
+		 * editor packages the plugin's browser code needs.
 		 *
 		 * @since 0.1.0
 		 * @var bool
@@ -61,9 +62,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		private function __construct() {}
 
 		/**
-		 * Boots the plugin: feature-detects the framework, then loads and
-		 * registers implementations. A missing framework is not an error —
-		 * the plugin simply stays dormant and surfaces an admin notice.
+		 * Boots the plugin: checks that the bundled Gutenberg is the one
+		 * running, then loads and registers everything. Beside another
+		 * Gutenberg the plugin stays dormant and shows an admin notice.
 		 *
 		 * @since 0.1.0
 		 *
@@ -75,9 +76,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 			 * framework: a plugin update that ships a newer schema upgrades
 			 * here (activation hooks do not fire on updates), and the
 			 * lifecycle CLI (`wp collaboration storage …`) must work on a
-			 * site whose framework is missing. A site that cannot create
-			 * the tables keeps working on the framework's post-meta storage
-			 * (see filter_sync_storage()) and is told so.
+			 * site where the plugin is dormant. A site that cannot create
+			 * the tables keeps working on the fallback storage
+			 * (see wp_rtc_get_storage()) and is told so.
 			 */
 			if ( ! WP_Sync_Table_Schema::maybe_upgrade() ) {
 				add_action( 'admin_notices', array( $this, 'render_storage_unavailable_notice' ) );
@@ -86,11 +87,10 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 				require_once GUTENBERG_SYNC_ENGINES_PATH . 'includes/storage/class-wp-sync-table-storage-cli-command.php';
 			}
 
-			// The framework's engine and storage contracts are the canonical
-			// presence check.
-			$this->framework_available = interface_exists( 'WP_Sync_Engine' )
-				&& interface_exists( 'WP_Sync_Transport' )
-				&& interface_exists( 'WP_Sync_Storage' );
+			// The plugin's browser code registers through the editor
+			// packages of the bundled Gutenberg. Another Gutenberg does not
+			// have them, so do nothing there but say so.
+			$this->framework_available = gutenberg_sync_engines_bundled_gutenberg_is_loaded();
 
 			if ( ! $this->framework_available ) {
 				add_action( 'admin_notices', array( $this, 'render_missing_framework_notice' ) );
@@ -109,6 +109,18 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @return void
 		 */
 		private function load(): void {
+			// The server contracts and registries. Gutenberg used to
+			// provide these (the functions file is loaded by the plugin
+			// entry, ahead of activation).
+			$server = GUTENBERG_SYNC_ENGINES_PATH . 'includes/server/';
+			require_once $server . 'interface-wp-rtc-storage.php';
+			require_once $server . 'class-wp-rtc-post-meta-storage.php';
+			require_once $server . 'class-wp-rtc-config.php';
+			require_once $server . 'interface-wp-sync-engine.php';
+			require_once $server . 'class-wp-sync-engine-registry.php';
+			require_once $server . 'interface-wp-sync-transport.php';
+			require_once $server . 'class-wp-sync-transport-registry.php';
+
 			// Room storage over the plugin's own tables (the schema class is
 			// loaded by the plugin entry, ahead of activation).
 			require_once GUTENBERG_SYNC_ENGINES_PATH . 'includes/storage/class-wp-sync-table-storage.php';
@@ -140,7 +152,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 
 			$transports = GUTENBERG_SYNC_ENGINES_PATH . 'includes/transports/';
 			require_once $transports . 'class-wp-sync-connection.php';
-			require_once $transports . 'class-wp-http-polling-sync-server.php';
+			require_once $transports . 'class-wp-rtc-http-polling-sync-server.php';
 			require_once $transports . 'sse/class-wp-sync-sse-connection.php';
 			require_once $transports . 'websocket/class-wp-websocket-access-token.php';
 			require_once $transports . 'websocket/class-wp-websocket-token-controller.php';
@@ -181,15 +193,26 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		}
 
 		/**
-		 * Registers engines and transports through the framework's filters,
-		 * and wires the admin settings screen.
+		 * Registers the server hooks, the engine and the transports, and
+		 * wires the admin settings screen.
 		 *
 		 * @since 0.1.0
 		 *
 		 * @return void
 		 */
 		private function register(): void {
-			add_filter( '__unstable_wp_sync_storage', array( $this, 'filter_sync_storage' ) );
+			// The on/off switch. A Gutenberg with this filter follows the
+			// plugin's setting. The bundled one follows its experiment,
+			// which is kept in step whenever the setting is saved.
+			add_filter( 'wp_is_collaboration_enabled', 'wp_rtc_filter_collaboration_enabled' );
+			add_action( 'add_option_wp_rtc_enabled', 'wp_rtc_sync_collaboration_experiment' );
+			add_action( 'update_option_wp_rtc_enabled', 'wp_rtc_sync_collaboration_experiment' );
+
+			// What Gutenberg used to do for the server side.
+			add_action( 'init', 'wp_rtc_register_storage_post_type' );
+			add_action( 'rest_api_init', 'wp_rtc_register_rest_routes' );
+			add_action( 'admin_init', 'wp_rtc_print_client_settings' );
+
 			add_filter( 'wp_sync_awareness_backend', array( $this, 'filter_awareness_backend' ) );
 			add_filter( 'wp_sync_tab_list_backend', array( $this, 'filter_tab_list_backend' ) );
 			add_filter( 'wp_sync_engines', array( $this, 'register_engines' ), 10, 2 );
@@ -200,30 +223,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 			( new Gutenberg_Sync_Engines_Advisory_Presence() )->register();
 
 			( new Gutenberg_Sync_Engines_Settings() )->register();
-		}
-
-		/**
-		 * Substitutes the plugin's table storage for the framework's
-		 * post-meta default (`__unstable_wp_sync_storage`).
-		 *
-		 * Only the DEFAULT is replaced: a storage another plugin has
-		 * already substituted, at any priority, is respected. And only
-		 * when the tables are usable (the recorded schema version is
-		 * current — an autoloaded option, since this runs on every
-		 * `wp_get_sync_storage()` call): a site that could not create them
-		 * keeps collaborating on post meta rather than failing every
-		 * request, with an admin notice saying so.
-		 *
-		 * @since 0.0.1
-		 *
-		 * @param WP_Sync_Storage $storage The storage the framework built.
-		 * @return WP_Sync_Storage Storage to use.
-		 */
-		public function filter_sync_storage( $storage ) {
-			if ( $storage instanceof WP_Sync_Post_Meta_Storage && WP_Sync_Table_Schema::is_ready() ) {
-				return new WP_Sync_Table_Storage();
-			}
-			return $storage;
 		}
 
 		/**
@@ -264,10 +263,10 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @since 0.1.0
 		 *
 		 * @param WP_Sync_Engine[] $engines Engines to register.
-		 * @param WP_Sync_Storage  $storage Storage backend.
+		 * @param WP_RTC_Storage   $storage Storage backend.
 		 * @return WP_Sync_Engine[] Engines including this plugin's.
 		 */
-		public function register_engines( array $engines, WP_Sync_Storage $storage ): array {
+		public function register_engines( array $engines, WP_RTC_Storage $storage ): array {
 			// The framework's conventional default is intent-log
 			// (WP_Sync_Engine_Registry::DEFAULT_ENGINE), used when the
 			// wp_sync_engine option is unset. Registration order only
@@ -283,12 +282,12 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @since 0.1.0
 		 *
 		 * @param WP_Sync_Transport[]     $transports Transports to register.
-		 * @param WP_Sync_Storage         $storage    Storage backend.
+		 * @param WP_RTC_Storage          $storage    Storage backend.
 		 * @param WP_Sync_Engine_Registry $engines    Engine registry.
 		 * @return WP_Sync_Transport[] Transports including this plugin's.
 		 */
-		public function register_transports( array $transports, WP_Sync_Storage $storage, WP_Sync_Engine_Registry $engines ): array {
-			$transports[] = new WP_HTTP_Polling_Sync_Server( $storage, $engines );
+		public function register_transports( array $transports, WP_RTC_Storage $storage, WP_Sync_Engine_Registry $engines ): array {
+			$transports[] = new WP_RTC_HTTP_Polling_Sync_Server( $storage, $engines );
 			$transports[] = new WP_WebSocket_Sync_Transport( $storage, $engines );
 			return $transports;
 		}
@@ -338,7 +337,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @return void
 		 */
 		public function enqueue_editor_assets(): void {
-			if ( function_exists( 'wp_is_collaboration_enabled' ) && ! wp_is_collaboration_enabled() ) {
+			if ( ! wp_rtc_is_collaboration_enabled() ) {
 				return;
 			}
 
@@ -447,8 +446,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		}
 
 		/**
-		 * Admin notice shown when the collaborative-editing framework is not
-		 * available (Gutenberg / a supporting WordPress version is required).
+		 * Admin notice shown when the plugin is dormant because a Gutenberg
+		 * other than the bundled copy is running.
 		 *
 		 * @since 0.1.0
 		 *
@@ -458,8 +457,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 			if ( ! current_user_can( 'activate_plugins' ) ) {
 				return;
 			}
+
 			echo '<div class="notice notice-warning"><p>';
-			echo esc_html__( 'Gutenberg Sync Engines needs the collaborative-editing framework from Gutenberg (or a supporting WordPress version). Real-time collaboration is inactive until it is available.', 'gutenberg-sync-engines' );
+			echo esc_html__( 'WP Real-Time Collaboration is inactive, because another copy of the Gutenberg plugin is active. For now it only works with the Gutenberg it bundles. Deactivate the Gutenberg plugin to use real-time collaboration.', 'gutenberg-sync-engines' );
 			echo '</p></div>';
 		}
 

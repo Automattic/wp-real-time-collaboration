@@ -12,13 +12,33 @@ release, which the release script generates from the commit history.
 
 ### Added
 
+- An on/off switch for real-time collaboration on the Settings →
+  Collaboration screen, stored in the `wp_rtc_enabled` option. Saving it
+  also switches Gutenberg's real-time collaboration experiment, which
+  the bundled Gutenberg still reads.
+- The `wp_rtc_storage` filter, to substitute another storage backend.
 - This plugin was created from `gutenberg-sync-engines` at commit
   `9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5`. It keeps the intent-log
   engine, the polling and WebSocket transports, the advisory channel,
   and the conflict review screens.
 
+### Changed
+
+- The plugin now owns the server side of collaborative editing: the
+  engine and transport contracts and registries, room names and
+  permissions, the REST routes, and the settings printed for the
+  browser. They used to come from the bundled Gutenberg.
+- Four classes have new names, so they no longer clash with a released
+  Gutenberg: `WP_RTC_Storage` (was `WP_Sync_Storage`),
+  `WP_RTC_Post_Meta_Storage`, `WP_RTC_Config`, and
+  `WP_RTC_HTTP_Polling_Sync_Server`. Code that implements the storage
+  interface or registers a transport must use the new names.
+- Gutenberg's `__unstable_wp_sync_storage` filter no longer changes the
+  plugin's storage. Use `wp_rtc_storage`.
+
 ### Removed
 
+- The `POST /wp-sync/v1/save` route, which only a Yjs engine used.
 - The `yjs-server` and `de-rtc` engines, with their vendored libraries
   and the de-rtc commit interval setting. A site set to either engine
   now runs intent-log.

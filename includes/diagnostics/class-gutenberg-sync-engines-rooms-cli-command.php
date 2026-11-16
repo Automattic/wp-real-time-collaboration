@@ -114,7 +114,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Rooms_CLI_Command' ) && defined( 'W
 				$type_counts[ $type ] = ( $type_counts[ $type ] ?? 0 ) + 1;
 			}
 
-			$awareness = ( new WP_Sync_Awareness( $storage ) )->entries( $room, WP_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
+			$awareness = ( new WP_Sync_Awareness( $storage ) )->entries( $room, WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
 
 			$state = array(
 				'room'      => $room,
@@ -142,7 +142,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Rooms_CLI_Command' ) && defined( 'W
 				if ( null === $engine_slug || '' === $engine_slug ) {
 					$state['materialized'] = '(cannot materialize: room has no recorded engine lineage)';
 				} else {
-					$engine = ( new WP_HTTP_Polling_Sync_Server( $storage ) )
+					$engine = ( new WP_RTC_HTTP_Polling_Sync_Server( $storage ) )
 						->get_engine_registry()
 						->get_engine( $engine_slug );
 					if ( null === $engine ) {

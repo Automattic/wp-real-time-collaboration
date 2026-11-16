@@ -26,10 +26,13 @@ shared editing session.
 ## Repo layout
 
 - `wp-real-time-collaboration.php` — plugin entry.
-- `includes/` — server PHP: `engines/intent-log/` (the one engine),
-  `shared/`, `transports/` (polling, `websocket/`, and an unused
-  leftover in `sse/`; see Traps), `admin/` (the settings screen),
-  `storage/`, `diagnostics/` (dev-only).
+- `includes/` — server PHP: `server/` (what Gutenberg used to provide:
+  the engine and transport contracts and registries, room names and
+  permissions, routes, the settings printed for the browser, the on/off
+  setting, the fallback storage), `engines/intent-log/` (the one
+  engine), `shared/`, `transports/` (polling, `websocket/`, and an
+  unused leftover in `sse/`; see Traps), `admin/` (the settings
+  screen), `storage/`, `diagnostics/` (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds `build/sync-engines.js`
   with `@wordpress/sync` and `yjs` external: `engines/`, `shared/`,
   `providers/{http-polling,websocket,advisory}/` (and an unused
@@ -46,8 +49,10 @@ shared editing session.
   <commit> --squash`, update the pin, rebuild, and run typecheck, Jest
   and the browser tests. Keep the private API exports, the post-lock
   fallback, the entity sync registration and the conflict-review
-  callbacks the vendored copy carries. The release zip includes the
-  built framework.
+  callbacks the vendored copy carries. Its
+  `lib/experimental/collaboration/` folder is trimmed on purpose: the
+  plugin owns those server pieces now (`gutenberg-pin.json` lists the
+  changed files). The release zip includes the built framework.
 - `tests/` — `phpunit/`, `js/` (Jest, mirroring `src/`), `e2e/`
   (Playwright specs, config, fixture plugins, launchers in `bin/`),
   `benchmarks/`, `debugging/`, `fuzzer/`, `tools/`; each of the last
@@ -271,7 +276,7 @@ before a big change. A durable lesson from an issue goes here.
   edit makes two tabs' first edits clash on every such block.
 - **The storage's `get_cursor()` and `get_update_count()` are
   per-request caches refreshed only by `get_updates_after_cursor()`**,
-  kept that way from the framework's post-meta default on purpose. Do
+  kept that way from the fallback storage on purpose. Do
   not decide anything from them before a read has run.
 - **The first copy of a post's blocks the server builds (genesis) must
   set `isValid: true`** on every block, or the editor renders them as
@@ -326,9 +331,12 @@ before a big change. A durable lesson from an issue goes here.
   `@wordpress/env@^11` with an `overrides` entry that clears the
   ERESOLVE. Composer pins `phpunit/phpunit:^9.6`; PHPUnit 10 removed a
   method WordPress's bootstrap calls.
-- `tests/bootstrap.php` loads the framework before the plugin, from
-  `WP_SYNC_FRAMEWORK_PLUGIN` or the subtree's wp-env path; otherwise
-  `WP_Sync_Post_Meta_Storage not found`.
+- `tests/bootstrap.php` loads the bundled Gutenberg, then the plugin,
+  then the test fixtures on `plugins_loaded` at priority 20. The
+  fixtures need the plugin's own classes, which load when it boots on
+  that hook. The plugin is dormant beside any Gutenberg but the bundled
+  one (`gutenberg_sync_engines_bundled_gutenberg_is_loaded()`), so
+  PHPUnit cannot run against another Gutenberg checkout.
 - e2e must load a single `@playwright/test`: the subtree's `npm install`
   re-creates its own copy, and `pretest:e2e` removes it. The runner is
   `playwright test` directly, NOT `wp-scripts test-e2e`.
@@ -340,7 +348,10 @@ before a big change. A durable lesson from an issue goes here.
   `gutenberg-experiments` in `POST /wp/v2/settings` (the fixture's
   `setCollaboration`), the CLI tools with a `wp eval`. The client flag
   is `window.__experimentalEnableRealTimeCollaboration`. Activation
-  turns it on but does not pin it.
+  turns it on but does not pin it. The plugin's own switch is the
+  `wp_rtc_enabled` option: saving it switches the experiment too, and
+  it also answers the `wp_is_collaboration_enabled` filter, which the
+  bundled Gutenberg does not apply yet.
 - Built subtree JS lands at `gutenberg/build/scripts/<pkg>/`.
 - A checkout in a folder with any name other than
   `wp-real-time-collaboration` (a git worktree, for example) is mounted

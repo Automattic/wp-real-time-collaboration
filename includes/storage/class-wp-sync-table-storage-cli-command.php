@@ -55,7 +55,11 @@ if ( ! class_exists( 'WP_Sync_Table_Storage_CLI_Command' ) && defined( 'WP_CLI' 
 				}
 			}
 
-			$active = function_exists( 'wp_get_sync_storage' ) ? get_class( wp_get_sync_storage() ) : '(collaboration framework not loaded)';
+			// The storage classes load only when the plugin is running.
+			$active = '(the plugin is dormant, so no storage is in use)';
+			if ( interface_exists( 'WP_RTC_Storage' ) && class_exists( 'WP_Sync_Table_Storage' ) ) {
+				$active = get_class( wp_rtc_get_storage() );
+			}
 
 			$items = array(
 				array(

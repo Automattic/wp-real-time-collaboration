@@ -25,7 +25,7 @@ import type { EngineDocument } from '../../../src/engines/intent-log/engine-type
 import { contentText } from './helpers';
 
 /*
- * Known defect, plan item 7 under "What is fragile today".
+ * Known defect.
  *
  * The server can replace a room's history with one fresh copy of the
  * document (a reset). If the tab has an edit the server has not answered
@@ -79,7 +79,7 @@ describe( 'known defect: a tab frozen by a reset', () => {
 	} );
 
 	it.failing(
-		'takes a reset and shows incoming changes even while the person keeps typing (known defect, fixed in Phase 5)',
+		'takes a reset and shows incoming changes even while the person keeps typing (known defect, to be fixed by keeping unsent edits in one place)',
 		() => {
 			const session = createIntentLogSession( {
 				userId: 1,

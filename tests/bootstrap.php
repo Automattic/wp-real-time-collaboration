@@ -2,15 +2,13 @@
 /**
  * PHPUnit bootstrap.
  *
- * These tests exercise the plugin's engines and transports through the
- * collaborative-editing FRAMEWORK (the WP_Sync_* contracts, registries, and
- * REST transport routes that ship in Gutenberg / WordPress core). The
- * framework must therefore load BEFORE this plugin — both are required in on
- * `muplugins_loaded` below. The framework's plugin entry path resolves from,
- * in order: the `WP_SYNC_FRAMEWORK_PLUGIN` env var, a same-named constant, or
- * the plugin's own bundled Gutenberg subtree (`gutenberg/gutenberg.php` at
- * the repo root — the same copy the plugin loads at runtime). Override the
- * env var to point at a different Gutenberg checkout.
+ * The plugin owns the whole server side of collaborative editing (see
+ * `includes/server/`). It still needs the Gutenberg it bundles, which
+ * supplies the on/off switch (`wp_is_collaboration_enabled()`) and the
+ * editor packages. Both are required in on `muplugins_loaded` below,
+ * Gutenberg first, the same order as on a real site. The plugin stays
+ * dormant beside any other Gutenberg, so the tests always use the bundled
+ * copy at `gutenberg/gutenberg.php`.
  *
  * @package GutenbergSyncEngines
  */
@@ -35,36 +33,22 @@ if ( ! defined( 'GUTENBERG_SYNC_ENGINES_DIAGNOSTICS' ) ) {
 tests_add_filter(
 	'muplugins_loaded',
 	static function () {
-		$framework = getenv( 'WP_SYNC_FRAMEWORK_PLUGIN' );
-		if ( ! $framework && defined( 'WP_SYNC_FRAMEWORK_PLUGIN' ) ) {
-			$framework = WP_SYNC_FRAMEWORK_PLUGIN;
+		// The bundled Gutenberg. The plugin entry would load it too, and
+		// requiring it here first keeps the order plain.
+		$gutenberg = dirname( __DIR__ ) . '/gutenberg/gutenberg.php';
+		if ( file_exists( $gutenberg ) ) {
+			require $gutenberg;
 		}
-		if ( ! $framework ) {
-			// The plugin's own bundled Gutenberg subtree (also what the
-			// plugin entry loads at runtime; requiring it here first keeps
-			// the framework-before-plugin order explicit).
-			$framework = dirname( __DIR__ ) . '/gutenberg/gutenberg.php';
-		}
-		if ( $framework && file_exists( $framework ) ) {
-			require $framework;
-		}
+
 		require dirname( __DIR__ ) . '/wp-real-time-collaboration.php';
-		// Test fixture engine (naive opaque relay) used by the transport and
-		// registry machinery tests; registered per-test, never in production.
-		require __DIR__ . '/phpunit/fixtures/class-test-opaque-relay-engine.php';
-		// Test fixture marker for tests that prove a defect not yet fixed.
-		require __DIR__ . '/phpunit/fixtures/trait-known-defect-assertions.php';
 
 		/*
-		 * Turn real-time collaboration on for the whole suite. Since
-		 * WordPress/gutenberg#80658 the framework gates RTC on the
-		 * `gutenberg-real-time-collaboration` experiment (the old
-		 * `wp_collaboration_enabled` option is gone), and the gate is
-		 * consulted on `init` — when the `wp_sync_storage` post type and the
-		 * CRDT post meta register — and again on `rest_api_init` for the
-		 * transport routes. That is earlier than any test's set_up, so it has
-		 * to happen here. This matches the posture the suite always had: the
-		 * old option was registered with a default of true.
+		 * Turn real-time collaboration on for the whole suite. The bundled
+		 * Gutenberg reads its `gutenberg-real-time-collaboration`
+		 * experiment, and the plugin checks it on `init` (the fallback
+		 * storage's post type) and again on `rest_api_init` (the transport
+		 * routes). That is earlier than any test's set_up, so it has to
+		 * happen here.
 		 */
 		$gse_experiments = get_option( 'gutenberg-experiments', array() );
 		if ( ! is_array( $gse_experiments ) ) {
@@ -88,6 +72,17 @@ tests_add_filter(
 tests_add_filter(
 	'plugins_loaded',
 	static function () {
+		/*
+		 * The test fixtures load here, after the plugin has booted on this
+		 * same hook: the fixture engine implements the plugin's own
+		 * WP_Sync_Engine interface, which does not exist before that.
+		 */
+		// Test fixture engine (naive opaque relay) used by the transport and
+		// registry machinery tests; registered per-test, never in production.
+		require __DIR__ . '/phpunit/fixtures/class-test-opaque-relay-engine.php';
+		// Test fixture marker for tests that prove a defect not yet fixed.
+		require __DIR__ . '/phpunit/fixtures/trait-known-defect-assertions.php';
+
 		if ( ! WP_Sync_Table_Schema::install() ) {
 			fwrite( STDERR, "Could not create the plugin's storage tables.\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 			exit( 1 );

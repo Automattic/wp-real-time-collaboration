@@ -1093,7 +1093,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		 */
 		add_filter(
 			'wp_sync_engines',
-			static function ( array $engines, WP_Sync_Storage $storage ): array {
+			static function ( array $engines, WP_RTC_Storage $storage ): array {
 				$engines[] = new Test_Opaque_Relay_Engine( $storage );
 				return $engines;
 			},

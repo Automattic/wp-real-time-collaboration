@@ -33,7 +33,7 @@ if ( ! class_exists( 'WP_Sync_Awareness' ) ) {
 		 * The storage holding the built-in store's array.
 		 *
 		 * @since 0.0.2
-		 * @var WP_Sync_Storage
+		 * @var WP_RTC_Storage
 		 */
 		private $storage;
 
@@ -42,9 +42,9 @@ if ( ! class_exists( 'WP_Sync_Awareness' ) ) {
 		 *
 		 * @since 0.0.2
 		 *
-		 * @param WP_Sync_Storage $storage Storage backing the built-in store.
+		 * @param WP_RTC_Storage $storage Storage backing the built-in store.
 		 */
-		public function __construct( WP_Sync_Storage $storage ) {
+		public function __construct( WP_RTC_Storage $storage ) {
 			$this->storage = $storage;
 		}
 
@@ -145,7 +145,7 @@ if ( ! class_exists( 'WP_Sync_Awareness' ) ) {
 			$live[] = array(
 				'client_id'  => $client_id,
 				'state'      => $state,
-				'updated_at' => WP_HTTP_Polling_Sync_Server::awareness_timestamp( time() ),
+				'updated_at' => WP_RTC_HTTP_Polling_Sync_Server::awareness_timestamp( time() ),
 				'wp_user_id' => $user_id,
 			);
 

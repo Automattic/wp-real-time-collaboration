@@ -25,7 +25,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 	 * protocol is JSON text frames sharing the HTTP polling semantics: the
 	 * client sends `{type: 'sync', rooms: [...]}` room requests and the
 	 * server replies with the same room-response shape as the REST endpoint.
-	 * Updates are persisted through WP_Sync_Storage so late joiners and
+	 * Updates are persisted through WP_RTC_Storage so late joiners and
 	 * reconnecting clients catch up via their cursor, and new updates are
 	 * pushed immediately to other connected sockets subscribed to the room.
 	 *
@@ -187,9 +187,9 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 * Transport-agnostic sync server core.
 		 *
 		 * @since 7.4.0
-		 * @var WP_HTTP_Polling_Sync_Server
+		 * @var WP_RTC_HTTP_Polling_Sync_Server
 		 */
-		private WP_HTTP_Polling_Sync_Server $sync;
+		private WP_RTC_HTTP_Polling_Sync_Server $sync;
 
 		/**
 		 * Host to bind.
@@ -330,12 +330,12 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 *
 		 * @since 7.4.0
 		 *
-		 * @param WP_HTTP_Polling_Sync_Server $sync Transport seam driving rooms
+		 * @param WP_RTC_HTTP_Polling_Sync_Server $sync Transport seam driving rooms
 		 *                                          through the engine registry.
-		 * @param string                      $host Host to bind.
-		 * @param int                         $port Port to bind.
+		 * @param string                          $host Host to bind.
+		 * @param int                             $port Port to bind.
 		 */
-		public function __construct( WP_HTTP_Polling_Sync_Server $sync, string $host = '127.0.0.1', int $port = 8787 ) {
+		public function __construct( WP_RTC_HTTP_Polling_Sync_Server $sync, string $host = '127.0.0.1', int $port = 8787 ) {
 			$this->sync = $sync;
 			$this->host = $host;
 			$this->port = $port;
@@ -1678,7 +1678,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			// with on the REST transports); the raw entry list crashes the
 			// editor's collaborator UI.
 			$awareness_map = array();
-			foreach ( $this->awareness()->entries( $room, WP_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT ) as $entry ) {
+			foreach ( $this->awareness()->entries( $room, WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT ) as $entry ) {
 				$awareness_map[ $entry['client_id'] ] = $entry['state'];
 			}
 
@@ -1966,7 +1966,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			}
 
 			$awareness = $this->awareness();
-			$timeout   = WP_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT;
+			$timeout   = WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT;
 
 			foreach ( $connected_clients_by_room as $room => $connected_client_ids ) {
 				$entries = $awareness->entries( $room, $timeout );

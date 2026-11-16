@@ -37,6 +37,15 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		const PAGE = 'gutenberg-sync-engines';
 
 		/**
+		 * Option holding the on/off switch for real-time collaboration.
+		 * Unset means on. wp_rtc_is_enabled_setting() reads it.
+		 *
+		 * @since n.e.x.t
+		 * @var string
+		 */
+		const ENABLED_OPTION = 'wp_rtc_enabled';
+
+		/**
 		 * Option storing the active transport slug.
 		 *
 		 * @since 0.1.0
@@ -283,10 +292,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			);
 			$choices = array();
 
-			if ( function_exists( 'wp_get_collaboration_transport_registry' ) ) {
-				foreach ( array_keys( wp_get_collaboration_transport_registry()->get_transports() ) as $slug ) {
-					$choices[ $slug ] = $labels[ $slug ] ?? $slug;
-				}
+			foreach ( array_keys( wp_rtc_get_transport_registry()->get_transports() ) as $slug ) {
+				$choices[ $slug ] = $labels[ $slug ] ?? $slug;
 			}
 			if ( empty( $choices ) ) {
 				$choices = $labels;
@@ -389,6 +396,18 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		 * @return void
 		 */
 		public function register_options(): void {
+			register_setting(
+				self::PAGE,
+				self::ENABLED_OPTION,
+				array(
+					'type'              => 'boolean',
+					'description'       => __( 'Whether real-time collaboration is switched on', 'gutenberg-sync-engines' ),
+					'sanitize_callback' => 'rest_sanitize_boolean',
+					'show_in_rest'      => true,
+					'default'           => true,
+				)
+			);
+
 			register_setting(
 				self::PAGE,
 				'wp_sync_engine',
@@ -589,6 +608,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			// One untitled section: the field labels are the headings.
 			add_settings_section( 'gutenberg_sync_engines_main', '', '__return_null', self::PAGE );
 			$fields = array(
+				array( self::ENABLED_OPTION, __( 'Real-time collaboration', 'gutenberg-sync-engines' ), 'render_enabled_field' ),
 				array( 'wp_sync_engine', __( 'Sync engine', 'gutenberg-sync-engines' ), 'render_engine_field' ),
 				array( self::DELIVERY_FIELD, __( 'Transport', 'gutenberg-sync-engines' ), 'render_delivery_field' ),
 				array( self::ADVISORY_WEBSOCKET_URL_OPTION, __( 'WebSocket advisory server', 'gutenberg-sync-engines' ), 'render_advisory_websocket_url_field' ),
@@ -601,6 +621,26 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			foreach ( $fields as list( $id, $label, $renderer ) ) {
 				add_settings_field( $id, $label, array( $this, $renderer ), self::PAGE, 'gutenberg_sync_engines_main' );
 			}
+		}
+
+		/**
+		 * Renders the on/off switch.
+		 *
+		 * The hidden field makes an unticked box arrive as "0". Without it
+		 * the form would not post the option at all.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @return void
+		 */
+		public function render_enabled_field(): void {
+			printf(
+				'<input type="hidden" name="%1$s" value="0" /><label><input type="checkbox" name="%1$s" id="%1$s" value="1" %2$s /> %3$s</label><p class="description">%4$s</p>',
+				esc_attr( self::ENABLED_OPTION ),
+				checked( wp_rtc_is_enabled_setting(), true, false ),
+				esc_html__( 'Let several people edit the same post at the same time.', 'gutenberg-sync-engines' ),
+				esc_html__( 'When this is off, the editor uses the usual post lock, and the settings below have no effect.', 'gutenberg-sync-engines' )
+			);
 		}
 
 		/**
@@ -1060,20 +1100,20 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			echo '<p>' . esc_html__( 'Choose how edits from several people are combined (the engine) and how they travel between the editor and WordPress (the transport). The defaults work on any host. Each setting is a plain WordPress option, so WP-CLI and the REST settings endpoint can change it. Guides for engines and transports are in the plugin\'s docs folder.', 'gutenberg-sync-engines' ) . '</p>';
 
 			/*
-			 * Nothing on this screen does anything while real-time
-			 * collaboration is off, and since WordPress/gutenberg#80658 it is
-			 * off by default and lives behind a Gutenberg experiment rather
-			 * than a Settings → Writing checkbox. Say so, and link there,
-			 * instead of leaving an engine picker that quietly has no effect.
+			 * The switch on this screen also turns on Gutenberg's real-time
+			 * collaboration experiment, which the bundled Gutenberg still
+			 * reads. Someone can turn that experiment off on Gutenberg's own
+			 * screen afterwards. Then the switch here says "on" and nothing
+			 * happens, so say so and link there.
 			 */
-			$collaboration_enabled = ! function_exists( 'wp_is_collaboration_enabled' ) || wp_is_collaboration_enabled();
-			if ( ! $collaboration_enabled ) {
+			$collaboration_enabled = wp_rtc_is_collaboration_enabled();
+			if ( ! $collaboration_enabled && wp_rtc_is_enabled_setting() ) {
 				printf(
 					'<div class="notice notice-warning"><p>%1$s</p></div>',
 					wp_kses(
 						sprintf(
 							/* translators: %s: link to the Gutenberg experiments screen. */
-							__( 'Real-time collaboration is turned off, so these settings have no effect yet. Enable the <strong>Real-time collaboration</strong> experiment on the %s screen.', 'gutenberg-sync-engines' ),
+							__( 'Real-time collaboration is switched on here, but it is turned off in Gutenberg, so these settings have no effect yet. Enable the <strong>Real-time collaboration</strong> experiment on the %s screen.', 'gutenberg-sync-engines' ),
 							'<a href="' . esc_url( admin_url( 'admin.php?page=gutenberg-experiments' ) ) . '">' . esc_html__( 'Gutenberg experiments', 'gutenberg-sync-engines' ) . '</a>'
 						),
 						array(

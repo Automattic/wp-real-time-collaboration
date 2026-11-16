@@ -93,15 +93,18 @@ tables and every session; deleting it drops them. See
 
 ## Architecture
 
-The plugin registers its engine and transports with the collaboration
-framework in Gutenberg (the `@wordpress/sync` package and the
-`lib/experimental/collaboration/` server) through the `wp_sync_engines`
-and `wp_sync_transports` PHP filters and the `registerSyncEngine` and
+The plugin owns the whole server side: the engine and transport
+contracts and registries, room names and permissions, the REST routes,
+and the settings printed for the browser (`includes/server/`). Its
+engine and transports register through the `wp_sync_engines` and
+`wp_sync_transports` PHP filters, so other code can add its own. In the
+browser the plugin still registers with the bundled Gutenberg's
+`@wordpress/sync` package, through the `registerSyncEngine` and
 `registerSyncTransport` JavaScript functions. The server says which
 engine and transport to use, and the browser checks that it has them.
 If they do not match, the editor uses the classic post lock instead, so
-nothing is corrupted. The framework ships no engines and no transports
-of its own; without this plugin, collaboration is off.
+nothing is corrupted. Beside a Gutenberg other than the bundled copy,
+the plugin stays dormant and says so in an admin notice.
 
 How an edit travels is in [docs/data-flow.md](docs/data-flow.md). How to
 add an engine or a transport is in [docs/protocol.md](docs/protocol.md).

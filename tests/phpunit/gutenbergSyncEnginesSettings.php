@@ -97,12 +97,12 @@ class Tests_Collaboration_GutenbergSyncEnginesSettings extends WP_UnitTestCase {
 		$settings = new Gutenberg_Sync_Engines_Settings();
 		update_option( Gutenberg_Sync_Engines_Settings::TRANSPORT_OPTION, 'http-long-polling' );
 		$this->assertSame( 'http-polling', Gutenberg_Sync_Engines_Settings::stored_transport() );
-		$this->assertSame( 'http-polling', wp_get_collaboration_transport_registry()->get_active_slug() );
+		$this->assertSame( 'http-polling', wp_rtc_get_transport_registry()->get_active_slug() );
 		$this->assertSame( 'http-polling', $settings->sanitize_transport( 'http-long-polling' ) );
 
 		foreach ( array( 'sse', 'sse-daemon' ) as $removed ) {
 			update_option( Gutenberg_Sync_Engines_Settings::TRANSPORT_OPTION, $removed );
-			$this->assertSame( 'http-polling', wp_get_collaboration_transport_registry()->get_active_slug(), $removed );
+			$this->assertSame( 'http-polling', wp_rtc_get_transport_registry()->get_active_slug(), $removed );
 			$this->assertSame( 'http-polling', $settings->sanitize_transport( $removed ), $removed );
 		}
 	}

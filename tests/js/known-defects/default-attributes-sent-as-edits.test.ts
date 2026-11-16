@@ -46,9 +46,8 @@ import type {
 import { contentText } from './helpers';
 
 /*
- * Known defect. This is the cause of the two-person host benchmark
- * failure in the plan, section "A defect to add to Phase 0: the
- * two-person host benchmark fails".
+ * Known defect. This is why the two-person host benchmark
+ * (`npm run bench -- --peers=2`) fails.
  *
  * The server builds its first copy of a post from the block comments in
  * the saved content. Those comments leave out values that equal the
@@ -297,7 +296,7 @@ describe( 'known defect: default attribute values are sent as edits', () => {
 	// The cause, with one person: typing a word in one paragraph also
 	// sends an attribute write for every paragraph in the post.
 	it.failing(
-		'sends only the typed text for the first edit in a post (known defect, fixed in Phase 3)',
+		'sends only the typed text for the first edit in a post (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		async () => {
 			const server = createServer( firstServerCopy() );
 			const tab = await openTab( server, ANCHORS[ 0 ] );
@@ -316,7 +315,7 @@ describe( 'known defect: default attribute values are sent as edits', () => {
 	// writer types only in their own paragraph, so nothing should be set
 	// aside.
 	it.failing(
-		'sets nothing aside when two people start typing in their own paragraphs at the same time (known defect, fixed in Phase 3)',
+		'sets nothing aside when two people start typing in their own paragraphs at the same time (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		async () => {
 			const server = createServer( firstServerCopy() );
 			const writer0 = await openTab( server, ANCHORS[ 0 ] );

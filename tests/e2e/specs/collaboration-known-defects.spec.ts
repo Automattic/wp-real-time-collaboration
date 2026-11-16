@@ -3,7 +3,7 @@
  *
  * Each test states the correct behavior and is declared with `test.fail`,
  * so it passes while the defect is present and goes red once it is fixed.
- * When a phase of the rewrite fixes one, change `test.fail` to `test`.
+ * When a change fixes one, change `test.fail` to `test`.
  * The Jest twins are in `tests/js/known-defects/`.
  */
 
@@ -33,10 +33,11 @@ test.describe( 'Known defects - intent-log engine @engine-intent-log', () => {
 	 * server's first copy of the post leaves defaults out. Two writes to
 	 * the same attribute that did not see each other are set aside, so
 	 * both paragraphs get a review card. This is also why the two-person
-	 * host benchmark fails. Fixed in Phase 3.
+	 * host benchmark fails. The fix is to take edits from Gutenberg's edit
+	 * batches, which only name what changed.
 	 */
 	test.fail(
-		'two people typing in their own paragraphs get no review card (known defect, fixed in Phase 3)',
+		'two people typing in their own paragraphs get no review card (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		async ( { collaborationUtils, requestUtils, editor, page } ) => {
 			const post = await requestUtils.createPost( {
 				title: 'Own paragraphs',

@@ -21,7 +21,7 @@ import {
 } from './helpers';
 
 /*
- * Known defect, plan item 4 under "What is fragile today".
+ * Known defect.
  *
  * The engine finds a text edit by comparing the start and the end of the
  * old and new text, one UTF-16 unit at a time (textDelta in
@@ -112,7 +112,7 @@ describe( 'known defect: an emoji cut in half', () => {
 	// Replacing one emoji with another that shares its first half is
 	// captured as "replace the second half only".
 	it.failing(
-		'does not cut an emoji in half when one emoji replaces another (known defect, fixed in Phase 3)',
+		'does not cut an emoji in half when one emoji replaces another (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		() => {
 			const before = `A${ GRIN }B`;
 			const doc = documentFromBlocks( [ paragraph( 'p1', before ) ] );
@@ -129,7 +129,7 @@ describe( 'known defect: an emoji cut in half', () => {
 	// Typing an emoji in front of another one is captured as an insert
 	// that starts inside the existing emoji.
 	it.failing(
-		'does not cut an emoji in half when an emoji is typed before another (known defect, fixed in Phase 3)',
+		'does not cut an emoji in half when an emoji is typed before another (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		() => {
 			const before = `A${ GRIN }B`;
 			const doc = documentFromBlocks( [ paragraph( 'p1', before ) ] );
@@ -148,7 +148,7 @@ describe( 'known defect: an emoji cut in half', () => {
 	// plus first half of the second". The server combines the two deletes
 	// and half an emoji stays in the text.
 	it.failing(
-		'leaves no half emoji when two people each delete a different emoji (known defect, fixed in Phase 3)',
+		'leaves no half emoji when two people each delete a different emoji (known defect, to be fixed by taking edits from the Gutenberg edit batches)',
 		() => {
 			const doc = documentFromBlocks( [
 				paragraph( 'p1', `A${ GRIN }${ BEAM }B` ),

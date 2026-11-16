@@ -2,7 +2,7 @@
 /**
  * WP_Sync_Transport_Registry class
  *
- * @package gutenberg
+ * @package GutenbergSyncEngines
  */
 
 if ( ! class_exists( 'WP_Sync_Transport_Registry' ) ) {
@@ -34,25 +34,24 @@ if ( ! class_exists( 'WP_Sync_Transport_Registry' ) ) {
 		 *
 		 * @since 7.2.0
 		 *
-		 * @param WP_Sync_Storage         $storage Storage backend.
+		 * @param WP_RTC_Storage          $storage Storage backend.
 		 * @param WP_Sync_Engine_Registry $engines Engine registry the
 		 *                                         transports drive rooms through.
 		 */
-		public function __construct( WP_Sync_Storage $storage, WP_Sync_Engine_Registry $engines ) {
+		public function __construct( WP_RTC_Storage $storage, WP_Sync_Engine_Registry $engines ) {
 			/**
 			 * Filters the registered sync transports.
 			 *
-			 * The framework ships NO transports of its own: a plugin (e.g.
-			 * Gutenberg Sync Engines) supplies them here. With none registered
-			 * a session has no transport to negotiate and degrades to the
-			 * classic post lock.
+			 * The plugin registers its own transports here, and other code
+			 * can add more. With none registered a session has no transport
+			 * and the editor falls back to the post lock.
 			 *
 			 * Return an array of WP_Sync_Transport instances.
 			 *
 			 * @since 7.2.0
 			 *
 			 * @param WP_Sync_Transport[]     $transports Transports to register.
-			 * @param WP_Sync_Storage         $storage    Storage backend.
+			 * @param WP_RTC_Storage         $storage    Storage backend.
 			 * @param WP_Sync_Engine_Registry $engines    Engine registry.
 			 */
 			$extra = apply_filters( 'wp_sync_transports', array(), $storage, $engines );
@@ -110,7 +109,7 @@ if ( ! class_exists( 'WP_Sync_Transport_Registry' ) ) {
 		 * @return string Active transport slug, or ''.
 		 */
 		public function get_active_slug(): string {
-			$configured = wp_get_collaboration_transport();
+			$configured = wp_rtc_get_transport_slug();
 			if ( isset( $this->transports[ $configured ] ) ) {
 				return $configured;
 			}

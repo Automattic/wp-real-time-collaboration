@@ -31,7 +31,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	private $storage;
 
 	/**
-	 * @var WP_HTTP_Polling_Sync_Server
+	 * @var WP_RTC_HTTP_Polling_Sync_Server
 	 */
 	private $sync;
 
@@ -72,7 +72,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 		parent::set_up();
 		wp_set_current_user( self::$editor_id );
 		$this->storage     = new WP_Sync_Table_Storage();
-		$this->sync        = new WP_HTTP_Polling_Sync_Server( $this->storage );
+		$this->sync        = new WP_RTC_HTTP_Polling_Sync_Server( $this->storage );
 		$this->server      = new WP_WebSocket_Sync_Server( $this->sync, '127.0.0.1', 8798 );
 		$this->connections = array();
 	}
@@ -433,7 +433,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	 * @return array<int, array> Entries.
 	 */
 	private function awareness_by_client( string $room ): array {
-		$entries = ( new WP_Sync_Awareness( $this->storage ) )->entries( $room, WP_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
+		$entries = ( new WP_Sync_Awareness( $this->storage ) )->entries( $room, WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
 		return array_column( $entries, null, 'client_id' );
 	}
 
