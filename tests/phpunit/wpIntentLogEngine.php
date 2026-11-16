@@ -1085,7 +1085,21 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	}
 
 	public function test_room_lineage_fences_an_engine_flip_with_409() {
-		// Write under intent-log, then flip the site to yjs-server.
+		/*
+		 * Write under intent-log, then flip the site to another engine.
+		 * The plugin ships intent-log alone, so the other engine is the
+		 * opaque-relay TEST FIXTURE (this case used yjs-server before the
+		 * other engines were removed).
+		 */
+		add_filter(
+			'wp_sync_engines',
+			static function ( array $engines, WP_Sync_Storage $storage ): array {
+				$engines[] = new Test_Opaque_Relay_Engine( $storage );
+				return $engines;
+			},
+			10,
+			2
+		);
 		$this->poll(
 			array(
 				self::intent_update(
@@ -1103,13 +1117,19 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				),
 			)
 		);
-		update_option( 'wp_sync_engine', 'yjs-server' );
+		update_option( 'wp_sync_engine', Test_Opaque_Relay_Engine::SLUG );
+
+		// The routes were built in set_up(), before the fixture engine was
+		// registered. Build them again so the server knows the engine.
+		global $wp_rest_server;
+		$wp_rest_server = new Spy_REST_Server();
+		do_action( 'rest_api_init', $wp_rest_server );
 
 		$response = $this->poll(
 			array(
 				array(
-					'type' => 'update',
-					'data' => base64_encode( 'yjs-bytes' ),
+					'type' => Test_Opaque_Relay_Engine::UPDATE_TYPE_UPDATE,
+					'data' => base64_encode( 'opaque-bytes' ),
 				),
 			)
 		);

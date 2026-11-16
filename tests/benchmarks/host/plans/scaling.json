@@ -1,6 +1,6 @@
 {
   "name": "scaling",
-  "description": "How each engine's cost changes with the number of people, the size of the post, and how people edit. Every other variable stays at the center.",
+  "description": "How the engine's cost changes with the number of people, the size of the post, and how people edit. Every other variable stays at the center.",
   "center": {
     "engine": "intent-log",
     "transport": "http-polling",
@@ -14,15 +14,12 @@
   },
   "vary": [
     {
-      "engine": [ "intent-log", "yjs-server", "de-rtc" ],
       "windows": [ 1, 2, 3 ]
     },
     {
-      "engine": [ "intent-log", "yjs-server", "de-rtc" ],
       "postSize": [ "empty", "medium", "large" ]
     },
     {
-      "engine": [ "intent-log", "yjs-server", "de-rtc" ],
       "pattern": [ "own-paragraph", "new-blocks" ]
     }
   ],

@@ -88,7 +88,7 @@ export function attachCounters( page ) {
 		}
 	};
 	const isSync = ( url ) => decoded( url ).includes( 'wp-sync/v1' );
-	// De-rtc commits ride the autosave endpoint — count
+	// An engine's commits can ride the autosave endpoint — count
 	// them as sync traffic (they replaced transport proposal rows). The
 	// commit shape is identified by its body, so editor-native autosaves
 	// stay out of the tally.

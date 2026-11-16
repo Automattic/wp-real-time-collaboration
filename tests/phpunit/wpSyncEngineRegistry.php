@@ -109,8 +109,10 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 		$registry = new WP_Sync_Engine_Registry( new WP_Sync_Table_Storage() );
 
 		// A configured-but-unregistered slug degrades to the FIRST
-		// registered engine (yjs-server), not the conventional default.
-		$this->assertSame( WP_Yjs_Server_Engine::SLUG, $registry->get_engine_slug_for_room( 'postType/post:1' ) );
+		// registered engine. That used to be yjs-server. It is intent-log
+		// now that the plugin registers intent-log alone (an intended
+		// change in behavior from removing the other engines).
+		$this->assertSame( WP_Intent_Log_Engine::SLUG, $registry->get_engine_slug_for_room( 'postType/post:1' ) );
 		delete_option( 'wp_sync_engine' );
 	}
 
@@ -225,15 +227,15 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 
 		// The site switches engines. A client speaking the NEW engine must
 		// not be fenced forever on this global, rebuildable room: it resets
-		// and re-derives under yjs-server instead.
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		// and re-derives under intent-log instead.
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 		try {
 			$response = rest_get_server()->dispatch(
 				$this->build_request(
 					array(
 						'room'            => $room,
-						'engine'          => WP_Yjs_Server_Engine::SLUG,
-						'engine_protocol' => WP_Yjs_Server_Engine::PROTOCOL_VERSION,
+						'engine'          => WP_Intent_Log_Engine::SLUG,
+						'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 						'updates'         => array(),
 					)
 				)
@@ -242,10 +244,10 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 
 			// The room was reset and re-genesised under the new engine: the
 			// relay rows are gone and lineage moved on.
-			$this->assertSame( WP_Yjs_Server_Engine::SLUG, $storage->get_room_engine( $room ) );
+			$this->assertSame( WP_Intent_Log_Engine::SLUG, $storage->get_room_engine( $room ) );
 			$rows = $response->get_data()['rooms'][0]['updates'];
 			$this->assertNotEmpty( $rows );
-			$this->assertSame( WP_Yjs_Server_Engine::UPDATE_TYPE_SNAPSHOT, $rows[0]['type'] );
+			$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $rows[0]['type'] );
 			foreach ( $rows as $row ) {
 				$this->assertNotSame( Test_Opaque_Relay_Engine::UPDATE_TYPE_SYNC_STEP1, $row['type'] );
 			}
@@ -266,14 +268,14 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 		// After the switch, even a client speaking the new engine is fenced:
 		// per-post rooms can hold unsaved collaborative content and degrade
 		// to the post lock by design.
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 		try {
 			$response = rest_get_server()->dispatch(
 				$this->build_request(
 					array(
 						'room'            => $room,
-						'engine'          => WP_Yjs_Server_Engine::SLUG,
-						'engine_protocol' => WP_Yjs_Server_Engine::PROTOCOL_VERSION,
+						'engine'          => WP_Intent_Log_Engine::SLUG,
+						'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 						'updates'         => array(),
 					)
 				)
@@ -303,7 +305,7 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 
 		// The site switched, but this tab still speaks the OLD engine: it is
 		// fenced by the client-stamp check and must not reset anything.
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 		try {
 			$response = rest_get_server()->dispatch(
 				$this->build_request(

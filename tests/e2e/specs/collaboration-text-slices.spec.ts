@@ -3,21 +3,15 @@
  */
 import { test, expect } from '../config/collaboration-fixtures';
 
-// Intent-log's contract and the other engines' observed baselines. The
-// latter document limitations; they are not the desired split behavior.
+// Intent-log's contract.
 const expected: Record< string, Record< string, string[] > > = {
 	'intent-log': {
 		append: [ 'Hello', 'World!' ],
 		format: [ 'Hel<strong>lo</strong>', '<strong>Wo</strong>rld' ],
 	},
-	'yjs-server': {
-		append: [ 'Hello!', 'World' ],
-		format: [ 'Hel<strong>lor</strong>', 'World' ],
-	},
-	'de-rtc': { append: [ 'Hello!', 'World' ], format: [ 'Hello', 'World' ] },
 };
 
-for ( const engine of [ 'intent-log', 'yjs-server', 'de-rtc' ] ) {
+for ( const engine of [ 'intent-log' ] ) {
 	test.describe( `Text across a split - ${ engine }`, () => {
 		test.beforeEach( async ( { requestUtils } ) => {
 			await requestUtils.rest( {
@@ -76,8 +70,6 @@ for ( const engine of [ 'intent-log', 'yjs-server', 'de-rtc' ] ) {
 						( response ) =>
 							/wp-sync|autosaves/.test( response.url() ) &&
 							response.status() === 200 &&
-							( engine !== 'de-rtc' ||
-								response.url().includes( 'autosaves' ) ) &&
 							( engine !== 'intent-log' ||
 								(
 									response.request().postData() ?? ''
@@ -126,18 +118,6 @@ for ( const engine of [ 'intent-log', 'yjs-server', 'de-rtc' ] ) {
 				} ).toPass( { timeout: 20000 } );
 				const actual = await contents( editor );
 				expect( actual ).toEqual( expected[ engine ][ edit ] );
-				if ( engine === 'de-rtc' && edit === 'format' ) {
-					// The set-aside edit shows as a review card on the
-					// block (the plugin's conflict review, src/review/).
-					await expect(
-						editor2.canvas
-							.getByRole( 'button', {
-								name: 'Review conflict',
-								exact: true,
-							} )
-							.first()
-					).toBeVisible( { timeout: 15000 } );
-				}
 				await testInfo.attach( 'split-result', {
 					body: JSON.stringify( { engine, actual }, null, 2 ),
 					contentType: 'application/json',

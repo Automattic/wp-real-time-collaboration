@@ -27,7 +27,7 @@
  * Usage:
  *   npm run fuzz                                  # full matrix, 5 seeds each
  *   npm run fuzz -- --seeds=20 --steps=15
- *   npm run fuzz -- --engines=yjs-server --transports=websocket
+ *   npm run fuzz -- --engines=intent-log --transports=websocket
  *   npm run fuzz -- --combos=intent-log/http-polling --seed-list=42 \
  *       --trace=retain-on-failure                 # replay one seed
  */
@@ -59,17 +59,14 @@ const DEV_WS_DAEMON_CONTAINER = 'wp-sync-ws-daemon';
 // are plain `cli`/`wordpress`, port from WP_ENV_PORT).
 const TESTS_CONFIG = '.wp-env.tests.json';
 
-const DEFAULT_ENGINES = [ 'intent-log', 'yjs-server', 'de-rtc' ];
+const DEFAULT_ENGINES = [ 'intent-log' ];
 
 /*
- * Documented engine capability gaps the fuzzer must not "rediscover"
- * (docs/engine-comparison.md): an action an engine cannot sync is dropped
+ * Documented engine capability gaps the fuzzer must not "rediscover":
+ * an action an engine cannot sync is dropped
  * from that engine's lanes instead of being reported as divergence.
  *
- * No engine declares a gap today. De-rtc used to declare `syncsTitle:
- * false`, but it syncs the title now — the whole entity property map rides
- * every commit (src/engines/de-rtc/doc-bridge.ts, readFlatProperties) and
- * the server merges it per property. Add an entry here only alongside the
+ * No engine declares a gap today. Add an entry here only alongside the
  * doc that documents the gap.
  */
 const ENGINE_CAPABILITIES = {};
@@ -149,7 +146,7 @@ function printUsage() {
 		[
 			'Usage: npm run fuzz -- [options]',
 			'',
-			'  --engines=a,b        Engines to sweep (default: intent-log,yjs-server,de-rtc)',
+			'  --engines=a,b        Engines to sweep (default: intent-log)',
 			'  --transports=a,b     Transports to sweep (default: http-polling,sse,sse-daemon,websocket)',
 			'  --combos=e/t,...     Explicit engine/transport pairs (overrides the cross product)',
 			'  --seeds=N            Seeds per combo (default: 5)',

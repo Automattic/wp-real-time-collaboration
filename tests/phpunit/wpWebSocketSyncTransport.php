@@ -206,7 +206,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 				'client_id'       => 8,
 				'after'           => 0,
 				'updates'         => array(),
-				'engine'          => 'yjs-server',
+				'engine'          => Test_Opaque_Relay_Engine::SLUG,
 				'engine_protocol' => 1,
 			)
 		);
@@ -229,8 +229,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		// so a client provably speaking the NEW engine must reset them
 		// instead of being fenced forever (there is no post lock to
 		// degrade to).
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, WP_Intent_Log_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			$validated = $this->validate(
@@ -239,8 +239,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 					'client_id'       => 7,
 					'after'           => 0,
 					'updates'         => array(),
-					'engine'          => WP_Yjs_Server_Engine::SLUG,
-					'engine_protocol' => WP_Yjs_Server_Engine::PROTOCOL_VERSION,
+					'engine'          => WP_Intent_Log_Engine::SLUG,
+					'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 				)
 			);
 			$this->assertIsArray( $validated );
@@ -253,11 +253,11 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			// the new engine, exactly as it does over HTTP polling.
 			$this->assertIsArray( $result );
 			$this->assertSame(
-				WP_Yjs_Server_Engine::SLUG,
+				WP_Intent_Log_Engine::SLUG,
 				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
 			);
 			$this->assertNotEmpty( $result['updates'] );
-			$this->assertSame( WP_Yjs_Server_Engine::UPDATE_TYPE_SNAPSHOT, $result['updates'][0]['type'] );
+			$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $result['updates'][0]['type'] );
 		} finally {
 			delete_option( 'wp_sync_engine' );
 			self::delete_user( $editor_id );
@@ -269,8 +269,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		wp_set_current_user( $editor_id );
 		$room = 'taxonomy/wp_pattern_category';
 
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, WP_Intent_Log_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			// A stale tab still speaks the OLD engine after the switch: it
@@ -282,7 +282,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 					'client_id'       => 7,
 					'after'           => 0,
 					'updates'         => array(),
-					'engine'          => WP_Intent_Log_Engine::SLUG,
+					'engine'          => Test_Opaque_Relay_Engine::SLUG,
 					'engine_protocol' => 1,
 				)
 			);
@@ -294,7 +294,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			$this->assertWPError( $result );
 			$this->assertSame( 'rest_sync_engine_mismatch', $result->get_error_code() );
 			$this->assertSame(
-				WP_Intent_Log_Engine::SLUG,
+				Test_Opaque_Relay_Engine::SLUG,
 				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
 			);
 		} finally {
@@ -309,8 +309,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		$post_id = self::factory()->post->create( array( 'post_author' => $editor_id ) );
 		$room    = 'postType/post:' . $post_id;
 
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, WP_Intent_Log_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Yjs_Server_Engine::SLUG );
+		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			// Per-post entity rooms can hold unsaved collaborative content:
@@ -322,8 +322,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 					'client_id'       => 7,
 					'after'           => 0,
 					'updates'         => array(),
-					'engine'          => WP_Yjs_Server_Engine::SLUG,
-					'engine_protocol' => WP_Yjs_Server_Engine::PROTOCOL_VERSION,
+					'engine'          => WP_Intent_Log_Engine::SLUG,
+					'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 				)
 			);
 			$this->assertIsArray( $validated );
@@ -334,7 +334,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			$this->assertWPError( $result );
 			$this->assertSame( 'rest_sync_engine_mismatch', $result->get_error_code() );
 			$this->assertSame(
-				WP_Intent_Log_Engine::SLUG,
+				Test_Opaque_Relay_Engine::SLUG,
 				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
 			);
 		} finally {

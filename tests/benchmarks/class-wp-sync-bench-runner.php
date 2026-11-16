@@ -24,7 +24,7 @@
  * stored row/byte growth. QUALITY is policy-correct and engine-matched:
  * a server-merging engine reports how every submitted edit settled —
  * merged (applied), preserved for review (escalated), or a benign void —
- * and asserts NO edit was lost. That inverts the old DE-RTC harness's
+ * and asserts NO edit was lost. That inverts an older harness's
  * "silent-merge retention" score, which rewarded exactly the
  * last-write-wins behaviour this project rejects. An engine that merges on
  * the client (the retired yjs-relay did; the opaque fallback profile

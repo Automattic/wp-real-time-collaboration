@@ -34,12 +34,6 @@ jest.mock( '../../../src/lock-unlock', () => ( {
 jest.mock( '../../../src/engines/intent-log-adapter', () => ( {
 	createIntentLogEngineAdapter: () => ( { slug: 'intent-log' } ),
 } ) );
-jest.mock( '../../../src/engines/yjs-server-adapter', () => ( {
-	createYjsServerEngineAdapter: () => ( { slug: 'yjs-server' } ),
-} ) );
-jest.mock( '../../../src/engines/de-rtc-adapter', () => ( {
-	createDeRtcEngineAdapter: () => ( { slug: 'de-rtc' } ),
-} ) );
 jest.mock(
 	'../../../src/providers/http-polling/http-polling-provider',
 	() => ( { createHttpPollingProvider: jest.fn() } )
@@ -94,7 +88,7 @@ it( 'registers the adapter from normal startup after all engines and transports'
 		syncApis.registerSyncEngine.mock.calls.map(
 			( [ engine ] ) => engine.slug
 		)
-	).toEqual( [ 'intent-log', 'yjs-server', 'de-rtc' ] );
+	).toEqual( [ 'intent-log' ] );
 	expect(
 		syncApis.registerSyncTransport.mock.calls.map(
 			( [ transport ] ) => transport.slug

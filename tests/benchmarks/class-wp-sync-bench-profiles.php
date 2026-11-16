@@ -19,8 +19,6 @@ if ( ! class_exists( 'WP_Sync_Bench_Profiles' ) ) {
 	require_once __DIR__ . '/class-wp-sync-bench-workload.php';
 	require_once __DIR__ . '/interface-wp-sync-bench-authoring-profile.php';
 	require_once __DIR__ . '/class-wp-sync-bench-intent-log-profile.php';
-	require_once __DIR__ . '/class-wp-sync-bench-yjs-server-profile.php';
-	require_once __DIR__ . '/class-wp-sync-bench-de-rtc-profile.php';
 	require_once __DIR__ . '/class-wp-sync-bench-opaque-relay-profile.php';
 
 	/**
@@ -38,8 +36,6 @@ if ( ! class_exists( 'WP_Sync_Bench_Profiles' ) ) {
 		public static function for_engine( string $engine_slug, int $post_id, array $workload ): WP_Sync_Bench_Authoring_Profile {
 			$profiles = array(
 				'intent-log' => WP_Sync_Bench_Intent_Log_Profile::class,
-				'yjs-server' => WP_Sync_Bench_Yjs_Server_Profile::class,
-				'de-rtc'     => WP_Sync_Bench_De_RTC_Profile::class,
 			);
 
 			/**

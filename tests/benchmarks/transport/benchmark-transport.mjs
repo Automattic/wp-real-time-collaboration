@@ -33,7 +33,7 @@
  *               on (auto = whatever the site has, Redis when detectable;
  *               cache needs cache=redis, table needs cache=none). The
  *               report records the wait the streams actually got.
- *   engine=     intent-log | yjs-server | current (default: current)
+ *   engine=     intent-log | current (default: current)
  *   trials=     measured token round-trips (default 30)
  *   warmup=     unmeasured leading trials (default 3)
  *   idle=       seconds of idle-traffic measurement (default 30, 0 skips)
@@ -100,6 +100,12 @@ const opts = parseCliOptions();
 
 const TRANSPORT = String( opts.transport ?? 'current' );
 const ENGINE = String( opts.engine ?? 'current' );
+if ( ! [ 'intent-log', 'current' ].includes( ENGINE ) ) {
+	console.error(
+		`unknown engine "${ ENGINE }" — known: intent-log, current`
+	);
+	process.exit( 1 );
+}
 const CACHE = String( opts.cache ?? 'current' );
 const WAKE = String( opts.wake ?? 'auto' );
 const TRIALS = Number( opts.trials ?? 30 );
@@ -482,15 +488,6 @@ async function main() {
 							return false;
 						}
 						const url = decodeURIComponent( response.url() );
-						if ( settings.active.engine === 'de-rtc' ) {
-							return (
-								url.includes( '/autosaves' ) &&
-								response
-									.request()
-									.postData()
-									?.includes( 'benchrecoveryx' )
-							);
-						}
 						if ( ! url.includes( '/wp-sync/v1/updates' ) ) {
 							return false;
 						}

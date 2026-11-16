@@ -30,9 +30,8 @@ mkdir -p "$DIST"
 echo "Staging plugin files..."
 cp wp-real-time-collaboration.php README.md CHANGELOG.md LICENSE "$DIST/"
 rsync -a build/ "$DIST/build/"
-# Server PHP, including the vendored y-php / automerge-php libraries.
-# Their dev-only artifacts (composer vendor dirs from running their own
-# test suites locally) are excluded.
+# Server PHP. Dev-only artifacts (composer vendor dirs, node_modules)
+# are excluded.
 rsync -a --exclude vendor/ --exclude node_modules/ includes/ "$DIST/includes/"
 
 # The bundled Gutenberg plugin: the same file list Gutenberg's own release

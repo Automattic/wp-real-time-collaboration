@@ -16,9 +16,6 @@
  *   review lane ("silently zero is a failure of honesty") — counting
  *   both escalated dispositions and partial-acceptance parked rows —
  *   while staying under an upper bound (overburdening is also failure).
- * - yjs-server's silence on contended workloads is its DOCUMENTED
- *   policy; the criterion pins that policy so a change to it is a
- *   deliberate act, not drift.
  *
  * @package Gutenberg
  */
@@ -63,8 +60,6 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 				'paragraphs' => 4,
 				'bands'      => array(
 					'WP_Intent_Log_Engine' => array( 0.0, 0.0 ),
-					'WP_Yjs_Server_Engine' => array( 0.0, 0.0 ),
-					'WP_De_RTC_Engine'     => array( 0.0, 0.0 ),
 				),
 			),
 			'save-sync-session'   => array(
@@ -72,16 +67,11 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 				'clients'    => 3,
 				'paragraphs' => 6,
 				'bands'      => array(
-					// The vision's native cadence: review work must stay
-					// rare. yjs is silent by policy; de-rtc surfaces only
-					// the occasional genuinely-colliding save beat as
-					// parked blocks (a small share — this band caught the
-					// doc overstating "nothing"); intent-log's
-					// stale-observation residual escalates most at this
-					// cadence — tracked, bounded, and expected to shrink
-					// as the residual is fixed (AGENTS.md).
-					'WP_Yjs_Server_Engine' => array( 0.0, 0.0 ),
-					'WP_De_RTC_Engine'     => array( 0.0, 0.15 ),
+					// The save-centric cadence: review work must stay
+					// rare. intent-log's stale-observation residual
+					// escalates most at this cadence — tracked, bounded,
+					// and expected to shrink as the residual is fixed
+					// (AGENTS.md).
 					'WP_Intent_Log_Engine' => array( 0.0, 0.4 ),
 				),
 			),
@@ -93,9 +83,6 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 					// Genuine same-register contention MUST surface — and
 					// must not drown the session in review work.
 					'WP_Intent_Log_Engine' => array( 0.000001, 0.7 ),
-					'WP_De_RTC_Engine'     => array( 0.000001, 0.7 ),
-					// Silent by documented policy.
-					'WP_Yjs_Server_Engine' => array( 0.0, 0.0 ),
 				),
 			),
 			'structural-churn'    => array(
@@ -104,11 +91,6 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 				'paragraphs' => 4,
 				'bands'      => array(
 					'WP_Intent_Log_Engine' => array( 0.0, 0.0 ),
-					'WP_Yjs_Server_Engine' => array( 0.0, 0.0 ),
-					// Structural divergence is where de-rtc's whole-proposal
-					// fallback still bites: it must surface, bounded well
-					// below the pre-salvage ~half-of-proposals share.
-					'WP_De_RTC_Engine'     => array( 0.000001, 0.5 ),
 				),
 			),
 		);
@@ -125,7 +107,6 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 				$post_id = self::factory()->post->create(
 					array( 'post_content' => $workload['post_content'] )
 				);
-				$room    = 'postType/post:' . $post_id;
 				$storage = new WP_Sync_Bench_Memory_Storage();
 				$engine  = new $engine_class( $storage );
 				$report  = WP_Sync_Bench_Runner::run( $engine, $storage, $post_id, $workload );
@@ -134,31 +115,9 @@ class Tests_Collaboration_WpSyncEscalationCriteria extends WP_UnitTestCase {
 				$this->assertSame( 0, $report['quality']['lost_work'], $label . ': lost work' );
 
 				$requests = max( 1, (int) $report['requests'] );
-				if ( 'WP_De_RTC_Engine' === $engine_class ) {
-					/*
-					 * de-rtc surfaces every conflict as a durable
-					 * parked row — both whole-proposal escalations
-					 * (which ALSO report an escalated disposition) and
-					 * partial-acceptance salvage (which reports applied).
-					 * Unique parked proposalIds are therefore the one
-					 * honest, non-double-counting surfaced metric.
-					 */
-					$parked_ids = array();
-					foreach ( $storage->get_updates_after_cursor( $room, 0 ) as $row ) {
-						if ( 'parked' !== ( $row['type'] ?? '' ) ) {
-							continue;
-						}
-						$decoded = json_decode( (string) $row['data'], true );
-						if ( is_array( $decoded ) && is_string( $decoded['proposalId'] ?? null ) ) {
-							$parked_ids[ $decoded['proposalId'] ] = true;
-						}
-					}
-					$surfaced = count( $parked_ids );
-				} else {
-					// Per-intent dispositions surface conflicts directly.
-					$surfaced = (int) ( $report['quality']['dispositions']['escalated'] ?? 0 );
-				}
-				$rate = $surfaced / $requests;
+				// Per-intent dispositions surface conflicts directly.
+				$surfaced = (int) ( $report['quality']['dispositions']['escalated'] ?? 0 );
+				$rate     = $surfaced / $requests;
 
 				list( $min, $max ) = $band;
 				if ( $min > 0 ) {

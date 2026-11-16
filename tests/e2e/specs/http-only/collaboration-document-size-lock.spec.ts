@@ -15,7 +15,7 @@ import { test, expect } from '../../config/collaboration-fixtures';
  * has its own separate size gates (genesis refuses above
  * `wp_sync_yjs_server_max_genesis_bytes`, and a grown room rejects writes
  * above `wp_sync_yjs_server_max_room_bytes`); they return 413 and are not
- * what this spec exercises. See docs/engine-comparison.md.
+ * what this spec exercises.
  */
 test.describe( 'Collaboration with large documents', () => {
 	test( 'disables collaboration when an oversized local update exceeds the document size limit', async ( {

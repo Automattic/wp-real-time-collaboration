@@ -1,6 +1,6 @@
 {
   "name": "transports",
-  "description": "Each engine over each transport. SSE needs the tests env's Redis; websocket needs the sync daemon running (npm run rtc:ws starts it for the dev env).",
+  "description": "The engine over each transport. SSE needs the tests env's Redis; websocket needs the sync daemon running (npm run rtc:ws starts it for the dev env).",
   "center": {
     "engine": "intent-log",
     "transport": "http-polling",
@@ -14,7 +14,6 @@
   },
   "vary": [
     {
-      "engine": [ "intent-log", "yjs-server", "de-rtc" ],
       "transport": [ "http-polling", "sse", "websocket" ]
     }
   ],
