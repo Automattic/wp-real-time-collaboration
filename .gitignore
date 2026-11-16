@@ -1,0 +1,29 @@
+# Dependencies
+/node_modules
+/vendor
+
+# Build output
+/build
+/tests/e2e/plugins/rtc-websocket-provider/build
+
+# Environment / tooling caches
+/.wp-env.override.json
+/.wp-env.tests.override.json
+/.phpcs.cache
+/.eslintcache
+/.phpunit.result.cache
+*.log
+
+# Playwright e2e output (traces, screenshots, reports)
+/artifacts
+
+# Release packaging output (npm run plugin-zip)
+/dist
+/gutenberg-sync-engines.zip
+
+# One-command benchmark runner output (npm run bench)
+/bench-results
+
+# Transport-tool failure screenshots (written to CWD on soak/bench failures)
+soak-fail-*.png
+bench-fail-*.png

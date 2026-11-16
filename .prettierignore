@@ -1,0 +1,32 @@
+# This file replaces @wordpress/scripts' stock ignore file entirely, so it
+# must repeat the defaults (build, vendor) in addition to project entries.
+build
+vendor
+package-lock.json
+composer.lock
+
+# Pinned Gutenberg subtree — formatted by its own tooling at the pin.
+gutenberg
+
+# Frozen cross-language intent-log core (byte-matched against its PHP twin
+# and JSON vectors); reformatting would break the contract.
+src/engines/intent-log
+
+# Generated test vectors: their contract is byte parity with the generator
+# (tests/tools/generate-*) and between the Jest and PHPUnit copies, not
+# style. Prettier would collapse short arrays onto one line.
+tests/js/engines/intent-log/test-vectors
+tests/js/engines/de-rtc/test-vectors
+tests/phpunit/test-vectors
+
+# Vendored third-party code from the Yjs ecosystem.
+src/engines/yjs-server/y-utilities
+
+# Vendored y-php and automerge-php libraries (imported verbatim; they
+# carry their own style and configs, and must stay byte-identical to
+# their upstream pins).
+includes/lib/y-php
+includes/lib/automerge-php
+
+# Playwright e2e output.
+artifacts

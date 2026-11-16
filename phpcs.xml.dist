@@ -1,0 +1,120 @@
+<?xml version="1.0"?>
+<ruleset name="Gutenberg Sync Engines">
+	<description>PHP coding standards, mirroring wordpress-develop.</description>
+
+	<!-- What to scan. -->
+	<file>.</file>
+	<exclude-pattern>/_trash/*</exclude-pattern>
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/build/*</exclude-pattern>
+	<!-- The pinned Gutenberg subtree is vendored runtime, not this plugin's code. -->
+	<exclude-pattern>/gutenberg/*</exclude-pattern>
+	<!-- Vendored y-php library (deliberately mirrors JS Yjs, not WPCS; it
+	     carries its own phpcs.xml.dist). -->
+	<exclude-pattern>/includes/lib/y-php/*</exclude-pattern>
+	<!-- Vendored automerge-php library (deliberately mirrors upstream
+	     Automerge style, PHP 8.2+, not WPCS; ported verbatim from the
+	     wordpress-develop add/distributed-editing branch). -->
+	<exclude-pattern>/includes/lib/automerge-php/*</exclude-pattern>
+	<!-- The DE-RTC merge core is ported verbatim from wordpress-develop
+	     (upstream style, core text domain, wp_de_rtc_ prefix); frozen like
+	     the intent-log cross-language core. -->
+	<exclude-pattern>/includes/engines/de-rtc/merge-core.php</exclude-pattern>
+	<!-- Frozen JS engine core + vectors are not PHP. -->
+	<exclude-pattern>*/engines/intent-log/*.js</exclude-pattern>
+
+	<!-- Run against PHP only, show progress and sniff codes. -->
+	<arg name="extensions" value="php"/>
+	<arg name="basepath" value="."/>
+	<arg name="parallel" value="8"/>
+	<arg value="ps"/>
+
+	<!-- WordPress-Core + Extra + Docs, as wordpress-develop uses. -->
+	<rule ref="WordPress-Core"/>
+	<rule ref="WordPress-Extra"/>
+
+	<!-- Documentation standards apply to shipping code only. Test methods
+	     and benchmark scripts are named for what they assert; requiring
+	     docblocks there adds noise, not information. -->
+	<rule ref="WordPress-Docs">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- The PHPUnit suites and the benchmark harness run under WP-CLI or
+	     the test runner, never in a web response: their echo output is
+	     terminal text, they deliberately stage WP globals, and they
+	     base64-encode binary CRDT payloads as part of the wire format
+	     they exercise. -->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.PHP.DiscouragedPHPFunctions">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- CLI tooling reads and writes local files directly; the sync
+	     daemon operates on stream sockets, which WP_Filesystem does not
+	     cover. -->
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>/tests/*</exclude-pattern>
+		<exclude-pattern>/includes/transports/websocket/*</exclude-pattern>
+		<exclude-pattern>/includes/transports/class-wp-sync-connection.php</exclude-pattern>
+		<exclude-pattern>/includes/transports/sse/class-wp-sync-sse-connection.php</exclude-pattern>
+		<exclude-pattern>/includes/transports/sse/class-wp-sync-redis.php</exclude-pattern>
+	</rule>
+
+	<!-- Test fixtures and benchmark profiles colocate small helper
+	     classes, and stand-ins for another plugin's global functions,
+	     with their only consumer. -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+	<rule ref="Universal.Files.SeparateFunctionsFromOO">
+		<exclude-pattern>/tests/*</exclude-pattern>
+	</rule>
+
+	<!-- Text domain for i18n checks. The 'gutenberg' domain is allowed
+	     because engine/transport strings were relocated from (and reuse
+	     the translations of) the Gutenberg collaboration framework this
+	     plugin extends. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="gutenberg-sync-engines"/>
+				<element value="gutenberg"/>
+				<element value="default"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Prefix enforcement for globals defined by this plugin. Tests,
+	     benchmarks, and fixtures never load in a production site, so
+	     their locals and helpers are not held to the prefix. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>/tests/*</exclude-pattern>
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="gutenberg_sync_engines"/>
+				<element value="Gutenberg_Sync_Engines"/>
+				<!-- Engine/transport classes implement framework contracts and
+				     keep their framework-canonical WP_* names. -->
+				<element value="WP_Intent_Log"/>
+				<element value="WP_De_RTC"/>
+				<element value="WP_Yjs_Server"/>
+				<element value="WP_HTTP_Polling"/>
+				<element value="WP_HTTP_Long_Polling"/>
+				<element value="WP_WebSocket"/>
+				<element value="WP_Sync"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Minimum supported versions. -->
+	<config name="minimum_wp_version" value="6.7"/>
+	<rule ref="PHPCompatibilityWP"/>
+	<config name="testVersion" value="7.4-"/>
+</ruleset>

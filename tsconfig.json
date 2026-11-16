@@ -1,0 +1,54 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@wordpress/core-data": [ "./gutenberg/packages/core-data/build-types" ],
+      "@wordpress/sync": [ "./gutenberg/packages/sync/src" ],
+      "@wordpress/blocks": [
+        "./gutenberg/node_modules/@wordpress/blocks/build-types"
+      ],
+      "@wordpress/components": [
+        "./gutenberg/node_modules/@wordpress/components/build-types"
+      ],
+      "@wordpress/plugins": [
+        "./gutenberg/node_modules/@wordpress/plugins/build-types"
+      ],
+      "@wordpress/block-serialization-default-parser": [
+        "./gutenberg/node_modules/@wordpress/block-serialization-default-parser"
+      ],
+      "@wordpress/data": [
+        "./gutenberg/node_modules/@wordpress/data/build-types"
+      ],
+      "yjs": [ "./gutenberg/node_modules/yjs" ],
+      "y-protocols/*": [ "./gutenberg/node_modules/y-protocols/*" ],
+      "lib0/*": [ "./gutenberg/node_modules/lib0/*" ]
+    },
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "checkJs": true,
+    "types": [ "@wordpress/element" ]
+  },
+  "include": [ "src/**/*", "tests/js/**/*" ],
+  "exclude": [
+    "node_modules",
+    "build",
+    // The Jest specs drive the intent-log core with loose fixtures on
+    // purpose. The core itself (src/engines/intent-log/*.js) and the
+    // Node-only harness modules beside the specs (simulator,
+    // genesis-sync-id) ARE checked, via checkJs and their JSDoc.
+    "tests/js/**/*.test.js",
+    "tests/js/jest-setup*.js",
+    // The conflict review UI's component tests render the (untyped, moved
+    // as is) prototype components with Testing Library, which Jest resolves
+    // from the subtree; they are not part of the typed program either.
+    "tests/js/review/**/*"
+  ]
+}
