@@ -12,8 +12,6 @@ that decision call for a change in direction: collaboration should run
 through WordPress, with Core in control. The reasoning is explored in
 [Moving to a server-aware approach for collaboration](https://make.wordpress.org/core/2026/09/18/moving-to-a-server-aware-approach-for-collaboration/).
 
-`wp-real-time-collaboration` is a temporary working name.
-
 ## Where this plugin came from
 
 This plugin was created from the `gutenberg-sync-engines` plugin at
