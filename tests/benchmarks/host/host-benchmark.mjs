@@ -623,7 +623,7 @@ async function listPluginCopies( rest ) {
 	}
 	return data
 		.filter( ( row ) =>
-			String( row.plugin ?? '' ).endsWith( '/gutenberg-sync-engines' )
+			String( row.plugin ?? '' ).endsWith( '/wp-real-time-collaboration' )
 		)
 		.map( ( row ) => ( { plugin: row.plugin, status: row.status } ) );
 }
@@ -1592,17 +1592,17 @@ async function main() {
 			const preferred =
 				copies.find(
 					( copy ) =>
-						! copy.plugin.startsWith( 'gutenberg-sync-engines/' )
+						! copy.plugin.startsWith( 'wp-real-time-collaboration/' )
 				) ?? copies[ 0 ];
 			console.log(
-				`no active gutenberg-sync-engines copy — activating ${ preferred.plugin }…`
+				`no active wp-real-time-collaboration copy — activating ${ preferred.plugin }…`
 			);
 			await setPluginStatus( rest, preferred.plugin, 'active' );
 			activeCopies = [ { ...preferred, status: 'active' } ];
 		}
 		if ( ! activeCopies.length ) {
 			throw new Error(
-				`no gutenberg-sync-engines plugin on ${ BASE } — install and activate it, then rerun`
+				`no wp-real-time-collaboration plugin on ${ BASE } — install and activate it, then rerun`
 			);
 		}
 

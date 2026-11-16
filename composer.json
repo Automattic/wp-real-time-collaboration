@@ -1,5 +1,5 @@
 {
-  "name": "wordpress/gutenberg-sync-engines",
+  "name": "wordpress/wp-real-time-collaboration",
   "description": "Pluggable real-time collaboration engines and transports for the Gutenberg collaborative-editing framework.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",

@@ -39,7 +39,7 @@ if ( '1' !== ( $_SERVER['HTTP_X_RTC_TEST'] ?? '' ) && '1' !== ( $_GET['_rtctest'
 // The log class lives in the plugin directory, which is mounted whether or
 // not the plugin is ACTIVE — that is the point: the baseline phase runs
 // with it deactivated.
-$gutenberg_sync_engines_request_log = WP_PLUGIN_DIR . '/gutenberg-sync-engines/includes/diagnostics/class-gutenberg-sync-engines-request-log.php';
+$gutenberg_sync_engines_request_log = WP_PLUGIN_DIR . '/wp-real-time-collaboration/includes/diagnostics/class-gutenberg-sync-engines-request-log.php';
 if ( ! file_exists( $gutenberg_sync_engines_request_log ) ) {
 	return;
 }

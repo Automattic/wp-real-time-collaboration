@@ -23,8 +23,8 @@
     },
     {
       "step": "activatePlugin",
-      "pluginName": "Gutenberg Sync Engines",
-      "pluginPath": "gutenberg-sync-engines/gutenberg-sync-engines.php"
+      "pluginName": "WP Real-Time Collaboration",
+      "pluginPath": "wp-real-time-collaboration/wp-real-time-collaboration.php"
     },
     {
       "step": "runPHP",

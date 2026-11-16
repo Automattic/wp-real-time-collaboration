@@ -312,7 +312,7 @@ export async function configureSettings( page, engine, transport ) {
 	if ( ! ( await engineSelect.count() ) ) {
 		throw new Error(
 			'Settings → Collaboration screen not found. Are the gutenberg ' +
-				'and gutenberg-sync-engines plugins active on ' +
+				'and wp-real-time-collaboration plugins active on ' +
 				`${ BASE }?`
 		);
 	}
@@ -396,7 +396,7 @@ export async function ensureCollaborationEnabled( page ) {
 	if ( 200 !== status || ! data ) {
 		throw new Error(
 			`GET /wp/v2/settings returned ${ status }. Are the gutenberg and ` +
-				`gutenberg-sync-engines plugins active on ${ BASE }?`
+				`wp-real-time-collaboration plugins active on ${ BASE }?`
 		);
 	}
 	const experiments = { ...( data[ 'gutenberg-experiments' ] || {} ) };

@@ -19,7 +19,7 @@
 
 # Release packaging output (npm run plugin-zip)
 /dist
-/gutenberg-sync-engines.zip
+/wp-real-time-collaboration.zip
 
 # One-command benchmark runner output (npm run bench)
 /bench-results

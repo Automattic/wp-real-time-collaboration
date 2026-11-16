@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds gutenberg-sync-engines.zip: a self-contained, ready-to-install
+# Builds wp-real-time-collaboration.zip: a self-contained, ready-to-install
 # WordPress plugin. The zip bundles the pinned Gutenberg plugin (built from
 # the gutenberg/ subtree) so the collaborative-editing framework is present
 # on any WordPress installation — the plugin entry loads the bundled copy
@@ -23,12 +23,12 @@ fi
 echo "Building the plugin bundle..."
 npm run build
 
-DIST=dist/gutenberg-sync-engines
-rm -rf dist gutenberg-sync-engines.zip
+DIST=dist/wp-real-time-collaboration
+rm -rf dist wp-real-time-collaboration.zip
 mkdir -p "$DIST"
 
 echo "Staging plugin files..."
-cp gutenberg-sync-engines.php README.md CHANGELOG.md LICENSE "$DIST/"
+cp wp-real-time-collaboration.php README.md CHANGELOG.md LICENSE "$DIST/"
 rsync -a build/ "$DIST/build/"
 # Server PHP, including the vendored y-php / automerge-php libraries.
 # Their dev-only artifacts (composer vendor dirs from running their own
@@ -53,8 +53,8 @@ mkdir -p "$DIST/gutenberg/packages/icons/src/library"
 cp gutenberg/packages/icons/src/manifest.php "$DIST/gutenberg/packages/icons/src/"
 cp gutenberg/packages/icons/src/library/*.svg "$DIST/gutenberg/packages/icons/src/library/"
 
-echo "Creating gutenberg-sync-engines.zip..."
-( cd dist && zip -rq ../gutenberg-sync-engines.zip gutenberg-sync-engines )
+echo "Creating wp-real-time-collaboration.zip..."
+( cd dist && zip -rq ../wp-real-time-collaboration.zip wp-real-time-collaboration )
 rm -rf dist
 
-du -h gutenberg-sync-engines.zip
+du -h wp-real-time-collaboration.zip

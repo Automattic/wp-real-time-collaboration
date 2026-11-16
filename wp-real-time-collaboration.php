@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       Gutenberg Sync Engines
- * Plugin URI:        https://github.com/WordPress/gutenberg-sync-engines
+ * Plugin Name:       WP Real-Time Collaboration
+ * Plugin URI:        TODO-REPOSITORY-URL (TODO: set the new repository address)
  * Description:       Pluggable real-time collaboration engines and transports for the Gutenberg collaborative-editing framework. Without this plugin active, real-time collaboration is effectively disabled.
  * Requires at least: 7.0
  * Requires PHP:      7.4
@@ -135,7 +135,7 @@ register_activation_hook( __FILE__, 'gutenberg_sync_engines_activate' );
 
 /*
  * In a git worktree, wp-env mounts this plugin TWICE (under the checkout's
- * directory name and as gutenberg-sync-engines), and both copies can end up
+ * directory name and as wp-real-time-collaboration), and both copies can end up
  * activated — wp-env re-activates its plugins list on every start. Loading
  * a second copy used to be a fatal redeclare; instead, let the first loaded
  * copy win and make any other mount a no-op. (The bootstrap declaration
@@ -166,10 +166,11 @@ if ( ! function_exists( 'gutenberg_sync_engines_load_bundled_gutenberg' ) ) {
 	 * any WordPress installation with nothing else installed.
 	 *
 	 * The standalone-Gutenberg check must read the active-plugins options, not
-	 * just look for loaded symbols: 'gutenberg-sync-engines/…' sorts BEFORE
-	 * 'gutenberg/gutenberg.php' in the active-plugins list, so this plugin
-	 * loads first, and loading the bundled copy while a standalone Gutenberg
-	 * is about to load would fatal with duplicate declarations. (Corollary:
+	 * just look for loaded symbols: a checkout folder whose name sorts BEFORE
+	 * 'gutenberg/gutenberg.php' in the active-plugins list (the old
+	 * 'gutenberg-sync-engines/…' did; 'wp-real-time-collaboration/…' sorts after) makes
+	 * this plugin load first, and loading the bundled copy while a standalone
+	 * Gutenberg is about to load would fatal with duplicate declarations. (Corollary:
 	 * activating a standalone Gutenberg while the bundled copy is already
 	 * loaded fails that activation request safely — WordPress's plugin
 	 * sandbox catches the redeclare — and the next request defers to it.)

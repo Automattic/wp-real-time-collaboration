@@ -52,7 +52,8 @@ const repoUrl = ( () => {
 	} catch {
 		// No origin remote — fall through.
 	}
-	return 'https://github.com/WordPress/gutenberg-sync-engines';
+	// TODO: set the new repository address.
+	return 'TODO-REPOSITORY-URL';
 } )();
 
 /**
@@ -139,7 +140,7 @@ run( 'npm', [ 'version', type, '--no-git-tag-version' ] );
 const version = JSON.parse( readFileSync( 'package.json', 'utf8' ) ).version;
 
 // Plugin header + version constant.
-const entryPath = 'gutenberg-sync-engines.php';
+const entryPath = 'wp-real-time-collaboration.php';
 let entry = readFileSync( entryPath, 'utf8' );
 const stamped = entry
 	.replace( /^( \* Version:\s+).*$/m, `$1${ version }` )

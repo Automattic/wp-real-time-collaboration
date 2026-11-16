@@ -14,7 +14,7 @@ import { test, expect } from '../config/collaboration-fixtures';
  * arrangement, and since the gutenberg mount left the wp-env configs, also
  * how every other spec in this suite gets its framework. This spec covers
  * the OTHER production arrangement: a site where a standalone Gutenberg was
- * already installed and active before gutenberg-sync-engines. The bundled
+ * already installed and active before wp-real-time-collaboration. The bundled
  * copy must defer — loading both is a fatal redeclare.
  *
  * The standalone install is materialized by the `gutenberg-stub` fixture
@@ -65,7 +65,7 @@ test.describe( 'Standalone Gutenberg precedence', () => {
 		// path-shaped identifier so cleanup restores the same arrangement.
 		const ourCopy = plugins.find(
 			( { name, status } ) =>
-				'Gutenberg Sync Engines' === name && 'active' === status
+				'WP Real-Time Collaboration' === name && 'active' === status
 		);
 		expect( ourCopy ).toBeDefined();
 		const stub = plugins.find( ( { plugin } ) =>

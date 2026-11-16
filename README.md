@@ -27,7 +27,7 @@ environments and both Playground blueprints install it.
 ## Install and try it
 
 1. Install and activate the Presence API.
-2. Install the [latest release zip](https://github.com/WordPress/gutenberg-sync-engines/releases/latest)
+2. Install the [latest release zip](TODO-REPOSITORY-URL/releases/latest)
    and activate it. Activation creates the storage tables and turns the
    Gutenberg "Real-time collaboration" experiment on.
 3. Open the same post in two browsers as two users and type. Changes

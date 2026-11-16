@@ -17,8 +17,8 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "https://github.com/WordPress/gutenberg-sync-engines/releases/latest/download/gutenberg-sync-engines.zip",
-        "caption": "Downloading Gutenberg Sync Engines (latest release, bundles Gutenberg)"
+        "url": "TODO-REPOSITORY-URL/releases/latest/download/wp-real-time-collaboration.zip",
+        "caption": "Downloading WP Real-Time Collaboration (latest release, bundles Gutenberg)"
       },
       "options": {
         "activate": true

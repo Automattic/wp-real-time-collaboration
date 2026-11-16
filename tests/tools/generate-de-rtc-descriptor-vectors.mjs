@@ -27,7 +27,7 @@ const output = execFileSync(
 		'.wp-env.tests.json',
 		'run',
 		'cli',
-		'--env-cwd=wp-content/plugins/gutenberg-sync-engines',
+		'--env-cwd=wp-content/plugins/wp-real-time-collaboration',
 		'wp',
 		'eval-file',
 		'tests/tools/generate-de-rtc-descriptor-vectors.php',

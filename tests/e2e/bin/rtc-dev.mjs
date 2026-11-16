@@ -267,7 +267,7 @@ function wpEnvWorkDirectory( configBasename = '.wp-env.json' ) {
 		// mounts the same plugin, so its work dir would also match — skip
 		// the `-tests-` variant or a stopped dev env reads as running on
 		// the tests site's port.
-		const needle = `${ REPO_ROOT }:/var/www/html/wp-content/plugins/gutenberg-sync-engines`;
+		const needle = `${ REPO_ROOT }:/var/www/html/wp-content/plugins/wp-real-time-collaboration`;
 		for ( const entry of readdirSync( home ) ) {
 			if ( entry.includes( '-tests-' ) ) {
 				continue;
@@ -361,7 +361,7 @@ async function isEnvRunning( composeFile ) {
  * (an unbuilt gutenberg.php bails before loading lib/, so the plugin goes
  * dormant), and in a git worktree wp-env mounts this plugin twice — under
  * the checkout's directory name (the plugins-list entry) AND as
- * gutenberg-sync-engines (the mapping). Activating a second copy while one
+ * wp-real-time-collaboration (the mapping). Activating a second copy while one
  * is active is a fatal redeclare, and `wp-env start` re-activates the
  * plugins-list copy on EVERY start — so the only steady state that
  * survives a restart is: directory-name copy active, mapping copy
@@ -394,15 +394,15 @@ async function ensurePluginsReady() {
 		] )
 	);
 	const copies = plugins.filter( ( plugin ) =>
-		plugin.file.endsWith( '/gutenberg-sync-engines.php' )
+		plugin.file.endsWith( '/wp-real-time-collaboration.php' )
 	);
 	const keep =
 		copies.find( ( p ) => p.name === path.basename( REPO_ROOT ) ) ||
-		copies.find( ( p ) => p.name === 'gutenberg-sync-engines' ) ||
+		copies.find( ( p ) => p.name === 'wp-real-time-collaboration' ) ||
 		copies[ 0 ];
 	if ( ! keep ) {
 		throw new Error(
-			'The gutenberg-sync-engines plugin is not installed in this wp-env.'
+			'The wp-real-time-collaboration plugin is not installed in this wp-env.'
 		);
 	}
 	for ( const plugin of copies ) {
@@ -706,20 +706,20 @@ async function runDoctorMode() {
 		}
 
 		const copies = plugins.filter( ( plugin ) =>
-			plugin.file.endsWith( '/gutenberg-sync-engines.php' )
+			plugin.file.endsWith( '/wp-real-time-collaboration.php' )
 		);
 		const active = copies.filter( ( p ) => 'active' === p.status );
 		const directoryCopy = copies.find(
 			( p ) => p.name === path.basename( REPO_ROOT )
 		);
 		if ( 0 === copies.length ) {
-			fail( 'gutenberg-sync-engines is not installed in this env' );
+			fail( 'wp-real-time-collaboration is not installed in this env' );
 		} else if ( active.length > 1 ) {
 			fail(
 				`both plugin copies are active (${ active
 					.map( ( p ) => p.name )
 					.join( ', ' ) }) — fatal redeclare`,
-				'deactivate the mapping copy: wp plugin deactivate gutenberg-sync-engines (npm run rtc:ws repairs the dev env automatically)'
+				'deactivate the mapping copy: wp plugin deactivate wp-real-time-collaboration (npm run rtc:ws repairs the dev env automatically)'
 			);
 		} else if (
 			1 === active.length &&

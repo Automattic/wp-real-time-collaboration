@@ -6,7 +6,7 @@
  *
  * Usage (tests env, which installs and activates the Presence API):
  *   npx wp-env --config .wp-env.tests.json run cli \
- *     --env-cwd=wp-content/plugins/gutenberg-sync-engines \
+ *     --env-cwd=wp-content/plugins/wp-real-time-collaboration \
  *     wp eval-file tests/tools/check-presence-api.php
  *
  * Exits non-zero on the first thing that does not hold.

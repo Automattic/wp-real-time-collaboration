@@ -73,16 +73,16 @@ async function globalSetup( config: FullConfig ) {
 		} );
 	}
 	const copies = plugins.filter(
-		( { name } ) => 'Gutenberg Sync Engines' === name
+		( { name } ) => 'WP Real-Time Collaboration' === name
 	);
 	if ( ! copies.some( ( { status } ) => 'active' === status ) ) {
 		const preferred =
 			copies.find( ( { plugin } ) =>
-				plugin.startsWith( 'gutenberg-sync-engines/' )
+				plugin.startsWith( 'wp-real-time-collaboration/' )
 			) ?? copies[ 0 ];
 		if ( ! preferred ) {
 			throw new Error(
-				'The gutenberg-sync-engines plugin is not installed on the tests site.'
+				'The wp-real-time-collaboration plugin is not installed on the tests site.'
 			);
 		}
 		await requestUtils.rest( {

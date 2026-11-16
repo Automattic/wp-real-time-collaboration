@@ -1,5 +1,5 @@
 {
-  "name": "gutenberg-sync-engines",
+  "name": "wp-real-time-collaboration",
   "version": "0.0.2",
   "description": "Pluggable real-time collaboration engines and transports for the Gutenberg collaborative-editing framework.",
   "license": "GPL-2.0-or-later",
@@ -51,7 +51,7 @@
     "lint:js:fix": "npm run lint:js -- --fix",
     "lint:docs": "node tests/tools/doc-lint.mjs",
     "lint:php": "composer lint",
-    "playground": "wp-playground-cli server --mount=.:/wordpress/wp-content/plugins/gutenberg-sync-engines --blueprint=blueprint.local.json --login --workers=1",
+    "playground": "wp-playground-cli server --mount=.:/wordpress/wp-content/plugins/wp-real-time-collaboration --blueprint=blueprint.local.json --login --workers=1",
     "plugin-zip": "bash bin/build-plugin-zip.sh",
     "preplayground": "test -f build/sync-engines.js -a -d gutenberg/build || { echo \"playground: build first (npm run build; cd gutenberg && npm install --ignore-scripts && npm run build)\" >&2; exit 1; }",
     "pretest:e2e": "rimraf gutenberg/node_modules/@playwright/test gutenberg/node_modules/playwright",
@@ -73,7 +73,7 @@
     "test:e2e:sse-daemon": "playwright test --config tests/e2e/playwright.rtc-sse-daemon.config.ts",
     "test:e2e:websocket": "playwright test --config tests/e2e/playwright.rtc-websocket.config.ts",
     "test:js": "wp-scripts test-unit-js",
-    "test:php": "wp-env --config .wp-env.tests.json run cli --env-cwd=wp-content/plugins/gutenberg-sync-engines vendor/bin/phpunit",
+    "test:php": "wp-env --config .wp-env.tests.json run cli --env-cwd=wp-content/plugins/wp-real-time-collaboration vendor/bin/phpunit",
     "typecheck": "tsc --noEmit"
   }
 }

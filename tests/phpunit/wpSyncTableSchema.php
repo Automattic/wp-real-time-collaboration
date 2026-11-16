@@ -147,7 +147,7 @@ class Tests_Collaboration_WpSyncTableSchema extends WP_UnitTestCase {
 		global $wpdb;
 
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
-			define( 'WP_UNINSTALL_PLUGIN', 'gutenberg-sync-engines/gutenberg-sync-engines.php' );
+			define( 'WP_UNINSTALL_PLUGIN', 'wp-real-time-collaboration/wp-real-time-collaboration.php' );
 		}
 		include dirname( GUTENBERG_SYNC_ENGINES_FILE ) . '/uninstall.php';
 

@@ -450,7 +450,7 @@ console.log( `env: ${ ENV_CONFIG } (${ ENV_CWD }); activating plugins…` );
  * The framework is BUNDLED: the plugin loads the vendored Gutenberg subtree
  * itself, so only the plugin needs activating — and only its DIRECTORY-NAME
  * copy. wp-env mounts the plugin twice (the directory name via `plugins`,
- * plus the fixed `gutenberg-sync-engines` mapping); in a worktree those are
+ * plus the fixed `wp-real-time-collaboration` mapping); in a worktree those are
  * two distinct plugin entries and activating both is a fatal redeclaration,
  * so activate the directory-name copy (the arrangement `wp-env start`
  * re-creates) and make sure the mapped copy is off. A stale `gutenberg`
@@ -459,8 +459,8 @@ console.log( `env: ${ ENV_CONFIG } (${ ENV_CWD }); activating plugins…` );
  */
 const PLUGIN_DIR = path.basename( process.cwd() );
 wp( 'wp', 'plugin', 'activate', PLUGIN_DIR );
-if ( 'gutenberg-sync-engines' !== PLUGIN_DIR ) {
-	wpTry( 'wp', 'plugin', 'deactivate', 'gutenberg-sync-engines' );
+if ( 'wp-real-time-collaboration' !== PLUGIN_DIR ) {
+	wpTry( 'wp', 'plugin', 'deactivate', 'wp-real-time-collaboration' );
 }
 const gutenbergVersion = wpTry(
 	'wp',

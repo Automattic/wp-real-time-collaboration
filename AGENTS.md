@@ -25,7 +25,7 @@ shared editing session.
 
 ## Repo layout
 
-- `gutenberg-sync-engines.php` — plugin entry.
+- `wp-real-time-collaboration.php` — plugin entry.
 - `includes/` — server PHP: `engines/{intent-log,yjs-server,de-rtc}/`
   (one folder per engine; none uses another's classes), `shared/`,
   `transports/` (polling, `sse/`, `websocket/`), `admin/` (the settings
@@ -144,7 +144,7 @@ Test traps:
 - `test:php` leaves the plugin INACTIVE; a daemon suite started next
   fails with `Error: 'collaboration' is not a registered wp command.`
   Reactivate first:
-  `npx @wordpress/env --config .wp-env.tests.json run cli wp plugin activate gutenberg-sync-engines`.
+  `npx @wordpress/env --config .wp-env.tests.json run cli wp plugin activate wp-real-time-collaboration`.
 - `test:php` and `test:e2e` need the running TESTS env with the subtree
   built, and e2e needs `npx playwright install chromium` once. If the
   tests site is not on `:8889`, pass `WP_BASE_URL`. If ANOTHER
@@ -382,7 +382,7 @@ before a big change. A durable lesson from an issue goes here.
   turns it on but does not pin it.
 - Built subtree JS lands at `gutenberg/build/scripts/<pkg>/`.
 - Worktrees mount the plugin twice (`.wp-env.json` maps `.` to
-  `wp-content/plugins/gutenberg-sync-engines` AND lists `.` in
+  `wp-content/plugins/wp-real-time-collaboration` AND lists `.` in
   `plugins`); activating both is a fatal
   `Cannot redeclare gutenberg_sync_engines_bootstrap()`. Keep the
   DIRECTORY-NAME copy active: `wp-env start` re-activates it on every

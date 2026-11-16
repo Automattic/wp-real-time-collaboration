@@ -48,7 +48,7 @@ tests_add_filter(
 		if ( $framework && file_exists( $framework ) ) {
 			require $framework;
 		}
-		require dirname( __DIR__ ) . '/gutenberg-sync-engines.php';
+		require dirname( __DIR__ ) . '/wp-real-time-collaboration.php';
 		// Test fixture engine (naive opaque relay) used by the transport and
 		// registry machinery tests; registered per-test, never in production.
 		require __DIR__ . '/phpunit/fixtures/class-test-opaque-relay-engine.php';

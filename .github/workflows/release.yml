@@ -2,7 +2,7 @@ name: Release
 
 # Publishes a GitHub release whenever the plugin version changes on trunk
 # (normally by merging the PR the "Create release PR" workflow opens). The
-# release asset is gutenberg-sync-engines.zip: a self-contained plugin that
+# release asset is wp-real-time-collaboration.zip: a self-contained plugin that
 # bundles the pinned, built Gutenberg framework, ready to install on any
 # WordPress site.
 
@@ -26,8 +26,8 @@ jobs:
       - name: Check for version change
         id: version_check
         run: |
-          OLD_VERSION=$(git show HEAD^:gutenberg-sync-engines.php 2>/dev/null | sed -n 's/.*Version: *//p' | head -n1 | tr -d '[:space:]')
-          NEW_VERSION=$(git show HEAD:gutenberg-sync-engines.php | sed -n 's/.*Version: *//p' | head -n1 | tr -d '[:space:]')
+          OLD_VERSION=$(git show HEAD^:wp-real-time-collaboration.php 2>/dev/null | sed -n 's/.*Version: *//p' | head -n1 | tr -d '[:space:]')
+          NEW_VERSION=$(git show HEAD:wp-real-time-collaboration.php | sed -n 's/.*Version: *//p' | head -n1 | tr -d '[:space:]')
           if [ -z "$OLD_VERSION" ] || [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
             echo "No version change detected"
             exit 0
@@ -61,7 +61,7 @@ jobs:
           npm run build
 
       # bin/build-plugin-zip.sh builds the plugin bundle and stages the
-      # plugin plus the bundled Gutenberg into gutenberg-sync-engines.zip.
+      # plugin plus the bundled Gutenberg into wp-real-time-collaboration.zip.
       - name: Build plugin zip
         if: steps.version_check.outputs.new_version
         run: npm run plugin-zip
@@ -71,5 +71,5 @@ jobs:
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           tag_name: v${{ steps.version_check.outputs.new_version }}
-          files: gutenberg-sync-engines.zip
+          files: wp-real-time-collaboration.zip
           generate_release_notes: true
