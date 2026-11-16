@@ -1426,28 +1426,22 @@ async function waitForDiscovery( pages: Page[] ) {
 				.waitFor( { timeout: DISCOVERY_TIMEOUT_MS } )
 		)
 	);
-	if ( [ 'websocket', 'sse', 'sse-daemon' ].includes( TRANSPORT ) ) {
-		// Sync rides WS frames, or one long-lived stream response per tab
-		// that answers only when it ends. Require evidence of the selected
-		// transport: successful polling fallback must not certify SSE.
+	if ( 'websocket' === TRANSPORT ) {
+		// Sync rides WS frames. Require evidence of the selected
+		// transport: successful polling fallback must not certify it.
 		await Promise.all(
 			pages.map( ( pg ) =>
 				pg.waitForFunction(
-					( transport ) => {
-						const state =
-							transport === 'websocket'
-								? ( window as any ).__wpSyncWsState
-								: ( window as any ).__wpSyncSseState;
+					() => {
+						const state = ( window as any ).__wpSyncWsState;
 						return (
 							state?.open &&
-							( transport === 'websocket'
-								? Object.values( state.rooms ).some(
-										( room: any ) => room.synced
-								  )
-								: state.events > 0 )
+							Object.values( state.rooms ).some(
+								( room: any ) => room.synced
+							)
 						);
 					},
-					TRANSPORT,
+					undefined,
 					{ timeout: DISCOVERY_TIMEOUT_MS }
 				)
 			)

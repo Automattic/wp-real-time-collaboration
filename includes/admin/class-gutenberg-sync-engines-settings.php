@@ -57,8 +57,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		const DELIVERY_POLLING           = 'polling';
 		const DELIVERY_POLLING_WEBRTC    = 'polling-webrtc';
 		const DELIVERY_POLLING_WEBSOCKET = 'polling-websocket';
-		const DELIVERY_SSE               = 'sse';
-		const DELIVERY_SSE_DAEMON        = 'sse-daemon';
 		const DELIVERY_WEBSOCKET         = 'websocket';
 
 		/**
@@ -208,9 +206,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 
 		/**
 		 * The stored transport slug, with the retired long-polling transport
-		 * read as SSE: the same held request, now a stream (sites that chose
-		 * it before the change keep push delivery without a visit to the
-		 * settings screen).
+		 * read as polling. (It used to be read as its stream successor, the
+		 * SSE transport, which this plugin no longer ships.)
 		 *
 		 * @since 0.0.2
 		 *
@@ -218,7 +215,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		 */
 		public static function stored_transport(): string {
 			$stored = (string) get_option( self::TRANSPORT_OPTION, '' );
-			return 'http-long-polling' === $stored ? 'sse' : $stored;
+			return 'http-long-polling' === $stored ? 'http-polling' : $stored;
 		}
 
 		/**
@@ -282,8 +279,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		public static function transport_choices(): array {
 			$labels  = array(
 				'http-polling' => __( 'Short-polling (default)', 'gutenberg-sync-engines' ),
-				'sse'          => __( 'Server-sent events', 'gutenberg-sync-engines' ),
-				'sse-daemon'   => __( 'Server-sent events (sync daemon)', 'gutenberg-sync-engines' ),
 				'websocket'    => __( 'WebSocket', 'gutenberg-sync-engines' ),
 			);
 			$choices = array();
@@ -301,20 +296,16 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 
 		/**
 		 * The "Transport" list: each entry is one (transport, advisory
-		 * channel) pair. SSE and the WebSocket transport carry
-		 * everything themselves while connected; the WebRTC advisory
-		 * channel they store is what serves when the connection is down
-		 * and tabs fall back to polling.
+		 * channel) pair. The WebSocket transport carries everything
+		 * itself while connected; the WebRTC advisory channel it stores is
+		 * what serves when the connection is down and tabs fall back to
+		 * polling.
 		 *
 		 * @since 0.0.1
 		 *
 		 * @return array<string, array{transport: string, advisory: string, label: string, description: string}> Choices.
 		 */
 		public static function delivery_choices(): array {
-			$sse_description = __( 'Receives updates over an HTTP stream held open by the server, one PHP worker per stream. Streams wake on Redis notices when a Redis address is configured or a Redis object cache is in use, and by checking a per-room version number every half second otherwise. Peers fall back to polling on failure.', 'gutenberg-sync-engines' );
-			if ( class_exists( 'WP_Sync_Redis_Notifications' ) && '' === WP_Sync_Redis_Notifications::url() ) {
-				$sse_description .= ' ' . __( 'No Redis is configured on this site (WP_SYNC_SSE_REDIS_URL, or a Redis object cache): streams check the version number instead, one small lookup per stream twice a second.', 'gutenberg-sync-engines' );
-			}
 			return array(
 				self::DELIVERY_POLLING           => array(
 					'transport'   => 'http-polling',
@@ -334,18 +325,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 					'label'       => __( 'Polling with a WebSocket advisory channel', 'gutenberg-sync-engines' ),
 					'description' => __( 'Peers connect via a socket to share announcements and poll for updates only when needed. Peers fall back to polling on failure.', 'gutenberg-sync-engines' ),
 				),
-				self::DELIVERY_SSE               => array(
-					'transport'   => 'sse',
-					'advisory'    => self::ADVISORY_WEBRTC,
-					'label'       => __( 'Server-sent events', 'gutenberg-sync-engines' ),
-					'description' => $sse_description,
-				),
-				self::DELIVERY_SSE_DAEMON        => array(
-					'transport'   => 'sse-daemon',
-					'advisory'    => self::ADVISORY_WEBRTC,
-					'label'       => __( 'Server-sent events (sync daemon)', 'gutenberg-sync-engines' ),
-					'description' => __( 'The same HTTP event stream, served by the sync daemon instead of a web worker, so no PHP worker is held per stream. Needs the daemon running. Peers fall back to polling on failure.', 'gutenberg-sync-engines' ),
-				),
 				self::DELIVERY_WEBSOCKET         => array(
 					'transport'   => 'websocket',
 					'advisory'    => self::ADVISORY_WEBRTC,
@@ -357,8 +336,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 
 		/**
 		 * The list entry the stored transport and advisory options amount
-		 * to. SSE and the WebSocket transport map to their entry whatever
-		 * advisory channel is stored (it only serves as fallback).
+		 * to. The WebSocket transport maps to its entry whatever advisory
+		 * channel is stored (it only serves as fallback).
 		 *
 		 * @since 0.0.1
 		 *
@@ -366,12 +345,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		 */
 		public static function delivery(): string {
 			$transport = self::stored_transport();
-			if ( 'sse-daemon' === $transport ) {
-				return self::DELIVERY_SSE_DAEMON;
-			}
-			if ( 'sse' === $transport ) {
-				return self::DELIVERY_SSE;
-			}
 			if ( 'websocket' === $transport ) {
 				return self::DELIVERY_WEBSOCKET;
 			}
@@ -698,8 +671,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		public function sanitize_transport( $value ): string {
 			$value = sanitize_key( (string) $value );
 			if ( 'http-long-polling' === $value ) {
-				// The retired transport; its stream successor.
-				$value = 'sse';
+				// The retired transport; polling replaces it.
+				$value = 'http-polling';
 			}
 			$choices = self::transport_choices();
 			return isset( $choices[ $value ] ) ? $value : 'http-polling';
@@ -840,10 +813,10 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			$effective = class_exists( 'WP_WebSocket_Sync_Transport' ) ? WP_WebSocket_Sync_Transport::get_socket_url() : '';
 			$this->render_url_input( self::WEBSOCKET_URL_OPTION, self::websocket_url(), $effective );
 			echo '<p class="description">' . wp_kses(
-				__( 'The address of the sync daemon, the long-running process that serves the WebSocket and the daemon\'s event stream (use <code>wss://</code> behind TLS in production). If empty, the daemon\'s own host and port are used: <code>WP_SYNC_WEBSOCKET_HOST</code> and <code>WP_SYNC_WEBSOCKET_PORT</code>, default <code>127.0.0.1:8787</code>. The <code>wp_sync_websocket_url</code> filter overrides this field and makes it read-only.', 'gutenberg-sync-engines' ),
+				__( 'The address of the sync daemon, the long-running process that serves the WebSocket (use <code>wss://</code> behind TLS in production). If empty, the daemon\'s own host and port are used: <code>WP_SYNC_WEBSOCKET_HOST</code> and <code>WP_SYNC_WEBSOCKET_PORT</code>, default <code>127.0.0.1:8787</code>. The <code>wp_sync_websocket_url</code> filter overrides this field and makes it read-only.', 'gutenberg-sync-engines' ),
 				array( 'code' => array() )
 			) . '</p>';
-			$this->show_row_for( self::WEBSOCKET_URL_OPTION, array( self::DELIVERY_WEBSOCKET, self::DELIVERY_SSE_DAEMON ) );
+			$this->show_row_for( self::WEBSOCKET_URL_OPTION, array( self::DELIVERY_WEBSOCKET ) );
 		}
 
 		/**

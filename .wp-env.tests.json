@@ -9,7 +9,6 @@
   "config": {
     "WP_DEBUG": false,
     "SCRIPT_DEBUG": false,
-    "WP_SYNC_SSE_REDIS_URL": "redis://sync-redis:6379",
     "WP_REDIS_HOST": "sync-redis",
     "WP_REDIS_CLIENT": "predis",
     "WP_REDIS_DISABLE_BANNERS": true,
@@ -17,7 +16,7 @@
     "WP_SYNC_WEBSOCKET_HOST": "localhost"
   },
   "lifecycleScripts": {
-    "afterStart": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:start || echo 'Redis did not start: the SSE transport runs on polling until it does (npm run doctor)'",
+    "afterStart": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:start || echo 'Redis did not start: the Redis object cache is unavailable until it does (npm run doctor)'",
     "afterDestroy": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:destroy"
   },
   "mappings": {

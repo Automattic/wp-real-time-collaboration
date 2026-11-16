@@ -723,7 +723,6 @@ const REPO_ROOT = nodePath.resolve(
 	nodePath.dirname( fileURLToPath( import.meta.url ) ),
 	'../../..'
 );
-const SSE_WAKE_OPTION = 'gutenberg_sync_engines_bench_sse_wake';
 
 /**
  * The wp-env work directory of one of this checkout's configs, mirroring
@@ -914,59 +913,35 @@ function currentHostCache( config ) {
  * Puts the site into the requested host-cache arrangement for a run and
  * returns what to restore. `cache` is the persistent object cache: none,
  * redis (the Redis Object Cache drop-in, on the env's Redis), or current
- * (leave alone). `wake` pins what an SSE stream sleeps on: auto (whatever
- * the site has: Redis when detectable), redis, cache (the version counter
- * in the object cache; needs cache=redis), or table (the counter in the
- * room-meta table; needs cache=none). Only a wp-env site of this checkout
- * can be switched (the drop-in goes in through wp-cli); on any other site
- * both must stay at their defaults.
+ * (leave alone). Only a wp-env site of this checkout can be switched (the
+ * drop-in goes in through wp-cli); on any other site it must stay at its
+ * default.
  *
  * @param {Object} wanted       Arrangement.
  * @param {string} wanted.cache none | redis | current.
- * @param {string} wanted.wake  auto | redis | cache | table.
  * @return {Object|null} State for restoreHostCache(), or null when nothing changed.
  */
-export function configureHostCache( { cache = 'current', wake = 'auto' } ) {
+export function configureHostCache( { cache = 'current' } ) {
 	if ( ! [ 'none', 'redis', 'current' ].includes( cache ) ) {
 		throw new Error(
 			`cache= must be none, redis, or current (got ${ cache })`
 		);
 	}
-	if ( ! [ 'auto', 'redis', 'cache', 'table' ].includes( wake ) ) {
-		throw new Error(
-			`wake= must be auto, redis, cache, or table (got ${ wake })`
-		);
-	}
-	if ( 'cache' === wake && 'redis' !== cache ) {
-		throw new Error(
-			'wake=cache measures the version counter in the object cache: it needs cache=redis'
-		);
-	}
-	if ( 'table' === wake && 'none' !== cache ) {
-		throw new Error(
-			'wake=table measures the version counter in the room-meta table: it needs cache=none'
-		);
-	}
-	if ( 'current' === cache && 'auto' === wake ) {
+	if ( 'current' === cache ) {
 		return null;
 	}
 	const config = wpEnvConfigForBase();
 	if ( ! config ) {
 		throw new Error(
-			`cache=/wake= switch the site through wp-cli, which works only for this checkout's wp-env sites; ${ BASE } is not one`
+			`cache= switches the site through wp-cli, which works only for this checkout's wp-env sites; ${ BASE } is not one`
 		);
 	}
 	const previous = {
 		cache: currentHostCache( config ),
-		wake:
-			wpCli( config, [ 'option', 'get', SSE_WAKE_OPTION ], {
-				allowFailure: true,
-			} ) || 'auto',
 	};
-	if ( 'current' !== cache && cache !== previous.cache ) {
+	if ( cache !== previous.cache ) {
 		setHostCache( config, cache );
 	}
-	setSseWake( config, wake );
 	return { config, previous };
 }
 
@@ -979,7 +954,6 @@ export function restoreHostCache( state ) {
 	if ( ! state ) {
 		return;
 	}
-	setSseWake( state.config, state.previous.wake );
 	if ( currentHostCache( state.config ) !== state.previous.cache ) {
 		setHostCache( state.config, state.previous.cache );
 	}
@@ -1001,16 +975,6 @@ function setHostCache( config, cache ) {
 			} (is the redis-cache plugin installed and Redis running? npm run doctor)`
 		);
 	}
-}
-
-function setSseWake( config, wake ) {
-	if ( 'auto' === wake ) {
-		wpCli( config, [ 'option', 'delete', SSE_WAKE_OPTION ], {
-			allowFailure: true,
-		} );
-		return;
-	}
-	wpCli( config, [ 'option', 'update', SSE_WAKE_OPTION, wake ] );
 }
 
 /**

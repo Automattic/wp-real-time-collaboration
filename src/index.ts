@@ -6,7 +6,7 @@
  * APIs. This plugin unlocks them with the shared consent string and adds:
  *   - the engine adapter (intent-log) via
  *     `registerSyncEngine`
- *   - transport providers (http-polling, sse, websocket) via
+ *   - transport providers (http-polling, websocket) via
  *     `registerSyncTransport`
  *   - the conflict review UI (src/review/), fed by the conflict source
  *     each engine adapter registers when it creates an engine
@@ -34,8 +34,6 @@ import { createIntentLogEngineAdapter } from './engines/intent-log-adapter';
 import './review';
 import { createHttpPollingProvider } from './providers/http-polling/http-polling-provider';
 import { createWebSocketProvider } from './providers/websocket/websocket-provider';
-import { createSseProvider } from './providers/sse/sse-provider';
-import { createSseDaemonProvider } from './providers/sse-daemon/sse-daemon-provider';
 import { bootstrapSlowAwareness } from './awareness';
 import { registerPluginEntitySync } from './entity-sync';
 
@@ -55,19 +53,6 @@ registerSyncTransport( {
 	slug: 'websocket',
 	protocolVersion: 1,
 	create: createWebSocketProvider,
-} );
-
-registerSyncTransport( {
-	slug: 'sse',
-	protocolVersion: 1,
-	create: createSseProvider,
-} );
-
-// The same receive stream, served by the sync daemon instead of a web worker.
-registerSyncTransport( {
-	slug: 'sse-daemon',
-	protocolVersion: 1,
-	create: createSseDaemonProvider,
 } );
 
 // Core-data receives lifecycle events through the plugin adapter in every mode.

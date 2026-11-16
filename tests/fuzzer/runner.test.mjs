@@ -16,7 +16,7 @@ test( 'replays preserve the schedule and inherited CPU throttle', () => {
 			noReload: true,
 			noLifecycle: true,
 		},
-		{ combo: 'intent-log/sse-daemon', seed: 17 },
+		{ combo: 'intent-log/websocket', seed: 17 },
 		24,
 		{
 			RTC_FUZZ_CPU_THROTTLE: '5',
@@ -25,7 +25,7 @@ test( 'replays preserve the schedule and inherited CPU throttle', () => {
 	);
 	assert.equal(
 		command,
-		"RTC_FUZZ_CPU_THROTTLE='5' npm run fuzz -- --combos=intent-log/sse-daemon --seed-list=17 --steps=24 --users=3 --trace=retain-on-failure --profile='undo' --fault-rate='0.4' --burst-rate='0.7' --no-faults --no-reload --no-lifecycle"
+		"RTC_FUZZ_CPU_THROTTLE='5' npm run fuzz -- --combos=intent-log/websocket --seed-list=17 --steps=24 --users=3 --trace=retain-on-failure --profile='undo' --fault-rate='0.4' --burst-rate='0.7' --no-faults --no-reload --no-lifecycle"
 	);
 } );
 

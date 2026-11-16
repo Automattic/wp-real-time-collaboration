@@ -88,15 +88,12 @@ Suites (--suite=; default: host):
                --engine=     the one engine to measure (intent-log |
                              current; default: the site's current
                              engine)
-               --transport=  http-polling | sse | websocket
+               --transport=  http-polling | websocket
                              (default: the site's current transport)
                --cache=      none | redis | current: the persistent object
                              cache for the run (redis = the Redis Object
                              Cache drop-in on the env's Redis; wp-env
                              sites only; restored after)
-               --wake=       auto | redis | cache | table: what an SSE
-                             stream sleeps on (cache needs --cache=redis,
-                             table needs --cache=none)
                --peers=      total peers (default 2; --windows is an alias)
                --p95-ms=     optional maximum p95 edit delivery delay
                --max-lag-ms= maximum typing schedule delay (default 1000 ms)

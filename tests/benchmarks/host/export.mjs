@@ -27,7 +27,6 @@ export const COLUMNS = [
 	[ 'transport', ( r ) => r.setup.transport ],
 	[ 'delivery', ( r ) => r.setup.delivery ],
 	[ 'cache', ( r ) => r.setup.cache ],
-	[ 'wake', ( r ) => r.setup.wake ],
 	[ 'windows', ( r ) => r.setup.windows ],
 	[ 'post_size', ( r ) => r.setup.postSize ],
 	[ 'post_blocks', ( r ) => r.setup.postBlocks ],

@@ -6,8 +6,8 @@ import {
 	serverCoverageLimits,
 } from '../../benchmarks/host/measurement.mjs';
 
-it( 'accepts cache and wake controls before workload validation', () => {
-	for ( const argument of [ 'cache=none', 'wake=table' ] ) {
+it( 'accepts the cache control before workload validation', () => {
+	for ( const argument of [ 'cache=none' ] ) {
 		const result = spawnSync(
 			process.execPath,
 			[

@@ -146,7 +146,6 @@ describe( 'plans', () => {
 			engine: 'intent-log',
 			transport: 'http-polling',
 			cache: 'none',
-			wake: 'auto',
 			windows: 1,
 			postSize: 'medium',
 			pattern: 'own-paragraph',
@@ -181,10 +180,6 @@ describe( 'plans', () => {
 		[
 			{ center: { engine: 'intent-log' }, vary: [ { windows: [] } ] },
 			'non-empty list',
-		],
-		[
-			{ center: { engine: 'intent-log', wake: 'cache' } },
-			'needs cache "redis"',
 		],
 	] )( 'refuses a bad plan: %j', ( bad, message ) => {
 		expect( () => expandPlan( bad ) ).toThrow( message );

@@ -1,15 +1,10 @@
 /**
  * Launches the plugin's REAL daemon-served transport lane for the e2e
- * suite: selects a transport on the TESTS site and runs the
+ * suite: selects the websocket transport on the TESTS site and runs the
  * `wp collaboration sync-server` PHP daemon in the tests env's cli
  * container with host port 8787 published (the daemon must bind 0.0.0.0 —
  * a loopback-bound or unpublished daemon is silently unreachable from the
  * browser).
- *
- * The websocket transport and the `sse-daemon` transport are both served
- * by that one daemon on that one port, so one launcher starts either:
- * `--transport=<slug>` selects which the site negotiates, and it defaults
- * to `websocket`.
  *
  * Meant to run as a Playwright webServer command: Playwright waits on the
  * daemon's own `http://localhost:8787/health` endpoint and terminates
@@ -47,11 +42,8 @@ const CONTAINER = 'rtc-e2e-ws-daemon';
 // daemon may also linger).
 const OTHER_PORT_HOLDERS = [ 'wp-sync-ws-daemon', 'rtc-fuzz-ws-daemon' ];
 const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
-// Which daemon-served transport this lane runs. Both are served by the
-// same daemon, so the lane differs only in the slug the site negotiates.
-const TRANSPORT =
-	( process.argv.find( ( arg ) => arg.startsWith( '--transport=' ) ) ?? ''
-	 ).split( '=' )[ 1 ] || 'websocket';
+// The daemon-served transport this lane runs.
+const TRANSPORT = 'websocket';
 // The pre-suite transport selection, persisted OUTSIDE this process:
 // Playwright may SIGKILL webServer process groups at teardown, so the
 // in-process restore below can never be the only path back. The suite's

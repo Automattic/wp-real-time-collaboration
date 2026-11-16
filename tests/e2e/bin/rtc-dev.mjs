@@ -8,8 +8,8 @@
  *   cache: --on copies the Redis Object Cache drop-in in (a persistent
  *   object cache on the env's sync-redis container, through the plugin's
  *   bundled Predis client — no PHP extension), --off removes it; --tests
- *   targets the tests env. With the drop-in on, the SSE transport detects
- *   Redis by itself and the room storage keeps presence in the cache.
+ *   targets the tests env. With the drop-in on, the room storage keeps
+ *   presence in the cache.
  *
  *   websockets: one-command start for the real websocket transport. Ensures
  *   wp-env is running, points the site at the websocket transport, and runs
@@ -89,12 +89,10 @@ const PORT = Number.isNaN( WS_PORT ) ? DEFAULT_PORT : WS_PORT;
 function parseMode() {
 	const mode = CLI.mode;
 	if (
-		! [ 'websockets', 'sse-daemon', 'daemon', 'http', 'doctor', 'cache' ].includes(
-			mode
-		)
+		! [ 'websockets', 'daemon', 'http', 'doctor', 'cache' ].includes( mode )
 	) {
 		throw new Error(
-			`Unknown --mode=${ mode }. Expected "websockets", "sse-daemon", "daemon", "http", "doctor", or "cache".`
+			`Unknown --mode=${ mode }. Expected "websockets", "daemon", "http", "doctor", or "cache".`
 		);
 	}
 	return mode;
@@ -205,7 +203,7 @@ async function cacheMode() {
 	process.stdout.write(
 		`${ label }: Redis object cache drop-in ${
 			CLI.on
-				? 'ON — a persistent object cache on sync-redis; the SSE transport now detects Redis by itself'
+				? 'ON — a persistent object cache on sync-redis'
 				: 'OFF — no persistent object cache'
 		}.\n`
 	);
@@ -449,8 +447,8 @@ async function runWebSocketsMode( mode ) {
 
 	await ensurePluginsReady();
 
-	if ( 'websockets' === mode || 'sse-daemon' === mode ) {
-		const transport = 'websockets' === mode ? 'websocket' : 'sse-daemon';
+	if ( 'websockets' === mode ) {
+		const transport = 'websocket';
 
 		process.stdout.write(
 			'Deactivating the e2e test provider plugin (if active)... '
@@ -518,9 +516,7 @@ async function runWebSocketsMode( mode ) {
 			`Websocket sync daemon running detached at ws://localhost:${ PORT }.\n` +
 				( 'websockets' === mode
 					? `RTC is on the websocket transport: open two windows at http://localhost:${ sitePort }/wp-admin and edit the same post.\n`
-					: 'sse-daemon' === mode
-						? `RTC is on the sse-daemon transport (the same daemon, streaming over HTTP): open two windows at http://localhost:${ sitePort }/wp-admin and edit the same post.\n`
-						: 'The site transport selection was left untouched; `npm run rtc:ws` switches the site onto the websocket transport.\n' ) +
+					: 'The site transport selection was left untouched; `npm run rtc:ws` switches the site onto the websocket transport.\n' ) +
 				'Stop the daemon with `npm run rtc:http` (or `docker rm -f ' +
 				DAEMON_CONTAINER_NAME +
 				'`).\n'
@@ -788,9 +784,9 @@ async function runDoctorMode() {
 			}`
 		);
 
-		// The SSE transport wakes streams through Redis, which each env's
-		// afterStart hook starts as a sibling container on the env's own
-		// network (npm run redis:start). Without it SSE runs on polling.
+		// Redis backs the optional persistent object cache. Each env's
+		// afterStart hook starts it as a sibling container on the env's
+		// own network (npm run redis:start).
 		const redisContainer = `${ path.basename( workDirectory ) }-redis`;
 		const redisState = spawnSync(
 			'docker',
@@ -800,21 +796,14 @@ async function runDoctorMode() {
 		const redisRunning =
 			0 === redisState.status && 'true' === redisState.stdout.trim();
 		if ( redisRunning ) {
-			ok( `Redis running (${ redisContainer }) for the SSE transport` );
-		} else if ( 'sse' === ( transport || '' ).trim() ) {
-			fail(
-				`the site selects the SSE transport but Redis container ${ redisContainer } is ${
-					0 === redisState.status ? 'stopped' : 'absent'
-				} — every tab falls back to polling`,
-				`${
-					configFile ? 'npm run env:tests start' : 'npm run env start'
-				} (its afterStart hook runs npm run redis:start)`
+			ok(
+				`Redis running (${ redisContainer }) for the object cache drop-in`
 			);
 		} else {
 			info(
 				`Redis ${
 					0 === redisState.status ? 'stopped' : 'absent'
-				} (${ redisContainer }); only the SSE transport needs it`
+				} (${ redisContainer }); only the object cache drop-in needs it`
 			);
 		}
 
@@ -824,7 +813,7 @@ async function runDoctorMode() {
 		if ( null !== persistentCache ) {
 			info(
 				persistentCache
-					? `object cache: Redis drop-in ON (persistent cache on sync-redis; SSE wakes on Redis notices; npm run cache:${
+					? `object cache: Redis drop-in ON (persistent cache on sync-redis; npm run cache:${
 							configFile ? 'tests:' : ''
 					  }off removes it)`
 					: `object cache: none (npm run cache:${

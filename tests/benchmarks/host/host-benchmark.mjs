@@ -51,13 +51,10 @@
  *
  *   engine=     the ONE engine to measure (intent-log | current;
  *               default: the site's current engine)
- *   transport=  http-polling | sse | websocket | current
+ *   transport=  http-polling | websocket | current
  *   cache=      none | redis | current: the persistent object cache the
  *               site runs for the run (redis = the Redis Object Cache
  *               drop-in on the env's Redis; wp-env sites only; restored)
- *   wake=       auto | redis | cache | table: what an SSE stream sleeps
- *               on (auto = whatever the site has; cache needs
- *               cache=redis, table needs cache=none)
  *   peers=      total peers (default 2); windows= remains an alias
  *   p95-ms=     optional maximum p95 delivery delay in milliseconds
  *   max-lag-ms= maximum typing schedule delay (default 1000 ms)
@@ -171,13 +168,11 @@ const HELP = `node tests/benchmarks/host/host-benchmark.mjs [key=value …]
 
   engine=     the ONE engine to measure (intent-log | current;
               default: the site's current engine)
-  transport=  http-polling | sse | websocket
+  transport=  http-polling | websocket
               (default: the site's current transport)
   cache=      none | redis | current: the persistent object cache for the
               run (redis = the Redis Object Cache drop-in on the env's
               Redis; this checkout's wp-env sites only; restored after)
-  wake=       auto | redis | cache | table: what an SSE stream sleeps on
-              (cache needs cache=redis, table needs cache=none)
   peers=      total peers (default 2); windows= remains an alias
   p95-ms=     optional maximum p95 delivery delay in milliseconds
   max-lag-ms= maximum typing schedule delay (default 1000 ms)
@@ -218,7 +213,6 @@ const KNOWN_ARGS = [
 	'engine',
 	'transport',
 	'cache',
-	'wake',
 	'windows',
 	'peers',
 	'p95-ms',
@@ -270,8 +264,13 @@ const SOCKET_METRICS = opts[ 'websocket-metrics' ]
 	? String( opts[ 'websocket-metrics' ] ).split( ',' )
 	: [];
 const TRANSPORT = String( opts.transport ?? 'current' );
+if ( ! [ 'http-polling', 'websocket', 'current' ].includes( TRANSPORT ) ) {
+	console.error(
+		`unknown transport "${ TRANSPORT }" — known: http-polling, websocket, current`
+	);
+	process.exit( 1 );
+}
 const CACHE = String( opts.cache ?? 'current' );
-const WAKE = String( opts.wake ?? 'auto' );
 let limits;
 try {
 	limits = deliveryOptions( opts );
@@ -1449,7 +1448,7 @@ async function main() {
 	// Playwright's own signal handling would close the browser the
 	// instant Ctrl+C lands, killing the REST transport the site-state
 	// restore below runs through — so signals are handled here instead.
-	// The object cache and the SSE wait are site-wide: set them before
+	// The object cache is site-wide: set it before
 	// any window opens (the baseline phase runs under them too).
 	let hostCache = null;
 	const browser = await chromium.launch( {
@@ -1544,7 +1543,7 @@ async function main() {
 	process.once( 'SIGTERM', () => onSignal( 'SIGTERM' ) );
 
 	try {
-		hostCache = configureHostCache( { cache: CACHE, wake: WAKE } );
+		hostCache = configureHostCache( { cache: CACHE } );
 		adminPage = await login( context );
 		rest = await makeRestClient( adminPage );
 		if ( ! rest ) {
@@ -1596,7 +1595,9 @@ async function main() {
 			const preferred =
 				copies.find(
 					( copy ) =>
-						! copy.plugin.startsWith( 'wp-real-time-collaboration/' )
+						! copy.plugin.startsWith(
+							'wp-real-time-collaboration/'
+						)
 				) ?? copies[ 0 ];
 			console.log(
 				`no active wp-real-time-collaboration copy — activating ${ preferred.plugin }…`
@@ -1649,10 +1650,8 @@ async function main() {
 		console.log( `  engine=${ engine }` );
 		console.log( `  transport=${ originalSettings.active.transport }` );
 		console.log(
-			`  cache=${ CACHE } wake=${ WAKE }${
-				hostCache
-					? ` (was cache=${ hostCache.previous.cache } wake=${ hostCache.previous.wake })`
-					: ''
+			`  cache=${ CACHE }${
+				hostCache ? ` (was cache=${ hostCache.previous.cache })` : ''
 			}`
 		);
 		console.log( `  edit-seconds=${ EDIT_SECONDS }` );
@@ -1715,7 +1714,6 @@ async function main() {
 			transport: originalSettings.active.transport,
 			delivery: originalSettings.active.delivery,
 			cache: CACHE,
-			wake: WAKE,
 			windows: WINDOWS,
 			postSize: POST_SIZE,
 			postBlocks: fixture.blocks,
@@ -2108,7 +2106,6 @@ async function main() {
 				timeline: Boolean( timeline ),
 				server: serverEnv,
 				cache: CACHE,
-				wake: WAKE,
 				delivery: originalSettings.active.delivery,
 				transportRequested: selectedTransport,
 				pollingIntervalSeconds: POLL_OVERRIDE ?? originalPoll,

@@ -39,17 +39,12 @@ export const VARIABLES = {
 	transport: {
 		arg: 'transport',
 		default: 'http-polling',
-		check: ( v ) => [ 'http-polling', 'sse', 'websocket' ].includes( v ),
+		check: ( v ) => [ 'http-polling', 'websocket' ].includes( v ),
 	},
 	cache: {
 		arg: 'cache',
 		default: 'none',
 		check: ( v ) => [ 'none', 'redis' ].includes( v ),
-	},
-	wake: {
-		arg: 'wake',
-		default: 'auto',
-		check: ( v ) => [ 'auto', 'redis', 'cache', 'table' ].includes( v ),
 	},
 	windows: {
 		arg: 'peers',
@@ -167,12 +162,6 @@ export function validateSetup( setup ) {
 				`plan variable ${ name } cannot be ${ JSON.stringify( value ) }`
 			);
 		}
-	}
-	if ( 'cache' === setup.wake && 'redis' !== setup.cache ) {
-		throw new Error( 'wake "cache" needs cache "redis"' );
-	}
-	if ( 'table' === setup.wake && 'none' !== setup.cache ) {
-		throw new Error( 'wake "table" needs cache "none"' );
 	}
 }
 
