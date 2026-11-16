@@ -3,5 +3,17 @@
   "branch": "try/sync-engines",
   "commit": "ee3554096494d12fe7ce1d1722f610250bbd237b",
   "trunk": "0d3eefe596560204e99bb1047df65e2e666a9ad1",
-  "tree": "e2c85ca38dd705da2db37f40c77994175ff59922"
+  "tree": "2cf1ab2f3ea393192dcdccb8c9972b48092b17fe",
+  "source": {
+    "repository": "https://github.com/WordPress/gutenberg-sync-engines",
+    "commit": "9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5"
+  },
+  "local_changes": [
+    "packages/core-data/src/utils/crdt-blocks.ts",
+    "packages/core-data/src/utils/test/crdt-blocks.jsdom.test.ts",
+    "packages/editor/CHANGELOG.md",
+    "packages/editor/src/private-apis.js",
+    "packages/editor/src/components/post-revisions-preview/revisions-canvas.jsx",
+    "packages/editor/src/components/post-revisions-preview/block-diff-view.jsx"
+  ]
 }

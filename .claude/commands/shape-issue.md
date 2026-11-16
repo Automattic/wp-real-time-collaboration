@@ -57,7 +57,7 @@ places to look first:
 
 - The Traps section of `AGENTS.md` and `docs/wontfix.md` — is this a known dead end, or already set aside?
 - `docs/` — is this behaving as designed? Some things are deliberate,
-  like conflicts resolving silently in yjs-server.
+  like a same-spot edit being set aside for review instead of merged.
 
 **3. Decide what it actually is**, and say so plainly:
 

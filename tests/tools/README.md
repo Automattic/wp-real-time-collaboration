@@ -11,8 +11,7 @@ a usage block in its header.
   live environment: prints each tab's block store, canvas, and console
   errors for a scripted scenario.
 - `generate-planner-vectors.js`, `generate-rich-text-vectors.js`,
-  `generate-sync-id-vectors.js`, `generate-de-rtc-descriptor-vectors.mjs`
-  and `.php` — the test-vector generators. The intent-log vectors are
+  `generate-sync-id-vectors.js` — the test-vector generators. The intent-log vectors are
   written to two places (Jest and PHPUnit); always update both.
 - `doc-lint.mjs` — checks the prose files against the code
   (`npm run lint:docs`, run by CI): backticked paths exist, documented
@@ -22,8 +21,6 @@ a usage block in its header.
   `const:` comment match the source. Its header lists the rules.
 - `check-presence-api.php` — checks the Presence API awareness backend
   against the real plugin instead of the test stand-in.
-- `dump-yjs-room-blocks.php`, `trace-yjs-room-rows.php` — yjs-server
-  session inspection helpers for WP-CLI.
 
 ## Typing by yourself in a second window
 

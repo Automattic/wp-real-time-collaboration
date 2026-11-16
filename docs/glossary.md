@@ -13,22 +13,12 @@ use these terms freely; none of them is standard outside this project
 - **Wire / wire format** — what travels between the browser and the
   server: the shape of each request and reply, and the bytes an engine
   puts inside a row.
-- **Stream / receive stream** — under the two server-sent events
-  transports, the one long-lived response per tab that the server writes
-  each change to. The tab still sends its own edits on ordinary requests
-  beside it.
 - **Canonical (content, document)** — the official copy on the server.
   Every browser's view is brought in line with it.
-- **Proposal / propose** — (de-rtc) a browser's offer of its whole
-  content, together with the base version it started from. The server
-  merges it; it is never applied as is.
-- **Base version** — (de-rtc) the version of the post a browser or a
-  script started editing from, named with every proposal or save so the
-  server knows what to merge against.
 - **Three-way merge** — combining two versions by comparing each with
   the version they both started from, so only real overlaps count as
-  conflicts (de-rtc; also what a script's declared base buys it under
-  intent-log).
+  conflicts. It is what a script gets when its save names the version
+  it started from (`base_seq`).
 - **Company / alone / quiet** — a tab has company when the server says
   another editor is in its room, and is alone otherwise. A tab that is
   alone stops polling (it is quiet).
@@ -63,33 +53,27 @@ use these terms freely; none of them is standard outside this project
   redo the work from a fresher state.
 - **Park / parked** — set an edit aside, saved but not applied, for a
   person to decide about later (on a review card, or in the sidebar
-  panel when there is no block to show a card on). Both engines with
-  a review lane (intent-log and de-rtc) store a parked edit in the room
-  log as a `parked` row and close it with a `resolved` row.
+  panel when there is no block to show a card on). Intent-log
+  stores a parked edit in the room
+  log as a `parked` row and closes it with a `resolved` row.
 - **Escalate** — refuse to merge automatically and park the edit
   instead.
 - **Review lane** — the whole path a parked edit travels: durable
   storage, the editor's review cards, and the accept/dismiss verbs.
 - **Lane** — a name for one kind of traffic and the code path it takes:
-  presence (who is here), commit (de-rtc's saves), kses (markup checks),
+  presence (who is here), kses (markup checks),
   property (title, status, and other fields), review (edits held for a
   person). Prefer the plain name of the path over coining a new lane.
-- **Kses lane / sanitize-and-compensate** — what happens to markup the
+- **Kses lane** — what happens to markup the
   author is not allowed to publish, such as scripts (what `wp_kses_post`
-  would strip). Intent-log and de-rtc hold it for review. yjs-server
-  replaces the touched blocks with their cleaned form and sends the
-  correction to everyone; that is sanitize-and-compensate.
+  would strip). Intent-log holds it for review.
 - **Register** — one named field of the post that syncs separately from
   the body: title, status, a taxonomy, one meta key.
 - **LWW (last writer wins)** — the later change silently replaces the
   earlier one, with nobody told. (Standard CRDT term.)
-- **Salvage** — saving the clean part of an edit and parking only the
-  clashing blocks, instead of parking the whole edit (de-rtc).
-- **Sequester** — the same idea applied to unsafe markup: risky blocks
-  revert to their previous form and park for review; the safe ones land.
-- **Announce** — (de-rtc) a ~200-byte message saying "version N exists
-  and its content hashes to X" — with no content in it. Clients whose
-  content already matches advance without downloading anything.
+- **Sequester** — set aside an edit whose markup the author may not
+  publish, so a person with the `unfiltered_html` capability can review
+  it. The safe edits are applied as usual.
 - **Checkpoint** — a periodic full snapshot row the server writes so it
   can trim older history without losing the ability to bootstrap a
   joiner.
@@ -104,11 +88,11 @@ use these terms freely; none of them is standard outside this project
   what it last showed and turning the difference into typed intents.
 - **Settle** — an edit reaching its final state: confirmed by the
   server, parked, or voided. Also, in the editor, the pause after a
-  burst of typing that the engines wait for before sending.
+  burst of typing that the engine waits for before sending.
 - **CAS (compare-and-swap)** — changing a stored value only if nobody
-  changed it since you read it, as one step. De-rtc uses it
-  (`WP_Sync_Atomic_Option`) for its version numbers and its official
-  content, so two requests cannot both take the same version number.
+  changed it since you read it, as one step. The advisory channel uses it
+  (`WP_Sync_Atomic_Option`) for each tab's waiting handshake messages,
+  so two senders cannot overwrite each other.
 - **Floor** — the oldest row a room still keeps after old rows are
   deleted. A client whose cursor is below the floor must start again
   from the latest full copy of the document.

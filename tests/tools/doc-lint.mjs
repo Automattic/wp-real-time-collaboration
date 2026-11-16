@@ -52,7 +52,13 @@ const SKIP_DIRS = new Set( [
 ] );
 
 /** Prose directories that are third-party code. */
-const SKIP_PROSE = [ 'gutenberg/', 'includes/lib/' ];
+const SKIP_PROSE = [
+	'gutenberg/',
+	'includes/lib/',
+	// The two plans for creating this plugin name paths that are gone.
+	'plan-move-intent-log.md',
+	'plan-rewrite-intent-log.md',
+];
 
 /** Where a documented name must appear. */
 const CODE_DIRS = [

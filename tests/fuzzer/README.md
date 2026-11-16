@@ -1,7 +1,8 @@
 # RTC engine × transport fuzzer
 
 Seeded browser fuzzing for this plugin's real-time collaboration stack,
-swept across **every engine × transport combination**. Adapted from the
+swept across **every engine × transport combination**. Today that is
+the intent-log engine over two transports. Adapted from the
 Gutenberg RTC browser fuzzing pipeline (danluu/gutenberg `try/fuzz`; see its
 `docs/explanations/architecture/real-time-collaboration-fuzzing*.md`),
 reduced to the parts that find bugs and reshaped around this repo's
@@ -13,39 +14,32 @@ pluggable engines and transports.
 npm run fuzz
 ```
 
-That runs the default matrix — `{intent-log, yjs-server, de-rtc} ×
-{http-polling, sse, sse-daemon, websocket}` — with 5 seeds per combo,
+That runs the default matrix — `{intent-log} ×
+{http-polling, websocket}` — with 5 seeds per combo,
 12 actions per seed, 2 collaborating browsers. It starts the TESTS wp-env
 (`.wp-env.tests.json`) if needed, flips the engine/transport per combo,
 manages the websocket daemon, rechecks failures, and writes a summary.
 Exit code is non-zero when any failure reproduces.
 
-Websocket and sse-daemon combos need host port 8787 for a daemon serving the TESTS
+Websocket combos need host port 8787 for a daemon serving the TESTS
 database, so the runner removes the dev env's auto-started daemon
 (`wp-sync-ws-daemon`, which serves the DEV database) for the duration of
 the run; `npm run env start` or `npm run rtc:ws` brings it back.
 
-SSE combos need the Redis container the tests env's `afterStart` hook
-starts beside the site; the runner refuses an sse combo without it, since
-tabs would silently receive over polling and certify nothing. Sync faults
-stay on for sse: a failed stream request is exactly the fallback path.
-Both SSE transports must open a stream and receive an event during peer
-discovery. A run that only uses polling fallback fails this check.
-
 Common variations:
 
 ```bash
-npm run fuzz:quick                               # post-change smoke: all engines
+npm run fuzz:quick                               # post-change smoke: intent-log
                                                  # over http-polling, 2 seeds,
                                                  # no faults/reloads
 npm run fuzz -- --seeds=20 --steps=15            # deeper sweep
-npm run fuzz -- --engines=yjs-server             # one engine, all transports
+npm run fuzz -- --engines=intent-log             # one engine, all transports
 npm run fuzz -- --transports=websocket           # all engines, one transport
 npm run fuzz -- --users=3                        # adds a seeded late joiner
 npm run fuzz -- --no-faults --no-reload          # low-noise convergence-only
 npm run fuzz -- --combos=intent-log/http-polling \
     --seed-list=42 --trace=retain-on-failure     # replay one failing seed
-npm run fuzz -- --combos=yjs-server/http-polling \
+npm run fuzz -- --combos=intent-log/websocket \
     --seed-list=8 --steps=14 --shrink            # bisect to minimal steps
 npm run fuzz -- --profile=undo --transports=http-polling \
     --seeds=10                                   # undo/redo-weighted campaign
@@ -153,8 +147,8 @@ few durable invariants instead of many brittle UI details.*
   long-running campaign is ever wanted, wrap `run.mjs` in a loop — it is
   resumable by construction (each invocation is self-contained).
 - The lower fuzz layers (CRDT model / sync state-machine / PHP randomized
-  tests). Their equivalents here would target the frozen intent-log core,
-  y-php, and the transport servers — worthwhile future work, but the
+  tests). Their equivalents here would target the frozen intent-log core
+  and the transport servers — worthwhile future work, but the
   engine × transport interaction bugs this harness hunts only exist in the
   full stack.
 
@@ -186,11 +180,6 @@ positions are read again after each choice.
 
 Run the runner's focused checks with `node --test tests/fuzzer/runner.test.mjs`.
 
-`cases/` keeps reproduction settings and filtered evidence for confirmed
-product failures. These are investigation records, not passing tests. See
-[`de-rtc-heading-duplication.json`](cases/de-rtc-heading-duplication.json)
-for a duplicate block reproduced without a participant leaving or rejoining.
-
 ## Choosing a campaign
 
 Start with `fuzz:quick` to check the environment and basic editing. Then
@@ -201,8 +190,8 @@ change one source of stress at a time:
     then add them to test retries.
 -   Use `--profile=undo` to test changes to local history while peers edit.
 -   Use `--users=3` to test a new participant after edits already exist.
--   Test all four transports. A passing polling run does not prove that a
-    stream reconnect or socket reconnect works.
+-   Test both transports. A passing polling run does not prove that a
+    socket reconnect works.
 -   Use `RTC_FUZZ_CPU_THROTTLE=5` when a failure depends on slow editor updates.
 
 Keep the original failing run before reducing steps or changing settings.
@@ -241,15 +230,14 @@ Run the focused checks with `npm run test:js -- --runInBand collaboration-login`
   signature is guaranteed to match, not the exact schedule.
 - Documented engine capability gaps are excluded up front: the runner's
   `ENGINE_CAPABILITIES` map (run.mjs) disables actions an engine cannot
-  sync (currently none; all three engines sync titles) so lanes measure real
+  sync (currently none) so lanes measure real
   defects, not known limitations. Extend the map when an engine's
   documented capabilities change.
-- Before filing anything, check the known gaps in
-  `docs/engine-comparison.md` ("Known gaps and qualifications"). Two
-  examples: intent-log holds later keystrokes for review when they are
+- Before filing anything, check the known gaps in `docs/wontfix.md`
+  and `docs/conflict-review.md` ("Known gaps"). One
+  example: intent-log holds later keystrokes for review when they are
   typed into a paragraph a peer is editing and this editor has not yet
-  received their change; yjs-server silently lets the later of two
-  field changes win. Finding these again validates the harness; it does not
+  received their change. Finding this again validates the harness; it does not
   need a new report.
 
 ## Env knobs (spec level)

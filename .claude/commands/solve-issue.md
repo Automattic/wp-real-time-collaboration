@@ -41,7 +41,7 @@ those notes accurate, and stop.
    them if the fix is obvious and local, otherwise write the diagnosis
    in the ledger and end the cycle having done nothing else. Never work
    around a broken environment. Timeouts that happen the same way
-   across every engine are an environment failure, not a bug in the
+   across every suite are an environment failure, not a bug in the
    code.
 
 3. **Claim it, before doing anything else.** Continue your own
@@ -105,8 +105,7 @@ those notes accurate, and stop.
    and from whom, move it to `agent:parked`, and go on to the next
    issue:
    - a change inside the `gutenberg/` copy of the framework
-   - a change to frozen code: the intent-log core and its PHP twin, the
-     de-rtc merge core, or the bundled y-php and automerge-php
+   - a change to frozen code: the intent-log core and its PHP twin
    - a change to the shape of anything sent over the wire or stored
    - weakening or deleting a test to get a pass
    - a product decision that is genuinely the human's to make

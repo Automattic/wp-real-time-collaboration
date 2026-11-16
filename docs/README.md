@@ -4,27 +4,24 @@ About an hour's reading, in this order.
 
 **Orientation**
 
-- [engine-comparison.md](engine-comparison.md) — which engine to pick,
-  how the three score against the principles, what happens in seven
-  situations, cost, and each engine's known gaps.
 - [data-flow.md](data-flow.md) — how one edit reaches the other
-  editors, in the Gutenberg experiment and under each engine.
+  editors, in the Gutenberg experiment and in this plugin.
 - [transports.md](transports.md) — how updates move: polling and the
-  advisory channel, server-sent events, the sync daemon's WebSocket,
+  advisory channel, the sync daemon's WebSocket,
   what happens to unsaved changes, presence on slow connections, and
   what a host must provide.
 - [protocol.md](protocol.md) — the routes, the room envelope, the row
-  types per engine, who may do what, and how to add an engine.
-- [storage.md](storage.md) — the two tables, the keys each engine
+  types, who may do what, and how to add an engine.
+- [storage.md](storage.md) — the two tables, the keys the engine
   writes, the object cache, presence, and the lifecycle commands.
 - [conflict-review.md](conflict-review.md) — how a set-aside change is
-  shown in the editor and decided: the record every engine publishes,
-  the cards and dialogs, and what each engine does with a decision.
+  shown in the editor and decided: the record the engine publishes,
+  the cards and dialogs, and what the engine does with a decision.
 
 **Rules and reference**
 
-- [principles.md](principles.md) — the seven principles the engines are
-  judged by, and the early decisions still open.
+- [principles.md](principles.md) — the seven principles the plugin is
+  judged by, and an early decision still open.
 - [wontfix.md](wontfix.md) — what we decided not to do, and why.
 - [glossary.md](glossary.md) — the project's own words, in plain words.
 

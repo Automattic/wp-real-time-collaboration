@@ -1,21 +1,33 @@
-# Gutenberg sync engines
+# WP Real-Time Collaboration
 
 An exploratory WordPress plugin for trying out **server-aware** real-time
-collaboration in Gutenberg. It provides three candidate sync **engines**
-(how the server merges edits from several people) and several
-**transports** (how updates move between the editor and WordPress). Each
-can be selected from a settings screen, so they can be compared on the
-same site under the same conditions.
+collaboration in Gutenberg. It provides one sync **engine**, intent-log
+(how the server merges edits from several people), and two
+**transports** (how updates move between the editor and WordPress). The
+transport is selected from a settings screen.
 
-**This plugin is a decision tool, not a solution.** Real-time
+**This plugin is experimental.** Real-time
 collaboration was removed from WordPress 7.0, and the concerns behind
 that decision call for a change in direction: collaboration should run
 through WordPress, with Core in control. The reasoning is explored in
 [Moving to a server-aware approach for collaboration](https://make.wordpress.org/core/2026/09/18/moving-to-a-server-aware-approach-for-collaboration/).
 
-This repository is where candidates are built, measured, and compared so
-that one can be chosen. The eventual goal is to package the preferred
-engine as a feature plugin for wider testing.
+`wp-real-time-collaboration` is a temporary working name.
+
+## Where this plugin came from
+
+This plugin was created from the `gutenberg-sync-engines` plugin at
+commit `9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5`. It replaces that
+plugin for intent-log work. The other engines and the server-sent
+events transports stayed behind.
+
+- **The two plugins cannot be active on one site at the same time.**
+  They declare the same PHP functions, so activating the second one is
+  a fatal error. Deactivate `gutenberg-sync-engines` first.
+- **A site that ran the old plugin with another engine keeps its old
+  rooms.** A room is one post's shared editing session, and it remembers
+  the engine that first wrote it. Such a room refuses an intent-log tab
+  with an HTTP 409.
 
 ## Requirements
 
@@ -27,9 +39,11 @@ environments and both Playground blueprints install it.
 ## Install and try it
 
 1. Install and activate the Presence API.
-2. Install the [latest release zip](TODO-REPOSITORY-URL/releases/latest)
-   and activate it. Activation creates the storage tables and turns the
-   Gutenberg "Real-time collaboration" experiment on.
+2. Install the plugin zip and activate it. Build the zip with
+   `npm run plugin-zip`, or take one from the repository's releases
+   page (`TODO-REPOSITORY-URL/releases/latest`). Activation creates the
+   storage tables and turns the Gutenberg "Real-time collaboration"
+   experiment on.
 3. Open the same post in two browsers as two users and type. Changes
    appear in the other window within seconds, each window shows the
    other person's avatar, and when both change the same paragraph at
@@ -43,7 +57,7 @@ collaboration off and keeps the storage tables; deleting it drops them.
 
 ## What it provides
 
-### Engines
+### The engine
 
 #### intent-log
 
@@ -55,21 +69,6 @@ When two people edit at the same time, the server adjusts the later edit around 
 
 https://github.com/user-attachments/assets/3563cba8-0537-4aa1-8794-9c712439b3a4
 
-#### yjs-server
-
-A PHP implementation of Yjs. The server holds a shared document for each post in a format built to merge automatically (a CRDT), merges every update into it, keeps it small by itself, and can produce the post content from it.
-
-https://github.com/user-attachments/assets/d408357a-499e-446b-8d97-732d22c8b4a6
-
-#### de-rtc
-
-Distributed Editing: the server compares three versions of the post, the latest saved version, the editor's proposed version, and the version the editor started from, and combines the changes (a three-way merge). Sync happens on save or autosave, not on every change. Genuine conflicts are flagged for someone to review instead of silently merging.
-
-https://github.com/user-attachments/assets/deeb6012-d708-433c-9514-12b81fc870a1
-
-To choose one, and see what each gives up, read
-[docs/engine-comparison.md](docs/engine-comparison.md).
-
 ### Transports
 
 - **http-polling**: the editor asks the server for updates on a short
@@ -78,15 +77,9 @@ To choose one, and see what each gives up, read
   else is here and when to fetch new changes, and it never carries
   content, so a tab polls only when there is something to fetch. It runs
   over WebRTC between browsers or over a WebSocket.
-- **sse**: one long-lived response per tab that the server writes each
-  change to (server-sent events), woken by Redis when a Redis address is
-  configured and by half-second storage checks otherwise. Needs a proxy
-  that passes streams through unbuffered.
-- **sse-daemon**: the same stream, written by the sync daemon that the
-  websocket transport runs, on the same port. It holds no PHP worker per
-  tab, and it works where a proxy blocks the WebSocket upgrade.
 - **websocket**: the server pushes updates over a persistent connection
-  served by a bundled PHP daemon (`wp collaboration sync-server`).
+  served by a bundled PHP daemon (`wp collaboration sync-server`). A tab
+  that cannot reach the daemon uses polling instead.
 
 [docs/transports.md](docs/transports.md) compares them and says what
 each needs from a host.
@@ -102,7 +95,7 @@ tables and every session; deleting it drops them. See
 
 ## Architecture
 
-The plugin registers engines and transports with the collaboration
+The plugin registers its engine and transports with the collaboration
 framework in Gutenberg (the `@wordpress/sync` package and the
 `lib/experimental/collaboration/` server) through the `wp_sync_engines`
 and `wp_sync_transports` PHP filters and the `registerSyncEngine` and
@@ -119,12 +112,13 @@ The framework's own design notes are at
 bundled Gutenberg. Every page is indexed in
 [docs/README.md](docs/README.md).
 
-## Comparing the engines
+## Measuring the cost
 
-Moving merge work to the server has a cost, and the point of this
-repository is to measure it. `npm run bench` reports what the plugin
+Moving merge work to the server has a cost, and this repository
+measures it. `npm run bench` reports what the plugin
 adds to a server on your own hardware, and
-`npm run bench -- --suite=engines` prints the engine comparison. The
+`npm run bench -- --suite=engines` runs the engine checks for
+intent-log. The
 benchmarks, the fuzzer, and the debugging tools are described in
 [tests/benchmarks/README.md](tests/benchmarks/README.md),
 [tests/fuzzer/README.md](tests/fuzzer/README.md), and

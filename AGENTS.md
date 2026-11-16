@@ -26,14 +26,14 @@ shared editing session.
 ## Repo layout
 
 - `wp-real-time-collaboration.php` — plugin entry.
-- `includes/` — server PHP: `engines/{intent-log,yjs-server,de-rtc}/`
-  (one folder per engine; none uses another's classes), `shared/`,
-  `transports/` (polling, `sse/`, `websocket/`), `admin/` (the settings
-  screen), `storage/`, `diagnostics/` (dev-only), `lib/` (vendored
-  y-php and automerge-php, frozen; see Traps).
+- `includes/` — server PHP: `engines/intent-log/` (the one engine),
+  `shared/`, `transports/` (polling, `websocket/`, and an unused
+  leftover in `sse/`; see Traps), `admin/` (the settings screen),
+  `storage/`, `diagnostics/` (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds `build/sync-engines.js`
   with `@wordpress/sync` and `yjs` external: `engines/`, `shared/`,
-  `providers/{http-polling,sse,sse-daemon,websocket,advisory}/`,
+  `providers/{http-polling,websocket,advisory}/` (and an unused
+  leftover in `providers/sse/`; see Traps),
   `awareness/`, `entity-sync/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`), `framework.ts`,
   `debug/inspector.ts`.
@@ -83,13 +83,13 @@ npm run cache:on          # Puts the Redis Object Cache drop-in in (the file tha
 ```
 
 Each config's `afterStart` hook (a wp-env lifecycle script) starts a
-Redis container as `sync-redis` and sets `WP_SYNC_SSE_REDIS_URL`. A
+Redis container as `sync-redis`. Redis serves only the optional
+persistent object cache; no transport uses it. A
 Redis that fails to start does not fail the environment. Plain `wp-env
 stop` (and `npm run env stop`) leaves Redis running; use `npm run
 env:stop`. With the object-cache drop-in on, the whole site goes through
 Redis, so measurements describe a Redis-backed host. The benchmarks
-switch this per run (`cache=none|redis`, `wake=auto|redis|cache|table`)
-and restore it.
+switch this per run (`cache=none|redis`) and restore it.
 `autoPort` is on, so a busy port makes wp-env pick another and print
 it; force one with `WP_ENV_PORT`. Each config has its own work dir
 under `~/.wp-env`, databases included. Personal overrides go in
@@ -111,11 +111,7 @@ npm run test:js             # Jest: engines/providers + frozen-core vectors
 npm run test:php            # PHPUnit in the wp-env tests container
 npm run test:e2e            # Playwright: two-browser collaboration (+ http-only)
 npm run test:e2e:websocket  # websocket-only suite (runs the daemon)
-npm run test:e2e:sse        # sse-only suite (needs the tests Redis)
-npm run test:e2e:sse-daemon # sse-daemon-only suite (runs the daemon)
 npm run lint:docs           # the prose against the code (see Commits / PRs)
-composer --working-dir=includes/lib/y-php install && composer --working-dir=includes/lib/y-php test
-php includes/lib/automerge-php/tests/run.php   # the vendored suites, no WordPress
 ```
 
 Iterate at the cheapest layer that can catch the change, fast to slow:
@@ -124,48 +120,44 @@ Iterate at the cheapest layer that can catch the change, fast to slow:
    60/400/3; no WordPress): the first check for any intent-log planner
    or merge change.
 2. `npm run test:js` (needs only the built subtree).
-3. The vendored suites, only when touching the vendored libraries.
-4. `npm run test:php`.
-5. `npm run test:e2e` (minutes).
-6. `npm run fuzz:quick` as a post-change smoke; the full `npm run fuzz`
+3. `npm run test:php`.
+4. `npm run test:e2e` (minutes).
+5. `npm run fuzz:quick` as a post-change smoke; the full `npm run fuzz`
    matrix for bug hunting (`tests/fuzzer/README.md`).
 
 Single-test loops: `npm run test:js -- sync-id` (files matching),
 `npm run test:js -- -t 'name'`, `npm run test:php -- --filter Class`,
 `npm run test:e2e -- collaboration-intent-log`,
-`RTC_E2E_ENGINE=de-rtc npm run test:e2e` (one engine's slice; CI runs
-one e2e job per engine, selected by `@engine-<slug>` in the describe
-title, and `RTC_E2E_ENGINE=none` runs the untagged specs).
+`RTC_E2E_ENGINE=intent-log npm run test:e2e` (one engine's slice; CI
+runs one e2e job per slice, selected by `@engine-<slug>` in the describe
+title, and `RTC_E2E_ENGINE=none` runs the untagged specs; `intent-log`
+and `none` are the only values).
 
 Test traps:
 
 - Never run `test:php` while an e2e run is in flight against the same
   env: PHPUnit wipes the tests database. Serialize the suites.
-- `test:php` leaves the plugin INACTIVE; a daemon suite started next
-  fails with `Error: 'collaboration' is not a registered wp command.`
-  Reactivate first:
-  `npx @wordpress/env --config .wp-env.tests.json run cli wp plugin activate wp-real-time-collaboration`.
+- `test:php` leaves this plugin and the Presence API plugin INACTIVE; a
+  daemon suite started next fails with `Error: 'collaboration' is not a
+  registered wp command.` Reactivate both first (this plugin requires
+  the Presence API, so activating it alone fails):
+  `npx @wordpress/env --config .wp-env.tests.json run cli wp plugin activate presence-api wp-real-time-collaboration`.
 - `test:php` and `test:e2e` need the running TESTS env with the subtree
   built, and e2e needs `npx playwright install chromium` once. If the
   tests site is not on `:8889`, pass `WP_BASE_URL`. If ANOTHER
   project's wp-env holds `:8889`, Playwright silently reuses that site
   and the first failure is a global-setup REST call dying with
   "Unexpected end of JSON input"; `npm run doctor` detects this.
-- The transport suites, one per command:
+- The transport suite:
   - `websocket-only` under `test:e2e:websocket`:
     `tests/e2e/bin/rtc-real-ws-daemon.mjs` selects the transport,
     publishes the daemon on host port 8787, runs the example relay on
     8790, and restores the transport at teardown.
-  - `sse-only` under `test:e2e:sse`; it refuses to run without the
-    tests Redis.
-  - `sse-daemon-only` under `test:e2e:sse-daemon`.
-  - `sse-framing` under both SSE suites: how a tab behaves around an
-    open stream (sends beside it, hidden tabs, the settle second).
-  - The cadence and stream rules also have Jest coverage in
-    `tests/js/providers/http-polling/polling-manager-cadence.test.ts`
-    and `tests/js/providers/sse/sse-exchange.test.js`; iterate there
-    first. Playwright cannot hide a tab, so the specs override
-    `document.visibilityState` in the page and fire `visibilitychange`.
+  - The polling cadence rules have Jest coverage in
+    `tests/js/providers/http-polling/polling-manager-cadence.test.ts`;
+    iterate there first. Playwright cannot hide a tab, so the specs
+    override `document.visibilityState` in the page and fire
+    `visibilitychange`.
   - `@y/websocket-server` stays pinned to 0.1.1 (0.1.5 crashes with a
     13.x client); the old y-websocket fixture is used by no suite.
 - `npm run rtc:ws` starts the real websocket transport for manual
@@ -180,12 +172,12 @@ Test traps:
 - `npm run doctor` — read-only preflight: builds, both environments,
   the worktree plugin-copy arrangement, whether the plugin loaded, the
   engine and transport options, the foreign-wp-env trap, the Redis
-  drop-in, daemon health. Uniform timeouts across all engines are an
+  drop-in, daemon health. Uniform timeouts across every suite are an
   environment failure, not an engine bug.
 - `window.wpSync` on every editor page (`src/debug/inspector.ts`):
   `enable()`, then `tail()`, `log()`, `table()`, `intents('p1')`,
   `doc()`, `proposals()`, `cursor()`, `export()`, `help()`. Enabling it
-  also makes every engine add a `_debug` section to its answers (gated
+  also makes the engine add a `_debug` section to its answers (gated
   by `SCRIPT_DEBUG` or the `wp_sync_debug_enabled` filter).
 - Query Monitor's `qm/debug` action receives lock timeouts, edits held
   back or thrown away, repairs, snapshots, trimming and engine
@@ -209,61 +201,19 @@ before a big change. A durable lesson from an issue goes here.
 
 ### Rules that must not be undone
 
-- **De-rtc's notices must never carry the document.** They used to,
-  and long sessions ran the server out of memory as messages grew with
-  the post. A notice now carries a version number and a content hash,
-  and a client that already matches downloads nothing. Never put a
-  `content` entry into de-rtc's list of synced properties: it silently
-  re-sends the whole document with every notice
-  (`tests/js/engines/de-rtc/record.test.ts` pins that the record never
-  stores content). The one place whole content still travels on the
-  transport is a `proposal` row for collections and unsupported post
-  types; posts and pages commit through the autosave endpoint.
-- **A de-rtc record never mints a creation id for a block the room
-  already identifies.** The editor's id stamper writes the saved post's
-  genesis ids one block at a time, so the editor trees captured around
-  a tab's bootstrap carry ids on some blocks and none on the rest. An
-  id-less block adopts the record's id at the same path (the server's
-  own rule for id-less saves, `adoptRecordIdentity` in
-  `src/engines/de-rtc/record.ts`). Minting the editor's clientId
-  instead put a second identity on every block: each joining tab's first
-  commit replaced the genesis ids, later merges saw deletions and
-  insertions instead of edits, and with four or more people one
-  person's first burst was parked as a conflict and lost.
-  `tests/js/engines/de-rtc/engine.test.ts` pins it.
-- **A de-rtc tab waits for the merged version before it sends its next
-  change.** When the server merges other people's work into a tab's
-  change, a newer version exists that the tab does not hold yet
-  (`pendingOwnMergeSeq`, the flag that says the tab is waiting, is set).
-  A change built on the old version makes
-  the server treat the tab's own accepted keystrokes as a conflict and
-  hold them back; the end of what the person typed was lost with no
-  warning on slow hosts. `tests/js/engines/de-rtc/announce.test.ts`
-  pins it.
-- **An editor save under de-rtc waits for the session's in-flight
-  commit** (`prepareForSave`), so a save can never conflict with the
-  session's own commit. The fuzzer found that one.
-- **yjs-server stores each block's saved HTML beside the block, but
-  never reads the text inside that copy.** The live shared text always
-  wins; a test exists only to prove it. Without that rule a stale copy
-  overwrote someone's typing.
 - **intent-log saves a full snapshot every 500 changes, not 100.** The
   smaller number crossed mid-typing and threw away edits still in
   flight.
-- **De-rtc commits every ten seconds by default.** Setting it to 0
-  commits after every pause in typing; that was the first release's
-  default, changed because ten seconds measurably cuts requests.
 - **The engine applies a review decision; the review code never
-  writes to the post.** Each engine publishes its set-aside changes as
+  writes to the post.** The engine publishes its set-aside changes as
   records (`src/review/types.ts`) and applies the reviewer's accept or
   dismiss itself. An accept names the current side the reviewer saw,
   and the registry (`src/review/conflicts.ts`) refuses it when that
-  side moved on; de-rtc and yjs-server make the same check on the
-  server. A card waits for the author's typing only when the engine
+  side moved on. A card waits for the author's typing only when the engine
   promises that later typing joins the same record (`followsTyping`).
   Block editors inside the dialogs carry the document's own block ids,
   so everything inside a dialog is wrapped in `ReviewSurface` or the
-  cards render inside it. The rules and each engine's part:
+  cards render inside it. The rules and the engine's part:
   `docs/conflict-review.md`.
 - **The bundled Gutenberg carries one change on top of its pin: the
   editor package exports its revision comparison** (four files under
@@ -272,24 +222,12 @@ before a big change. A durable lesson from an issue goes here.
   lacks it, so the review dialogs check `hasBlockDiff` and
   `hasCodeDiff` (`src/review/revisions-diff.ts`) and show a text
   comparison instead; a new use of those names needs the same check.
-- **Four pieces of code are frozen: do not edit them casually.**
-  - The intent-log core (`src/engines/intent-log/`) is kept identical
-    to its PHP twin (`includes/engines/intent-log/`) through JSON test
-    vectors kept in two copies, `tests/js/engines/intent-log/test-vectors/`
-    and `tests/phpunit/test-vectors/`. Regenerate with the
-    `tests/tools/` generators and always update both. A JSDoc-only edit
-    is fine.
-  - The de-rtc merge core (`includes/engines/de-rtc/merge-core.php`) is
-    a verbatim port; its two local changes are marked `DELTA`.
-  - y-php (`includes/lib/y-php/`) carries two deliberate local changes
-    to preserve when re-vendoring: the `composer.json` platform pin to
-    PHP 7.4, and the rewritten
-    `includes/lib/y-php/src/Lib0/StringDecoder.php` (decoding used to
-    slow down sharply as documents grew).
-  - automerge-php's runner leaves `PORTING_STATUS.json` alone unless
-    `AUTOMERGE_PHP_UPDATE_STATUS=1` is set. Two of its 680 tests fail
-    under a PCRE2 older than 10.43, which distribution PHP builds link;
-    check `php -r 'echo PCRE_VERSION;'` before blaming the library.
+- **The intent-log core is frozen: do not edit it casually.** The
+  core (`src/engines/intent-log/`) is kept identical to its PHP twin
+  (`includes/engines/intent-log/`) through JSON test vectors kept in
+  two copies, `tests/js/engines/intent-log/test-vectors/` and
+  `tests/phpunit/test-vectors/`. Regenerate with the `tests/tools/`
+  generators and always update both. A JSDoc-only edit is fine.
 
 ### Dead ends: do not retry these without new information
 
@@ -336,21 +274,27 @@ before a big change. A durable lesson from an issue goes here.
   field in every mode.** A peer can send the field at any time, and
   core-data throws on an unknown field.
 - **The block name for slow awareness is sent with the presence data
-  that already travels.** Under SSE, `announceLocalAwarenessChange`
-  (`src/providers/advisory/announce.ts`) sends it beside the stream.
-  Under the Heartbeat channel an advisory channel must be selected. The
-  e2e spec turns the advisory channel off for its duration.
+  that already travels.** Under the Heartbeat channel an advisory
+  channel must be selected. The e2e spec turns the advisory channel off
+  for its duration.
 - **A post admits five editor tabs, so the sixth is refused** ("Too
   many editors connected"), checked once on the page's first
   connection. Give extra test tabs their own post, or raise
   `sync.pollingProvider.maxClientsPerRoom`.
-- **The daemon authenticates a stream once per connection.** A stream's
-  POST body can arrive across several reads and the one-time token is
-  spent on first sight; authenticating again refuses a stream that was
-  already accepted. The symptoms: the daemon logs `Handshake rejected:
-  Missing, expired, or mismatched token.`, the browser reports the
-  stream POST as a CORS failure, and the client retries with a fresh
-  token and succeeds.
+- **Some server-sent events code is still in the tree, and nothing
+  can switch it on.** No transport uses it. The pieces are the stream
+  mode in `src/providers/http-polling/polling-manager.ts` (with
+  `src/providers/sse/sse-exchange.ts` and its Jest test), and the
+  stream handling in the daemon
+  (`includes/transports/websocket/class-wp-websocket-sync-server.php`,
+  with `includes/transports/sse/class-wp-sync-sse-connection.php`).
+  They are unused leftovers. Do not build on them, and do not read
+  their comments as a description of a feature.
+- **The daemon authenticates once per connection, not once per read.**
+  The one-time token is spent the first time it is seen, so
+  authenticating the same connection again would refuse it. The check
+  was written for the unused stream handling, whose request body can
+  arrive across several reads. Keep it while that code remains.
 - **The polling manager's "safety poll" comments are stale.** There is
   no safety timer: a tab alone schedules no polls after its 30-second
   discovery window, and a tab that can reach every peer polls on
@@ -381,10 +325,13 @@ before a big change. A durable lesson from an issue goes here.
   is `window.__experimentalEnableRealTimeCollaboration`. Activation
   turns it on but does not pin it.
 - Built subtree JS lands at `gutenberg/build/scripts/<pkg>/`.
-- Worktrees mount the plugin twice (`.wp-env.json` maps `.` to
-  `wp-content/plugins/wp-real-time-collaboration` AND lists `.` in
-  `plugins`); activating both is a fatal
-  `Cannot redeclare gutenberg_sync_engines_bootstrap()`. Keep the
+- A checkout in a folder with any name other than
+  `wp-real-time-collaboration` (a git worktree, for example) is mounted
+  twice: `.wp-env.json` lists `.` in `plugins`, which mounts it under
+  the folder's name, AND maps `.` to
+  `wp-content/plugins/wp-real-time-collaboration`. A checkout whose
+  folder has that name is mounted once. Activating both copies is a
+  fatal `Cannot redeclare gutenberg_sync_engines_bootstrap()`. Keep the
   DIRECTORY-NAME copy active: `wp-env start` re-activates it on every
   start, so the reverse arrangement aborts the next start. `npm run
   rtc:ws` enforces this.
@@ -394,7 +341,7 @@ before a big change. A durable lesson from an issue goes here.
 - PHP: `composer lint` / `composer format`; keep lint at zero errors and
   zero warnings, and never widen the excludes. JS/TS: `npm run lint:js`
   + `npm run format`. JSON is two-space; everything else keeps tabs.
-- The frozen intent-log core, the vendored `y-utilities/`, and the
+- The frozen intent-log core and the
   generated test vectors are excluded from prettier on purpose
   (see Traps). JSDoc-only edits to the core are fine.
 

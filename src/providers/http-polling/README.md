@@ -19,11 +19,11 @@ What it does, and why, is documented once:
 
 - Server: `includes/transports/class-wp-http-polling-sync-server.php`
   registers the route, checks limits and permissions, and passes each
-  post's data to the active engine. The two server-sent events
-  transports extend it.
+  post's data to the active engine.
 - Client: `http-polling-provider.ts` (per-room provider lifecycle),
   `polling-manager.ts` (the single polling loop, the queues, presence,
-  and the stream rules the SSE transports reuse), `config.ts`
+  and an unused stream mode left over from the removed server-sent
+  events transports), `config.ts`
   (intervals, limits, retry schedules), `types.ts` (wire types),
   `utils.ts` (queues and API helpers). The advisory channel is in
   `../advisory/`.

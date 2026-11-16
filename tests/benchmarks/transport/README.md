@@ -25,7 +25,7 @@ edit-to-visible latency as a user experiences it.
 - **Observed transport** — advisory WebSocket frames count toward traffic
   but do not establish a WebSocket content transport. Content `sync` frames
   are required. The transport is self-labeled from the traffic actually seen
-  (websocket frames / `/sse` streams / `/updates`), and compared against the
+  (websocket frames / `/updates`), and compared against the
   requested transport. A mismatch usually means a
   `WP_COLLABORATION_TRANSPORT` constant/env override on the site, or a
   failed negotiation.
@@ -58,8 +58,9 @@ once. Then, from the repo root:
 node tests/benchmarks/transport/benchmark-transport.mjs \
     transport=http-polling trials=30 json=polling.json
 
+# Needs the sync daemon. See "The websocket transport" below.
 node tests/benchmarks/transport/benchmark-transport.mjs \
-    transport=sse trials=30 json=sse.json
+    transport=websocket trials=30 json=websocket.json
 ```
 
 Arguments are bare `key=value` tokens (the engine benchmark's convention):
@@ -68,9 +69,8 @@ Arguments are bare `key=value` tokens (the engine benchmark's convention):
 | ------------ | --------- | --------------------------------------------------- |
 | `transport=` | `current` | Transport to measure; switched via the Settings →   |
 |              |           | Collaboration screen and restored afterwards.       |
-| `engine=`    | `current` | Engine to measure under (`intent-log`, `yjs-server`, `de-rtc`). |
+| `engine=`    | `current` | Engine to measure under (`intent-log`). |
 | `cache=`     | `current` | Persistent object cache for the run: `none`, `redis` (the Redis Object Cache drop-in on the env's Redis; this checkout's wp-env sites only), or leave alone. Restored after. |
-| `wake=`      | `auto`    | What an SSE stream sleeps on: `auto` (whatever the site has), `redis`, `cache` (needs `cache=redis`), `table` (needs `cache=none`). The report's `sseWaitObserved` says what the streams actually got. |
 | `trials=`    | `30`      | Measured token round-trips.                         |
 | `warmup=`    | `3`       | Unmeasured leading trials.                          |
 | `idle=`      | `30`      | Idle-phase seconds (`0` skips the phase).           |
@@ -78,12 +78,17 @@ Arguments are bare `key=value` tokens (the engine benchmark's convention):
 | `json=`      | —         | Write full results (per-trial data included) here.  |
 | `headed=1`   | —         | Visible browser, for debugging.                     |
 
+Add `recovery=1` (`--recovery` through `npm run bench`) to interrupt the
+receiving tab's HTTP sync requests, accept an edit while it is offline, and
+require it to catch up without a reload. The JSON report includes the
+recovery time separately from normal edit latency.
+
 Two caveats on the server-side lane. The scenario tagging intercepts
 `/wp-sync/` HTTP requests through Playwright routing, adding a small
 per-request overhead inside the measured latency — identical across
 phases, but latency comparisons against pre-tagging runs carry that delta
-(single-digit ms; negligible at polling cadence). And it covers the HTTP
-transports only: websocket data frames bypass both the tagging and the
+(single-digit ms; negligible at polling cadence). And it covers HTTP
+requests only: websocket data frames bypass both the tagging and the
 REST dispatch the request log measures, so under `transport=websocket`
 the `serverSide` aggregates hold just the baseline polls.
 
@@ -130,6 +135,14 @@ The benchmark then works with `transport=websocket`: it counts WebSocket
 frames/bytes instead of HTTP requests, and fails with a clear message when
 the daemon is unreachable (window B never receives the anchor paragraph).
 
+To measure the DEV site instead, run `npm run rtc:ws` and point the
+benchmark at that site:
+
+```bash
+WP_BASE_URL=http://localhost:8888 node tests/benchmarks/transport/benchmark-transport.mjs \
+    transport=websocket trials=30 json=websocket.json
+```
+
 ## Reading the numbers
 
 - **http-polling**: latency has *two* polling legs — the edit waits in A's
@@ -138,24 +151,14 @@ the daemon is unreachable (window B never receives the anchor paragraph).
   e2e setup pins the tests site to 1 s) and a max near two. Requests continue at the same
   cadence while idle; that idle request rate × collaborators is the host's
   steady-state load.
-- **sse**: receive latency drops to near-push: with Redis the stream is
-  written the moment a row lands; without it the server re-checks storage
-  every 500 ms while holding the stream, so expect a p50 in the hundreds of
-  milliseconds. The cost moves server-side: each open stream occupies a
-  PHP worker for its whole length (up to five minutes) — the *request
-  count* here understates worker occupancy, and without Redis each stream
-  also costs two storage reads a second. See
-  `docs/transports.md#server-sent-events`.
 - **websocket**: true push — observed p50 ≈ 30 ms edit-to-visible (~60×
   better than polling) with the lowest idle
   wire volume by far (~14 frames/idle-30 s per window vs ~28–49 HTTP
   requests). The price is the heaviest hosting ask: a persistent daemon,
   TLS termination, and an exposed port.
 
-Latency includes the engine's client-side apply path, so cross-engine runs
-of this benchmark differ for engine reasons too — compare transports under
-one engine at a time, and use the engine benchmark for engine-vs-engine
-server cost.
+Latency includes the engine's client-side apply path. Use the engine
+benchmark for the engine's server cost.
 
 ## The N-window soak
 
@@ -164,28 +167,3 @@ tool, not a benchmark: it lives at `tests/debugging/soak-transport.mjs`
 with its documentation in `tests/debugging/README.md`. It imports this
 directory's `lib.mjs`, so the soak and this benchmark use identical
 counters, tagging, and server-log collection.
-
-### SSE
-
-Start the test site with `npm run env:tests start`; its lifecycle hook starts
-and connects Redis. Select it with `transport=sse`, for example:
-
-```sh
-WP_BASE_URL=http://localhost:8889 npm run bench -- --suite=transport --transport=sse --engine=intent-log --trials=30 --json=/tmp/sse.json
-```
-
-Use the port printed by wp-env. SSE response bytes are measured while the
-stream is open. JSON counters include `sseRequests`, `sseStreams`, and
-`sseBytesReceived`; only a successful stream with received bytes counts as
-observed SSE. A Redis outage can make the run use polling, so check the
-observed transport. Setup and recovery details are in
-[the transport guide](../../../docs/transports.md#server-sent-events).
-
-Add `--recovery` to the transport benchmark to interrupt the receiving tab,
-accept an edit while it is offline, and require it to catch up without a reload.
-The JSON report includes the recovery time separately from normal edit latency.
-
-For longer-stream checks, add `--idle=65` to cross several twenty-second
-catch-up reads, or `--idle=310` to include five-minute renewal. A positive PHP
-execution limit can shorten streams; compare the `sseRequests` counters with
-the site's limit when interpreting reconnect counts.

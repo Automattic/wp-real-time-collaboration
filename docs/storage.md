@@ -30,10 +30,9 @@ with an underscore belong to the storage:
 | `_version` | The room's version counter, when there is no persistent cache. |
 | `generation` | The id of the room's first row; changes on every reset, so clients start over. |
 | `intent_log_checkpoint`, `intent_log_floor` | intent-log's latest full copy of the document (a checkpoint, saved every so often so older rows can be deleted) and the oldest row still kept (the floor). |
-| `yjs_server_doc`, `yjs_server_checkpoint`, `yjs_server_floor`, `yjs_server_wrappers` | yjs-server's server copy of the document, snapshot, floor, and each block's saved HTML. |
-| `de_rtc_checkpoint`, `de_rtc_floor`, `de_rtc_approved_blocks` | de-rtc's snapshot, floor, and blocks a reviewer approved despite unsafe markup. |
 
-De-rtc keeps its current content and version claim in options rows,
+The advisory channel keeps each tab's waiting handshake messages in
+options rows,
 swapped atomically by `WP_Sync_Atomic_Option` (a compare-and-swap:
 change a value only if nobody changed it first; the
 `wp_sync_cas_backend` filter can substitute Redis). Intent-log's
@@ -48,12 +47,14 @@ request.
 ## The version counter and change notices
 
 Every successful write bumps the room's version counter (an atomic
-increment), so a waiting reader such as a server-sent events stream can
+increment), so a waiting reader can
 ask "did anything change in these rooms?" with one lookup
 (`get_room_versions`) and read again when the value differs. Every
 write also fires `gutenberg_sync_engines_room_changed` with the room
-name; the stream transport sends its Redis notice from it, and a
-replacement storage must fire it too.
+name, and a
+replacement storage must fire it too. Nothing in the plugin reads the
+counter or listens to the action now. Both stay for other code to
+use.
 
 ## What the object cache holds
 
@@ -66,7 +67,7 @@ recommended ("custom table with transients"):
 - the two keys written once per room, `_engine` and `generation`,
   cached after their first read and dropped by `reset_room()`.
 
-Nothing else is cached, because checkpoints and engine documents are
+Nothing else is cached, because checkpoints are
 rewritten by several requests at once. An idle poll is read-only either
 way: presence timestamps are rounded to ten-second buckets
 (`wp_sync_awareness_timestamp_granularity`), and a poll that changes

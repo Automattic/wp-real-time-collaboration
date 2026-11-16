@@ -52,7 +52,7 @@ captured `/wp-sync/` request:
 plus four **additive** top-level keys the community format does not carry
 (its sanitizer drops them; ours preserves them): `engine`, `transport`, and
 `base_title` / `base_content` — the post state when capture started. This
-plugin's engines validate updates against server state (the community
+plugin's engine validates updates against server state (the community
 harness's relay endpoint did not), so replay recreates the starting
 document from `base_content` before sending frames; without it, intents
 that target pre-existing blocks void or escalate instead of applying.

@@ -61,7 +61,7 @@ someone hosting this plugin actually needs, each measured as the difference
 against the workflow the plugin replaces:
 
 - extra requests per minute, per person editing (and per idle open tab);
-- HTTP body, SSE, and WebSocket payload traffic (KiB/min), excluding
+- HTTP body and WebSocket payload traffic (KiB/min), excluding
   headers, protocol overhead, compression effects, and WebRTC traffic;
 - extra PHP CPU time per minute (not database, Redis, or relay CPU);
 - the extra share of one PHP worker held;
@@ -117,11 +117,9 @@ target URL and checks measurement support before login or site changes. If
 the test site is stopped, run `npm run env:tests start`. It never falls back
 to a shared localhost port.
 
-Server measurements use request timelines, including streams opened during
-setup that remain active during editing or idle. Each tagged PHP request
+Server measurements use request timelines. Each tagged PHP request
 gets an ID, cumulative CPU and query samples, and a final shutdown record.
-The SSE loop samples before and after each wait and when the stream ends.
-Sampling makes no database calls and sends no extra stream frames. Timelines
+Sampling makes no database calls. Timelines
 are kept in memory and written with the existing shutdown log row.
 
 **Ranges describe measurement uncertainty, not statistical confidence.**
@@ -140,8 +138,7 @@ The same server must handle the probes and measured requests. Requests with
 clock jumps, counters that move backwards, missing shutdown records, or
 samples that disagree with whole-request totals make server results
 unavailable. After closing the editor windows, collection waits up to 20
-seconds for shutdown records. This includes disconnected streams that hold
-a worker until PHP notices the disconnect. A killed worker that cannot log
+seconds for shutdown records. A killed worker that cannot log
 its final counters does not silently count as zero cost.
 
 These samples still have a cost: CPU includes sampling overhead, and PHP
@@ -233,7 +230,7 @@ markdown tables (editing, then idle), columns baseline/sync/delta/delta-%,
 followed by the summary stats (room storage, derived capacity). The run
 opens by stating the configuration it resolved (engine, transport,
 durations, polling), marking defaults. Arguments target what you need:
-`--engine=` (one per run — comparing engines is `--suite=engines`),
+`--engine=` (one per run),
 `--transport=`, `--peers=`, `--edit-seconds=`/`--idle-seconds=`,
 `--polling-interval=` to override the HTTP short-polling interval for the
 run (restored afterwards), `--metrics=` to print only some rows, `--json=`
@@ -260,11 +257,11 @@ database contention through parallel CLI processes. It does not test the web ser
 worker queue. Neither number is a tested hosting limit.
 
 Two more **benchmarks** live behind `--suite=` — measurements that inform
-a real decision (which engine, which transport):
+a real decision (how the engine behaves, which transport):
 
 | Suite               | What it is                                                    |
 | ------------------- | ------------------------------------------------------------- |
-| `--suite=engines`   | The engine-decision matrix and invariant sweeps — the harness documented in the rest of this README. `--scenarios=`, `--certify=`, and `--concurrency=` exist only in this suite, so passing any of them selects it without `--suite=` (CI's certify job invokes it that way). |
+| `--suite=engines`   | The engine scenario matrix and invariant sweeps — the harness documented in the rest of this README. `--scenarios=`, `--certify=`, and `--concurrency=` exist only in this suite, so passing any of them selects it without `--suite=` (CI's certify job invokes it that way). |
 | `--suite=transport` | Two-browser edit-to-visible latency + wire traffic per transport (`transport/README.md`). |
 
 The **debugging and analysis tools** — lanes that generate load or
@@ -274,7 +271,7 @@ reachable through `npm run bench`:
 
 ```bash
 node tests/debugging/soak-transport.mjs \
-    engine=de-rtc windows=3 soak=3600      # N-window hour-scale soak that
+    engine=intent-log windows=3 soak=3600  # N-window hour-scale soak that
                                            # validates the cost cards
                                            # end to end
 node tests/debugging/replay/replay.mjs \
@@ -284,7 +281,7 @@ node tests/debugging/replay/replay.mjs \
 
 ## Building a data set: result lines and sweeps
 
-One run answers one question. To compare engines, people, post sizes, or
+One run answers one question. To compare transports, people, post sizes, or
 editing patterns, run many setups and collect their results in one file.
 
 **The result line.** `record=<file>` makes the host report append one JSON
@@ -328,11 +325,11 @@ npm run bench -- --suite=sweep --plan=scaling             # run them
 
 | Plan         | What it answers                                              |
 | ------------ | ------------------------------------------------------------ |
-| `quick`      | each engine with 1 and 2 people, short runs: checks the output path in ~30–40 min |
-| `peers`      | each engine with 1 to 5 peers, short runs: ~1.5–2 hours |
-| `scaling`    | each engine against people (1–3), post size, and pattern     |
+| `quick`      | 1 and 2 people, short runs: checks the output path in ~10–15 min |
+| `peers`      | 1 to 5 peers, short runs: ~30–40 min |
+| `scaling`    | the engine against people (1–3), post size, and pattern      |
 | `spread`     | one setup five times: how much each metric moves between identical runs |
-| `transports` | each engine over each transport (needs Redis and the daemon) |
+| `transports` | the engine over each transport (`websocket` needs the daemon) |
 
 The sweep writes to `bench-results/host/<plan>/`: `results.jsonl` (the
 data set), `results.csv` (one row per number, for spreadsheets, pandas, or
@@ -379,7 +376,7 @@ this for any results file whose setups ran more than once; rerun the
 
 The plugin-off phase does not depend on the engine or transport, so a
 sweep measures it once per people/post/pattern/repeat and reuses it for
-every engine (`baseline-cache=`). Each repeat keeps its own plugin-off
+every run that shares them (`baseline-cache=`). Each repeat keeps its own plugin-off
 measurement, so the spread still includes its noise. `export.mjs` and
 `chart.mjs` in the same folder rebuild the CSV and the chart from any
 results file.
@@ -407,9 +404,8 @@ Divergences, each deliberate:
   rows are labeled `<engine>/<transport>` — the axis this plugin
   compares — instead of the community's storage-approach labels.
   Additive: an explicit label always wins.
-- **Tagged autosave requests are measured too.** De-rtc sessions
-  commit through the ordinary autosave endpoint, so their merge cost
-  lives on that route; the community harness's relay had no such path.
+- **Tagged autosave requests are measured too.** A client that tags an
+  autosave request adds it to the log.
   Untagged requests are unaffected.
 - **Three extra log columns and two extra routes.** Rows carry
   `option_writes` (options-API writes during the measured window —
@@ -441,31 +437,19 @@ Divergences, each deliberate:
 
 # The engines suite (`--suite=engines`)
 
-Compares server sync engines **through the production seam** — the same
-`WP_Sync_Engine::handle_updates()` / `get_updates_since()` calls the polling
-transport makes — so the numbers are the real engine's, not a model's. It
-exists to make the architecture decision (which of the three engines to keep) a
-matter of evidence.
+Measures the server sync engine **through the same calls production
+makes**: the `WP_Sync_Engine::handle_updates()` / `get_updates_since()`
+calls the polling transport makes. So the numbers are the real engine's,
+not a model's.
 
 Engines are resolved through the framework's registry (the
 `wp_sync_engines` filter), so **any engine registered by an active plugin is
-benchmarkable by slug** — run with an unknown slug to list what's
-registered. This plugin registers three:
+benchmarkable by slug**. Run `benchmark.php` with an unknown slug to list
+what's registered. This plugin registers one:
 
 - **`intent-log`** (`WP_Intent_Log_Engine`) — server-authoritative: the
   server transforms each edit against the log, so it can report exactly how
   every edit settled.
-- **`yjs-server`** (`WP_Yjs_Server_Engine`) — server-authoritative CRDT:
-  the server (via the vendored y-php) merges every update into a canonical
-  room document, compacts by itself, and materializes post content.
-- **`de-rtc`** (`WP_De_RTC_Engine`) — server-governed three-way merges:
-  clients propose whole content against a named base version; the server
-  merges each proposal with the ported DE-RTC merge core and announces
-  each accepted version; genuine conflicts escalate.
-
-(A fourth engine, the retired `yjs-relay` — a relay whose merge happened in each
-client's CRDT — has been removed; historical numbers for it remain below
-as context.)
 
 HOW the runner speaks to an engine is an **authoring profile** — a
 first-class SPI (`WP_Sync_Bench_Authoring_Profile`) that owns everything
@@ -480,7 +464,7 @@ profile hands it. Profiles are resolved by engine slug through
 `wp_sync_bench_authoring_profiles` filter (mapping slug to a class
 constructed as `new $class( int $post_id, array $workload )`).
 
-This plugin ships three dedicated profiles. The **intent-log profile**
+This plugin ships one dedicated profile. The **intent-log profile**
 speaks typed intents authored from each client's observed base and scores
 quality with the disposition-based oracle. Its client model is
 read-driven: each simulated client advances its observed head, register
@@ -505,23 +489,7 @@ below it, which the production client answers by re-deriving the work
 from its editor tree. The profile re-authors each such edit once as a
 follow-up ingest after the client's next read, skipping edits whose
 target block no longer exists in the observed state (a real client
-cannot retype into a block that left its canvas). The **yjs-server profile**
-speaks **real Yjs**: each simulated client holds a y-php document, authors
-genuine incremental V2 updates (text inserts into the paragraph's content
-Y.Text; align set on the attributes Y.Map — exactly what the editor's
-session codec sends), and applies read responses into its document;
-payload and storage bytes are therefore REAL for this engine, and quality
-is scored with a CRDT oracle (see below). The **de-rtc profile** speaks
-whole-content proposals: each simulated client keeps a local working copy
-and its base version (base = last version applied to the doc, the client
-adapter's rule; an APPLIED proposal advances it at settle time, mirroring
-the accepted row the polling transport returns in the same response as
-the dispositions), adopts the server's canonical snapshots on read, and —
-because retry is part of that protocol — re-proposes edits the engine
-voided at an aged-out base as a coalesced follow-up proposal against the
-base it just observed (one retry per edit); payload and storage bytes are
-REAL and scale with document size, and quality is scored with a
-disposition + version-lineage oracle (see below). Every other engine gets
+cannot retype into a block that left its canvas). Every other engine gets
 the **opaque-relay fallback profile** — relay-convention
 `update`/`compaction` blobs with quality reported as not
 server-observable. A third-party relay-style engine benchmarks
@@ -532,19 +500,18 @@ instead.
 
 ## What it measures
 
-**Cost** (all engines):
+**Cost**:
 
 - `service_us` — per-request service time of `handle_updates` (p50/p90/p99/
   max/mean, reported in ms), measured with `hrtime()` and pooled across
   measured repetitions (warmup reps are excluded). Storage is swapped for an
   in-memory implementation, so this mostly isolates *engine* CPU (the
-  intent-log planner and replay; the relay's append) from database I/O —
+  intent-log planner and replay; a relay's append) from database I/O —
   with one deliberate exception: the intent-log ingest holds a Core-style
   options-row lock (`WP_Sync_Room_Lock`) for the length of each request
   (its transform log is order-dependent), so each of its samples includes
-  one claim/release pair of real DB writes; de-rtc's optimistic version
-  claim adds one CAS write per accepted proposal (yjs-server and the
-  relay pay neither). The reported `calibration` block times the lock
+  one claim/release pair of real DB writes. The reported `calibration`
+  block times the lock
   pair and a bare `SELECT 1` in the same environment so the number can
   be decomposed.
 - `read_us` / `idle_poll_us` — per-request time of `get_updates_since`,
@@ -555,8 +522,7 @@ instead.
   by a client that was never in the session, after all the session's
   history — what a fresh visitor pays to enter the room (snapshot + tail,
   per the engine's retention). Its response size is reported as
-  `payload_bytes.join_response_*`: the payload that visitor downloads,
-  which differs sharply per engine (full-content rows vs binary diffs).
+  `payload_bytes.join_response_*`: the payload that visitor downloads.
 - `materialize_us` — the save path: `materialize()` timed on a FRESH
   engine instance per sample (a save request starts with no per-request
   room cache). Engines without the materialize convention report null.
@@ -568,19 +534,19 @@ instead.
   payload (the transport envelope and awareness add overhead on top).
 - `storage.rows` / `storage.bytes` — how the room grows. This is measured
   exactly even though storage is in-memory, because growth is a real
-  differentiator — but of a different KIND per engine: the intent log
-  checkpoints and trims on the server; the relay relies on a client to
-  compact (the engine nominates the lowest-id session member once the room
-  passes 50 rows). The runner plays that compactor's part — it submits a
+  cost, and its kind depends on the engine. The intent log
+  checkpoints and trims on the server. A relay-style engine relies on a
+  client to compact, and the opaque-relay profile plays that client's
+  part: it submits a
   synthetic full-state snapshot whenever a read answers `should_compact` —
   so relay growth reflects a session with live clients, not an abandoned
   room. `storage.followups` counts protocol follow-up ingests generally
-  (the relay's compaction snapshots; de-rtc's stale-base retry proposals;
+  (a relay's compaction snapshots;
   intent-log's floor-reset re-authoring after a compaction checkpoint);
   their requests and dispositions are included in cost and quality.
-  `storage.trims` counts history-trim events — every engine's checkpoint
+  `storage.trims` counts history-trim events. The intent-log checkpoint
   path trims once per checkpoint (as does an accepted relay compaction),
-  so the server's checkpoint cadence is visible per engine instead of
+  so the server's checkpoint cadence is visible instead of
   hiding as unlabeled spikes in `service_us` p99.
 
 **Quality** — policy-correct, and only where the server can observe it:
@@ -602,72 +568,31 @@ instead.
   last applied write in server order. Failures are itemized in
   `quality.convergence_failures`.
 
-For `yjs-server`, quality is scored with a **CRDT oracle** matched to CRDT
-semantics: after full catch-up every simulated client's document must be
-identical (the convergence guarantee), every applied text token must appear
-in the server-materialized content exactly once (text merges are lossless —
-nothing lost), the block structure must be intact, and the materialized
-attribute registers must equal the converged CRDT value. Attribute
-conflicts resolve by CRDT rules (deterministic, but NOT server arrival
-order) rather than escalating, so `escalated` is always 0 for this engine —
-that is the policy difference with intent-log, reported honestly: the same
-contended workload that intent-log sends to review, yjs-server silently
-last-writer-wins.
-
-For `de-rtc`, quality is scored with a **disposition + lineage oracle**:
-applied tokens appear in the canonical exactly once, escalated (parked)
-tokens not at all, structure intact, each align register equal to the last
-applied write that actually CHANGED it against its own base (three-way
-merges preserve untouched registers, so a no-op write must not move the
-expectation), the broadcast `content` rows chain v(N)→v(N+1) with no gaps
-and match the applied dispositions exactly, and after full catch-up every
-client's adopted copy equals the materialized canonical. Two accounting
-notes: de-rtc escalates the WHOLE proposal (its escalation grain is a
-proposal, not a single register write — rates are not directly comparable
-with intent-log's per-intent grain), and `voided`/`unknown-base-version`
-is NOT lost work — it is the protocol asking the client to retry against
-a fresher base, which the profile models (the retry's settlement is what
-counts).
-
 **Entity-field registers** (the `set_property`, `set_terms`, and
 `set_meta` ops) never materialize
-into post content, so their oracles use the engine's other observables.
-Intent-log: concurrent writes to the same property escalate the later
+into post content, so their oracle uses the engine's other observables.
+Concurrent writes to the same property escalate the later
 writer (`property-conflict`, the attr-conflict analog); the profile
 asserts every client's wire-decoded property state — what a production
 editor would display — equals the last applied write in server order.
-Yjs-server: register conflicts resolve by CRDT rules (deterministic, NOT
-server order), so the oracle asserts all-client convergence plus that
-each register converged to a value somebody actually wrote. De-rtc: a
-conflicting property parks as its OWN `parked` row
-(`property-conflict`) while the proposal it rode in still reports
-`applied` — the engine's escalation grain for fields is a property, not
-the proposal, so field conflicts do NOT appear in the `escalated`
-disposition count; the profile mirrors the engine's per-property
-three-way rule and asserts the canonical property map on every broadcast
-row, the caught-up clients' adopted maps, and the parked rows all match
-that model exactly. The de-rtc client re-carries its FULL property map on
-every proposal (production behavior), so field sync also adds real bytes
-to every de-rtc request.
 
-All three field ops are the same register lane; only the naming and
-transport shape differ. `set_terms` writes a taxonomy's whole term-ID set
+All three field ops are the same register lane; only the naming differs.
+`set_terms` writes a taxonomy's whole term-ID set
 to the register named by its rest_base (`categories`, `tags`), as a
-numerically-sorted array — the engines compare term sets
-order-insensitively, exactly like the shipping clients and the genesis
-seed normalize them. `set_meta` writes a registered-meta register:
-intent-log and de-rtc carry it as a flat `meta.<key>` register, while the
-CRDT codec nests it per key under the document's `meta` Y.Map. The
+numerically-sorted array. The engine compares term sets
+order-insensitively, exactly like the shipping client and the genesis
+seed normalize them. `set_meta` writes a registered-meta register,
+carried as a flat `meta.<key>` register. The
 harness registers the meta palette's keys before genesis
 (`WP_Sync_Bench_Workload::register_bench_meta()`) because synced meta IS
-registered meta — that is what puts the `meta.<key>` registers (and the
-CRDT's nested meta map) in every engine's genesis seed.
+registered meta — that is what puts the `meta.<key>` registers in the
+genesis seed.
 
-For an engine that merges on the client (the retired `yjs-relay` did, and
-the opaque-relay fallback profile models one), quality is reported as
-**not server-observable**: there is no PHP CRDT in the loop to score
-convergence or conflict outcome, so the harness says so rather than
-inventing a number.
+For an engine that merges on the client (the opaque-relay fallback
+profile models one), quality is reported as
+**not server-observable**: no merge runs on the server, so there is
+nothing there to score for convergence or conflict outcome. The harness
+says so rather than inventing a number.
 
 ### Why not a "merge retention" score
 
@@ -690,7 +615,7 @@ review* (an outcome, not a demerit).
 | `mixed-newsroom`      | Mostly parallel, ~25% of rounds collide on one block.       |
 | `laggy-newsroom`      | Mixed newsroom, but the last client reads only every 10th round: stale bases, deep transforms, heavy catch-up reads. |
 | `structural-churn`    | Concurrent block INSERTS and REMOVALS alongside typing — the block-structure stress the pure-typing scenarios never exercise. |
-| `remove-contention`   | One client types into an inserted block while ANOTHER client concurrently removes it (the edit-vs-remove conflict class, where the three merge policies differ most sharply). |
+| `remove-contention`   | One client types into an inserted block while ANOTHER client concurrently removes it (the edit-vs-remove conflict class). |
 | `field-sync`          | Entity-field register writes (scalar properties, taxonomy term sets, post meta) alongside typing: clean parallel field sync, plus ~25% of rounds where every client writes the SAME register — the register-contention analog of `contended-paragraph`, on the field traffic PR #22 added. |
 | `editorial-session`   | A wall-clock session, one round per second: staggered joins/leaves, typing bursts with think-time pauses, every present client polling every round, an autosave every 60 rounds. `rounds=3600 clients=3` is a one-hour three-user session. |
 
@@ -700,15 +625,13 @@ addressed by `block_id`; each carries a seeded abstract position — `head`
 or `tail` — that the profiles map to engine coordinates from the client's
 own observed state, so typing is not all offset-0 prepends: intent-log
 authors the intent's offset from the client's editor-tree field length
-(read-observed plus its own pending edits), the
-yjs profile inserts at the corresponding index in the client's own
-Y.Text, and de-rtc splices before the closing tag; the token-counting
+(read-observed plus its own pending edits); the token-counting
 oracles are position-independent, and under correct transforms a token
 can never split mid-token — a split would surface as a missing-token
 convergence failure), `attr` (an align restyle), `set_property` (an
 entity-property register write — slug, template, …, the field-sync
-traffic PR #22 added; title/excerpt are deliberately excluded because the
-CRDT codec models them as merging Y.Text, not registers), `set_terms` (a
+traffic PR #22 added; title and excerpt are left out of the
+palette), `set_terms` (a
 taxonomy's whole term-ID set, on the rest_base-named register), `set_meta`
 (a registered-meta `meta.<key>` register), `insert_block`
 (a new paragraph), and `remove_block` (of a block the same client
@@ -736,36 +659,30 @@ request a live deployment mostly serves.
 
 ## Running
 
-The fastest way to the whole decision picture is the one-command runner
+The fastest way to the whole picture is the one-command runner
 (needs the tests wp-env running — `npm run env:tests start` — with the
 subtree built; it activates the plugins itself):
 
 ```bash
-npm run bench -- --suite=engines     # every engine x the decision matrix
+npm run bench -- --suite=engines     # intent-log x the scenario matrix
                                      # (steady concurrency, deep-lag
                                      #  settlement, structural churn, remove
                                      #  contention, field-sync registers, a
                                      #  10-minute wall-clock session), with
-                                     #  comparison tables and hosting cost
+                                     #  result tables and hosting cost
                                      #  cards; FAILS on any lost work or
                                      #  convergence failure
-npm run bench -- --engines=de-rtc --scenarios=editorial-session
-npm run bench -- --certify=10        # invariant sweep: 10 seeds x engines x
+npm run bench -- --engines=intent-log --scenarios=editorial-session
+npm run bench -- --certify=10        # invariant sweep: 10 seeds x
                                      # adversarial scenarios + both save-lane
                                      # sessions — certifies "no edit is ever
                                      # silently dropped" at scale; CI runs
                                      # --certify=3 on every push/PR
-npm run bench -- --transport=sse --cache=redis --wake=cache
-                                     # the host report on a Redis-backed
+npm run bench -- --cache=redis       # the host report on a Redis-backed
                                      # site (the Redis Object Cache drop-in
                                      # goes in for the run and comes out
-                                     # after), with SSE streams pinned to
-                                     # the version counter in the cache;
-                                     # --cache=none --wake=table is the
-                                     # no-cache host, --wake=auto lets a
-                                     # detected Redis wake the streams.
-                                     # The report records the wait the
-                                     # streams actually got.
+                                     # after); --cache=none is the
+                                     # no-cache host.
 ```
 
 Multi-process concurrency measurement is OPT-IN behind one flag:
@@ -781,14 +698,12 @@ It complements the modeled queueing on the hosting cost card: the model
 composes measured service times with the workload's concurrency histogram
 (cheap, deterministic); the measurement runs truly parallel processes against
 the shared database (real, noisy, and the only way to exercise the
-engines' actual race behavior — its first run caught yjs-server voiding
-most updates under 4-writer contention; see
-`docs/engine-comparison.md`). No quality oracles run in this mode — it is
+engine's actual race behavior). No quality oracles run in this mode — it is
 a latency and failure-mode probe, with dispositions and void reasons
 reported for context.
 
 JSON reports land in `bench-results/`. Individual runs go through wp-cli
-directly — the engines need WordPress (`get_post`, `serialize_block`, and a
+directly — the engine needs WordPress (`get_post`, `serialize_block`, and a
 `$wpdb` for the ingest lock), so run inside the environment under test.
 Options are bare `key=value` tokens — wp-cli would claim `--flags` itself.
 
@@ -797,21 +712,15 @@ wp eval-file tests/benchmarks/benchmark.php \
     engine=intent-log scenario=mixed-newsroom \
     rounds=200 clients=4 paragraphs=8 seed=42
 
-# Head-to-head: run every engine over the same scenario and seed.
-for e in intent-log yjs-server de-rtc; do
-  wp eval-file tests/benchmarks/benchmark.php \
-      engine=$e scenario=contended-paragraph rounds=200 clients=4 seed=42
-done
-
 # Document-size sweep: fill= pads every genesis paragraph to ~N chars
 # (8 paragraphs x fill=6000 is a ~48 KB document).
 for kb in 0 750 6000 60000; do
   wp eval-file tests/benchmarks/benchmark.php \
-      engine=yjs-server scenario=solo-typing rounds=50 fill=$kb json=size-$kb.json
+      engine=intent-log scenario=solo-typing rounds=50 fill=$kb json=size-$kb.json
 done
 
 # A one-hour three-user session (one round per second; join/leave, typing
-# bursts, idle polling, autosaves). Heavy under yjs-server — start with
+# bursts, idle polling, autosaves). Start with
 # rounds=600 (ten minutes) to see the growth trend.
 wp eval-file tests/benchmarks/benchmark.php \
     engine=intent-log scenario=editorial-session rounds=3600 clients=3 reps=1
@@ -868,8 +777,8 @@ runs, transport-benchmark runs (`tests/benchmarks/transport/`), or a mix;
 each kind gets its own table, one column per run:
 
 ```bash
-node tests/benchmarks/compare.js intent.json relay.json            # console
-node tests/benchmarks/compare.js intent.json relay.json md=1      # Markdown
+node tests/benchmarks/compare.js before.json after.json            # console
+node tests/benchmarks/compare.js before.json after.json md=1      # Markdown
 ```
 
 It warns when engine runs used different workloads (scenario/seed/rounds/
@@ -879,156 +788,87 @@ them up.
 
 ## Reading the results
 
-Historical representative run, recorded in August 2026 before de-rtc
-moved to announce rows (`mixed-newsroom`, 150 rounds, 4 clients, 8
-paragraphs; wp-env Docker, PHP 8.3 / MariaDB). The de-rtc storage and
-join figures below describe the old full-content rows; today a de-rtc
-row is a small fixed-size notice and a joiner downloads one snapshot. Run the benchmark for current numbers, and quote your own
+Historical representative run, recorded in August 2026
+(`mixed-newsroom`, 150 rounds, 4 clients, 8
+paragraphs; wp-env Docker, PHP 8.3 / MariaDB). Run the benchmark for current numbers, and quote your own
 `environment` + `calibration` stanzas with any numbers you report:
 
-| Metric              | intent-log       | yjs-relay (retired)    | yjs-server             | de-rtc                 |
-| ------------------- | ---------------- | ---------------------- | ---------------------- | ---------------------- |
-| service ms (mean)   | ~0.7 (incl. ~0.1 lock pair) | ~0.0005 (timer floor) | ~41 (canonical-doc load/merge/save per ingest) | ~2.0 (content three-way merge, incl. lock pair) |
-| service ms (p99)    | ~2.0             | ~0.008                 | ~96                    | ~3.7                   |
-| idle poll ms (mean) | ~0.0003          | ~0.0002                | ~0.0003                | ~0.0003                |
-| storage rows        | 302 (server checkpoints + trims) | 30 (11 scripted client compactions) | 102 (server checkpoints + trims; no client help) | 204 (server checkpoints + trims) |
-| storage bytes       | ~117 KB (JSON intents + checkpoints) | (synthetic) | ~61 KB (binary diffs + snapshots) | ~466 KB (every accepted proposal stores a FULL content row) |
-| trims (checkpoints) | 3                | —                      | 6                      | 5                      |
-| join (cold read)    | ~0.24 ms, ~113 KB payload | —             | ~0.08 ms, ~60 KB payload | ~0.52 ms, **~452 KB payload** (the retained full-content tail) |
-| materialize (cold save path) | ~2.2 ms | n/a (no document)     | **~187 ms** (decode the whole canonical doc; the in-session ingest keeps it cached, a fresh save request does not) | ~0.0004 ms (the canonical IS post content) |
-| ingest peak memory  | ~0.9 MB          | —                      | ~1.0 MB                | ~1.6 MB                |
-| quality             | 450 applied, 150 to review, **0 lost**, content-verified converged | not observable | 600 applied, **0 lost**, all-client CRDT convergence verified | 480 applied, 120 to review, **0 lost**, lineage-verified converged |
+| Metric              | intent-log       |
+| ------------------- | ---------------- |
+| service ms (mean)   | ~0.7 (incl. ~0.1 lock pair) |
+| service ms (p99)    | ~2.0             |
+| idle poll ms (mean) | ~0.0003          |
+| storage rows        | 302 (server checkpoints + trims) |
+| storage bytes       | ~117 KB (JSON intents + checkpoints) |
+| trims (checkpoints) | 3                |
+| join (cold read)    | ~0.24 ms, ~113 KB payload |
+| materialize (cold save path) | ~2.2 ms |
+| ingest peak memory  | ~0.9 MB          |
+| quality             | 450 applied, 150 to review, **0 lost**, content-verified converged |
 
 Document-size scaling (`long-form`, one editor in a ~5 KB document, 100
-rounds): intent-log mean service ~0.42 ms; de-rtc ~2.7 ms with ~5.9 KB
-request payloads (the whole document travels in every proposal — both its
-merge time and its wire/storage bytes scale with document size);
-yjs-server ~36 ms (the canonical-doc rebuild dominates regardless of edit
-size). The `laggy-newsroom` scenario (one client reading every 10th round;
-part of the engines-suite matrix, at mixed-newsroom size) settles
-differently per engine and loses nothing on any of them: intent-log
+rounds): intent-log mean service ~0.42 ms. The `laggy-newsroom` scenario
+(one client reading every 10th round;
+part of the engines-suite matrix, at mixed-newsroom size) loses nothing:
+intent-log
 absorbs stale bases with deeper transforms (~24% escalated, 38 benign
 voids, 13 floor-reset re-authoring follow-ups, heavier catch-up reads —
 and its deep-stale tail inserts are what force the profile's editor-tree
-offset coordinates; see the profile description above); de-rtc escalates
-slightly more than in mixed-newsroom (~24% vs 20% — cumulative
-stale-base proposals conflict more often), while its base stays mostly
-fresh even between rare reads — every applied proposal advances it at
-settle, like the shipping codec whose transport returns the accepted row
-with the ack — so its retry lane (`unknown-base-version` voids +
-`followups`) fires on the RECONNECT shape instead: a deep read gap under
-sustained register contention, where escalations never advance the base
-until it ages out of the engine's 20-version snapshot window (see the
-deep-read-gap PHPUnit test for the deterministic construction).
+offset coordinates; see the profile description above).
 
 Structural churn (concurrent inserts/removals + typing, 60 rounds, 4
-clients) is where conflict POLICIES separate hardest: intent-log and
-yjs-server merge all 240 edits cleanly (transform and CRDT both handle
-structure), while de-rtc escalates ~49% of proposals (whole-document
-proposals against a structurally-shifting base are exactly what its
-three-way merge refuses to auto-resolve) — still zero lost work, all
-engines convergence-verified through the marker oracle.
+clients): intent-log merges all 240 edits cleanly, with zero lost work,
+convergence-verified through the marker oracle.
 
 Remove contention (one client types into an inserted block another
-client concurrently removes; 60 rounds, 4 clients) separates the
-policies on the edit-vs-remove class specifically: **intent-log
+client concurrently removes; 60 rounds, 4 clients): **intent-log
 escalates the trailing edit** (~12% of edits escalate, the trailing
 keystrokes parking as `target-deleted`; when the text lands first, both
-apply and the token legitimately vanishes with the removed block),
-**yjs-server escalates nothing** (CRDT deletion semantics dissolve the
-edit with the deleted block; deterministic, but the conflict is never
-surfaced), and **de-rtc escalates the whole trailing proposal** (~22%;
-its proposal grain sends the entire document state to review, not just
-the contested edit). All three: zero lost work, convergence-verified
+apply and the token legitimately vanishes with the removed block).
+Zero lost work, convergence-verified
 under the target-scoped token oracle. This scenario is also where
 intent-log's floor-reset retry lane fires visibly (`followups` > 0):
 checkpoints stale-void in-flight seed inserts, and the profile re-authors
 them like the production client would.
 
 Field sync (entity-property, taxonomy-term, and post-meta register
-writes alongside typing; 60 rounds, 4 clients) separates the
-register-conflict policies at FIELD grain: **intent-log escalates each
+writes alongside typing; 60 rounds, 4 clients): **intent-log escalates each
 later concurrent writer per register** (54 of 240 edits, ~22%, parking
-as `property-conflict`), **de-rtc parks a conflicting property as its
-own review row while the proposal it rode in still applies** (only 4
-whole-proposal escalations, ~2% — field conflicts deliberately do not
-appear in its `escalated` count; see the register-oracle notes above),
-and **yjs-server resolves every register by silent CRDT last-writer-wins**
-(0 escalations). Register traffic is also the cheapest ingest for every
-engine (~0.5 / ~5.5 / ~0.8 ms mean for intent-log / yjs-server / de-rtc
-— no text transform, no content merge). All three: zero lost work, every
+as `property-conflict`). Register traffic is also the cheapest ingest
+(~0.5 ms mean, with no text transform). Zero lost work, every
 register's final wire state verified against the engine's own account.
 
 A ten-minute `editorial-session` (600 rounds, 3 clients, joins/bursts/
 saves; ~850 requests) shows the session-lifetime behavior single scenarios
-miss: intent-log holds a flat ~0.7 ms mean throughout; **yjs-server
-degrades as the document grows** (p50 ~100 ms, p90 ~260 ms, p99 ~300 ms
-by session end — every ingest rebuilds the ever-larger canonical doc, and
-in-session cold saves run ~218 ms); de-rtc stays ~3.1 ms mean but its room
-tail reaches **~1.2 MB** — which is also the payload the NEXT visitor
-downloads to join. Escalations in the realistic mix: 0 (yjs-server,
-silent), ~0.1% (intent-log — bursty non-overlapping typing rarely
-collides; 1 of 851 edits), ~6% (de-rtc, whole-proposal grain), with
-de-rtc's retry lane firing for late joiners whose genesis base aged out.
-All three: **0 lost**, converged. The hosting cost cards from the same
-run: intent-log 1.4 CPU-s / 2.2 MB wire per user-hour with 62 KB to
-join; de-rtc 5.8 CPU-s / 33.9 MB per user-hour with 1.2 MB to join;
-yjs-server 219 CPU-s per user-hour (~6% of a core per present user) with
-87 KB to join.
+miss: intent-log holds a flat ~0.7 ms mean throughout. Escalations in the
+realistic mix: ~0.1% (bursty non-overlapping typing rarely
+collides; 1 of 851 edits). **0 lost**, converged. The hosting cost card
+from the same
+run: 1.4 CPU-s / 2.2 MB wire per user-hour with 62 KB to
+join.
 
-The comparison the decision turns on:
+What the numbers say:
 
 - **intent-log** spends real server CPU per request (it transforms and plans
   the merge) and in return keeps storage bounded through checkpointing and
   gives a server-side, policy-correct quality signal — nothing lost, every
   conflict surfaced for review. Under a `contended-paragraph` load (4
   editors on one block) it escalates ~74% and still loses nothing.
-- **yjs-relay (retired)** was a near-free relay, but the merge cost and
-  conflict outcome lived on the client where the server could not see
-  them, and the server could not compact (it had no document to snapshot)
-  — it depended on a live client volunteering. In a room whose clients
-  left or never volunteered, storage grew one row per edit forever. Its
-  `storage.bytes` and snapshot sizes in the table are synthetic (see
-  Limitations).
-- **yjs-server** buys back the relay's missing server authority (bounded
-  storage without client help, observable convergence, materialization)
-  while keeping CRDT merge semantics and needing NO ingest lock — but at
-  the price of loading, merging, and re-encoding the canonical y-php
-  document on every ingest: tens of ms per request at this document size
-  in pure PHP, roughly 55× intent-log's transform. Its idle polls and
-  reads stay as cheap as the relay's (pure row reads — the canonical doc
-  is never touched on the read path). That ingest cost scales with
-  document size, so `long-form` runs matter before drawing conclusions.
-- **de-rtc** sits between them on CPU (~3× intent-log per ingest, ~20×
-  cheaper than yjs-server at this size) and buys the same escalate-honest
-  conflict policy as intent-log — but it pays in BYTES, not cycles: whole
-  documents travel in every proposal and every accepted proposal stores a
-  full content row (~4× intent-log's row bytes here, and both scale
-  linearly with document size). Its escalation rate on the same contended
-  workload is lower than intent-log's (~56% vs ~74% under
-  `contended-paragraph`: its block-level three-way grain escalates a
-  conflicting proposal once where intent-log's versioned registers
-  escalate every later writer), and a client that reads rarely
-  escalates more and eventually needs the retry lane — the deep-lag
-  behaviors are where the engines differ most, so run `laggy-newsroom`
-  before concluding.
 
 ## Limitations
 
 - **Single-process, no queueing model.** This measures per-request service
-  time and growth, not tail latency under a saturated worker pool. The
-  DE-RTC harness's multi-process request-queue simulation could be layered
-  on top of these engine adapters later. The hosting cost card inherits
+  time and growth, not tail latency under a saturated worker pool.
+  The hosting cost card inherits
   this: its CPU/request totals are exact for the session it measured, but
-  under real concurrency the lock-holding engines (intent-log, de-rtc)
+  under real concurrency intent-log requests
   additionally queue on the per-room lock, which the card cannot see. A
   browser-driven host report (`npm run bench -- --peers=N`) measures
   delivery delay and whole-request server costs under growing peer counts;
   these are separate from this engine model.
 - **Opaque-relay quality is unmeasured here** by construction (a
   client-merging engine's merge runs in browser clients, outside the
-  harness), not by omission. This limitation does not apply to yjs-server:
-  its profile IS the y-php client oracle.
+  harness), not by omission.
 - **Opaque-relay payloads are synthetic.** Per-edit updates and compaction
   snapshots are size-modelled blobs (a few dozen bytes per keystroke batch;
   a snapshot proportional to accumulated document size), not real Yjs
@@ -1036,12 +876,12 @@ The comparison the decision turns on:
   order-of-magnitude estimates; `storage.rows` and the compaction cadence
   are exact.
 - **In-memory storage** understates absolute per-request time (no real DB
-  round-trip for reads/writes) but keeps the *engine* comparison clean;
+  round-trip for reads/writes) but keeps the *engine* measurement clean;
   storage growth is exact. For end-to-end latency including MySQL, point
   the runner at `WP_Sync_Table_Storage` instead.
-- **The intent-log lock and de-rtc version claim ARE real DB I/O inside
-  `service_us`** (a claim/release options-row pair per intent-log
-  request; one CAS write per accepted de-rtc proposal), so their
+- **The intent-log lock IS real DB I/O inside
+  `service_us`** (a claim/release options-row pair per
+  request), so its
   absolute timings move with the environment's DB latency — a Docker MySQL
   and a local socket differ by an order of magnitude. Use the
   `calibration.lock_pair_p50_ms` figure to subtract it out, and never
@@ -1050,25 +890,6 @@ The comparison the decision turns on:
 - **Opaque-relay service times sit near the timer floor** (single-digit
   µs): they say "an append-only relay's server cost is negligible", not
   anything more precise.
-- **The de-rtc client model is deliberately simplified in two places.**
-  Escalated proposals are reverted from the simulated client's local copy
-  (production keeps the author's copy on screen pending a human decision;
-  the harness reverts so later proposals stay clean and the oracle can
-  assert the conflict stayed OUT of the canonical), and EVERY applied
-  proposal advances the client's base at settle time — a fast-forward
-  apply advances the version only, a server-merged apply adopts the
-  canonical. That is sound because the runner is synchronous (the
-  canonical at settle IS the just-applied version), and it is what
-  production does: the polling transport returns the accepted row in the
-  same response as the dispositions, so the shipping codec's base advance
-  is row-driven and immediate. Without it, a client that reads rarely
-  would re-propose already-applied content against a pre-apply base, and
-  the engine genuinely duplicates the re-proposed text when the merge
-  regions have drifted apart (head-only workloads masked this — the
-  cumulative proposals always escalated; mixed head/tail insert positions
-  surfaced it). Each edit is
-  retried once; a second stale-base void parks it (never silently drops
-  it), and score() flags any edit left unsettled.
 
 ## Text across paragraph splits
 

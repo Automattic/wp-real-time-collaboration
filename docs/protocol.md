@@ -12,19 +12,18 @@ them meaning. The intent-log vocabulary itself is in
 
 | Route | Purpose |
 | --- | --- |
-| `POST /wp-sync/v1/updates` | Polling, and the send path for both stream transports: one request carries every open room. |
-| `POST /wp-sync/v1/sse` | The event stream from the web tier: the same envelope with no updates, answered as a long-lived `text/event-stream`. |
+| `POST /wp-sync/v1/updates` | Polling: one request carries every open room. |
 | `POST /wp-sync/v1/ws-token` | Mints the daemon credential: a one-time token, or a signed access token when a secret is configured. Answer `{ token, expires_in }`. |
-| `POST /wp-sync/v1/de-rtc/resolve` | A reviewer's decision on a de-rtc edit held for review (`room`, `proposalId`, `resolution`: `restored` or `dismissed`). Posts and pages only; other types send a `resolved` row. |
 | `POST /wp-sync/v1/save` | The bundled framework's own route for saving a CRDT document copy with a post. |
 | `POST /gutenberg-sync-engines/v1/advisory/leave` | The leave beacon a tab sends on `pagehide`, so its presence goes at once. |
 | `rtc-test/v1/*` | The per-request benchmark log, dev-only (`GUTENBERG_SYNC_ENGINES_DIAGNOSTICS`). |
 
 The sync daemon (`wp collaboration sync-server`, port 8787 by default)
 serves the WebSocket (the browser offers `Sec-WebSocket-Protocol:
-wp-sync, wp-sync-token.<token>`; the daemon echoes `wp-sync`), the same
-event stream at `<daemon>/wp-sync/v1/sse` with the token in an
-`Authorization` header, and `GET /health`.
+wp-sync, wp-sync-token.<token>`; the daemon echoes `wp-sync`) and
+`GET /health`. The daemon also still holds code that answers a plain
+POST with an event stream. It is an unused leftover: no transport
+opens such a stream.
 
 ## The room envelope
 
@@ -60,26 +59,20 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `requires-unfiltered-html`, `resync-required`. |
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |
-| `rows_received_separately` | `true` on a send made beside an open event stream: the server stores the updates and answers with the verdicts but no rows. |
+| `rows_received_separately` | An unused leftover, always `false`. When `true`, the server stores the updates and answers with the verdicts but no rows. Nothing sets it now. |
 | `advisory` | The advisory channel's discovery probe, answered beside the rooms. |
 | `debug` / `_debug` | Asks for the engine's diagnostics, served when the `wp_sync_debug_enabled` filter allows (default `SCRIPT_DEBUG`). |
 
 Other statuses: 403 `rest_cannot_edit`, 413 when a body or a room is
-too large (yjs-server also for a document over its size limits), 503
-when the intent-log room lock or a de-rtc version claim could not be
-taken in time, which the client retries. A different 409 comes from
-the ordinary post save route: under de-rtc a save that names a base
-version and genuinely conflicts is refused with one, and the conflict
-is set aside for review.
+too large, 503
+when the intent-log room lock could not be
+taken in time, which the client retries.
 
 Over the socket the same envelope travels as `{ "type": "sync", "rooms": [ … ] }`
 frames both ways, plus `type: "advisory"` frames on the advisory link
-and `type: "error"` frames when the daemon refuses something. The event
-stream writes each room response as `event: sync`, a `: keepalive`
-comment at least every five seconds, and `event: retry` when it ends on
-purpose.
+and `type: "error"` frames when the daemon refuses something.
 
-## Row types per engine
+## Row types
 
 Every stored row is `{ type, data }`. A client may send only the types
 marked "client".
@@ -92,45 +85,32 @@ marked "client".
 | | `voided` | server | A marker that an edit was thrown away. |
 | | `resolved` | client | A reviewer's decision on a parked edit. |
 | | `cancel` | client, never stored | Cancels edits the server has not accepted yet; all or nothing. |
-| yjs-server (protocol 1) | `update` | client | One incremental Yjs update, base64; the server stores only what it did not have. |
-| | `snapshot` | server | A full copy, `{ doc: <base64> }`. |
-| de-rtc | `proposal` | client | Whole content against a base version. Posts and pages send theirs through the ordinary autosave endpoint instead (`base_version`, `block_base_versions`, `clientUpdate`). |
-| | `announce` | server | Tells tabs that version N exists, with a short fingerprint of its content and the merged property values; about 200 bytes and no content. |
-| | `fetch` | client, never stored | "My version is behind"; answered with one snapshot built on the fly. |
-| | `snapshot` | server | The first version and each checkpoint. |
-| | `parked` / `resolved` | server / client | As for intent-log. |
 
 A script or plugin that saves a post needs none of this. If it names
-the version it read (`base_seq` for intent-log, `base_version` for
-de-rtc), the server merges its save with other people's edits
-([engine-comparison.md](engine-comparison.md)).
+the version it read (`base_seq`), the server merges its save with other
+people's edits.
 
 ## Who may do what
 
 Every route needs a logged-in user with `edit_posts`, and for each room
 the framework checks that the user may edit that entity (403 and the
 list of refused rooms otherwise). A tab's `client_id` and presence token
-are bound to the user who first used them. Every engine checks each
-edit on the server before anyone else sees it; what each does with
-markup the author may not publish is in
-[engine-comparison.md](engine-comparison.md).
+are bound to the user who first used them. The engine checks each
+edit on the server before anyone else sees it. Markup the author may
+not publish (what `wp_kses_post` would change, for a user without
+`unfiltered_html`) is held for review.
 
 | Credential | Used for | Lives |
 | --- | --- | --- |
 | Cookie + REST nonce | the REST routes | the WordPress session |
-| One-time token | the daemon's socket and stream, in a header, never the URL; the daemon also requires the `logged_in` cookie and checks `Origin` against the site's own | two minutes, spent on first use |
+| One-time token | the daemon's socket, in a header, never the URL; the daemon also requires the `logged_in` cookie and checks `Origin` against the site's own | two minutes, spent on first use |
 | Access token (when `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` is set) | the daemon and a host's own relay: a JWT signed with the shared secret, claims `user_id`, `blog_id`, `iss`, `rooms`, `iat`, `exp` | two minutes; anyone with the secret can mint one |
 | Presence token | finding the other tabs on a post | five minutes after the last heartbeat |
 
 The daemon runs WordPress code and writes the room tables, so it is
 trusted like a web worker and must sit behind TLS. A relay sees only
 who is present and "go and poll" notices; the worst a bad one can do is
-cause extra polls or show false presence. Redis carries only change
-notices.
-
-One known gap: the de-rtc review route checks `edit_posts` only. It has
-no per-post check and no `unfiltered_html` check on a restore. The
-browser's review panel applies those rules; the route does not.
+cause extra polls or show false presence.
 
 ## Adding an engine or a transport
 
@@ -152,7 +132,8 @@ An engine is two pieces, registered through one filter on each side:
 A transport is a `WP_Sync_Transport` (`get_slug`,
 `get_protocol_version`, `register_routes`) on the `wp_sync_transports`
 filter, plus a provider factory registered with
-`registerSyncTransport`. The two stream transports, which reuse the
-polling manager and change only how rows are received, are the model.
+`registerSyncTransport`. The websocket transport
+(`includes/transports/websocket/class-wp-websocket-sync-transport.php`
+and `src/providers/websocket/websocket-provider.ts`) is the model.
 Every filter and action the plugin offers:
 `grep -rn "apply_filters\|do_action" includes`.

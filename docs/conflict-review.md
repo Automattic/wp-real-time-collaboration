@@ -4,7 +4,7 @@ When two people change the same part of a post at the same moment, the
 server may keep one change and set the other aside for a person to
 decide. This page is how that decision is shown and applied: the one
 record shape every engine publishes, the cards and dialogs in the
-editor, what each engine does with a decision, and the rules that hold
+editor, what the intent-log engine does with a decision, and the rules that hold
 it together. The code is in `src/review/`.
 
 ## What a person sees
@@ -90,7 +90,7 @@ new one rather than carrying the merged result built for the old one.
 The components are JavaScript with type checking off; the registries
 and types are TypeScript. The tests are in `tests/js/review/`.
 
-## What each engine does
+## What the engine does
 
 **intent-log** builds records from its own history of edits
 (`src/engines/intent-log-conflicts.ts`). Set-aside edits by one person
@@ -113,36 +113,6 @@ When another person removed the conflicted block in the meantime, an
 accepted result puts it back where it sat, next to the neighbours that
 survived.
 
-**de-rtc** stores each set-aside block together with its base form, so
-the dialog has all three sides. Its route (`POST
-/wp-sync/v1/de-rtc/resolve`) takes `accepted` with the merged content,
-replaces the blocks and closes the record in one request, and refuses
-with HTTP 409 `review_stale` when the record's blocks changed between
-the version the client names and the current one. Restoring a held
-block needs the `unfiltered_html` capability, the same as accepting
-one, because restoring marks the held markup as approved. A field that
-is not text, such as the categories list, is stored as its real value.
-The current side of a block record is read from the newest content the
-server announced, never from the author's own document, which still
-holds the set-aside text. A newer record from the same person on the
-same blocks replaces the older one. While a person has an open record,
-their waiting text is sent at the first pause in typing instead of at
-the commit interval.
-
-**yjs-server** never raises a merge conflict, because the CRDT merges
-everything. It holds markup the security filter strips: the cleaned
-block lands at once and the stripped markup is kept as a hold, one open
-hold per author and block, until a reviewer approves, edits, or
-discards it over `POST /wp-sync/v1/yjs-server/resolve`. A hold follows
-its block by id, so a cleaned or approved block keeps its id. Removing
-the block closes the hold. Open holds survive the server's routine
-deletion of old rows, and the closing row is stored before the server
-forgets the hold.
-
-Both routes check that the caller can edit the room's post
-(`WP_Sync_Review_Permissions`), the same check the sync transport
-makes, and approving held markup needs `unfiltered_html`.
-
 ## Rules every engine follows
 
 1. Conflict data reaches the editor through the registry, never
@@ -150,13 +120,12 @@ makes, and approving held markup needs `unfiltered_html`.
 2. The engine applies the decision and closes the record. The review
    code never writes to the post.
 3. A decision lands only on what the reviewer saw. The registry refuses
-   an accept whose `current` moved on; de-rtc and yjs-server make the
-   same check on the server. Dismiss is never refused.
+   an accept whose `current` moved on. Dismiss is never refused.
 4. A record is published again when a side changes, not only when it
    opens or closes.
 5. `followsTyping` is a promise that later typing joins the record. Only
-   then does the card wait. de-rtc promises it on every block record,
-   intent-log on `merge` block records, yjs-server never.
+   then does the card wait. Intent-log promises it on `merge` block
+   records only.
 6. The dialogs mount block editors whose blocks carry the same ids as
    the document, so everything inside a dialog is wrapped in
    `ReviewSurface`, or cards would render inside the dialog.
@@ -168,23 +137,16 @@ makes, and approving held markup needs `unfiltered_html`.
 
 ## Known gaps
 
-- The base can be missing: intent-log drops the history at clean-up,
-  and de-rtc has none for post fields or for the two-people-at-once
-  case it shows as Adopt/Reject. The dialog says so.
+- The base can be missing: intent-log drops the history at clean-up.
+  The dialog says so.
 - The typing wait also delays the card in a reviewer's window when
   their cursor is in the block.
 - The hidden blocks of a multi-block record are still in the document.
   The list view shows them, disabled, and a drag there can still move
   one.
-- Only intent-log widens a record to a block someone split off.
 - A decision that fails for a reason other than changed content brings
   the card back with no message.
 - After a dismiss under intent-log, the author's next keystrokes open a
   new record until their editor notices the clash.
-- Under yjs-server the dialog's current side is the cleaned block as
-  the server last recorded it, not the live block, so the first
-  approval after a collaborator's edit is refused once.
 - A table comparison lines cells up by position when labels cannot do
   it, so it cannot follow a row or column inserted in the middle.
-- yjs-server does not sync Custom HTML markup, so its common real case
-  cannot be shown yet.

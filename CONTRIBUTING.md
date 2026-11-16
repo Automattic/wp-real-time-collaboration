@@ -1,4 +1,4 @@
-# Contributing to Gutenberg sync engines
+# Contributing to WP Real-Time Collaboration
 
 Thank you for your interest in contributing. This plugin is
 experimental: settings, filters and stored data can change or go away
