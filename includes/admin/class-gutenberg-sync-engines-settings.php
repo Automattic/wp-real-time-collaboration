@@ -1099,27 +1099,16 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			echo '<p>' . esc_html__( 'Choose how edits from several people are combined (the engine) and how they travel between the editor and WordPress (the transport). The defaults work on any host. Each setting is a plain WordPress option, so WP-CLI and the REST settings endpoint can change it. Guides for engines and transports are in the plugin\'s docs folder.', 'gutenberg-sync-engines' ) . '</p>';
 
 			/*
-			 * The switch on this screen also turns on Gutenberg's real-time
-			 * collaboration experiment, which the bundled Gutenberg still
-			 * reads. Someone can turn that experiment off on Gutenberg's own
-			 * screen afterwards. Then the switch here says "on" and nothing
-			 * happens, so say so and link there.
+			 * The switch on this screen works through a filter that
+			 * Gutenberg applies. An editor that does not apply it (no
+			 * Gutenberg, or one too old to have the filter) leaves the
+			 * switch saying "on" while nothing happens, so say so.
 			 */
 			$collaboration_enabled = wp_rtc_is_collaboration_enabled();
 			if ( ! $collaboration_enabled && wp_rtc_is_enabled_setting() ) {
 				printf(
 					'<div class="notice notice-warning"><p>%1$s</p></div>',
-					wp_kses(
-						sprintf(
-							/* translators: %s: link to the Gutenberg experiments screen. */
-							__( 'Real-time collaboration is switched on here, but it is turned off in Gutenberg, so these settings have no effect yet. Enable the <strong>Real-time collaboration</strong> experiment on the %s screen.', 'gutenberg-sync-engines' ),
-							'<a href="' . esc_url( admin_url( 'admin.php?page=gutenberg-experiments' ) ) . '">' . esc_html__( 'Gutenberg experiments', 'gutenberg-sync-engines' ) . '</a>'
-						),
-						array(
-							'strong' => array(),
-							'a'      => array( 'href' => array() ),
-						)
-					)
+					esc_html__( 'Real-time collaboration is switched on here, but the editor on this site does not support it, so these settings have no effect yet. It needs a version of the Gutenberg plugin that lets another plugin switch collaboration on.', 'gutenberg-sync-engines' )
 				);
 			}
 

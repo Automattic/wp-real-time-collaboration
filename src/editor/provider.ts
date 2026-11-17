@@ -27,6 +27,7 @@ import { flushHeldUpdates } from '../providers/http-polling/polling-manager';
 import { getProviderCreators } from '../registry/transports';
 import type { ProviderCreatorResult } from '../registry/types';
 import { createEntityConflictSource } from '../review/entity-source';
+import { TYPING_HOLD_MAX_MS } from '../review/typing-hold';
 import type { SyncConflictSource } from '../review/types';
 import { createAwarenessDoc } from '../shared/awareness-sync';
 import {
@@ -122,11 +123,21 @@ const SAVE_WAIT_MS = 5000;
 /** What the provider can be given besides core-data's context. */
 export interface IntentLogProviderOptions {
 	/**
-	 * Whether the engine must not write to the editor right now: text is
-	 * being composed with an input method, or a review card is waiting for
-	 * the person to stop typing. The push is tried again shortly after.
+	 * Whether text is being composed with an input method right now. A
+	 * write to the editor would cancel the composition and lose its text,
+	 * so writes wait until it ends.
 	 */
-	shouldHoldPushes?: () => boolean;
+	isComposing?: () => boolean;
+
+	/**
+	 * Whether the person is still typing in a block. A review card that
+	 * follows typing leaves its block editable until the person pauses
+	 * (src/review/typing-hold.ts). The typed text is no longer in the
+	 * engine's document by then, so a write to the editor would take it
+	 * away from under them. Writes wait while the person types in such a
+	 * block, for as long as the card may wait.
+	 */
+	isTypingIn?: ( clientId: string ) => boolean;
 
 	/**
 	 * Reads one block from the block editor. Used for two things the
@@ -200,6 +211,8 @@ interface RecordState {
 	forcePush: boolean;
 	/** Raw markup blocks whose markup has to be read from the editor. */
 	rawContentToRefresh: Set< string >;
+	/** When writes started to wait for the person to stop typing. */
+	typingHoldSince: number | null;
 	counters: CaptureCounters;
 }
 
@@ -405,6 +418,49 @@ export function createIntentLogProvider(
 	};
 
 	/**
+	 * Whether a write to the editor has to wait.
+	 *
+	 * @param state The record.
+	 * @return Whether text is being composed, or the person is typing in a
+	 *         block whose review card is waiting for them to pause.
+	 */
+	const shouldHoldPushes = ( state: RecordState ): boolean => {
+		if ( options.isComposing?.() ) {
+			return true;
+		}
+
+		const { isTypingIn } = options;
+		let typing = false;
+
+		if ( isTypingIn && state.session.getOpenProposals().length > 0 ) {
+			typing = state.review.list().some(
+				( conflict ) =>
+					true === conflict.followsTyping &&
+					'blocks' === conflict.target.type &&
+					( conflict.target.ids ?? [] ).some( ( syncId ) => {
+						const clientId = state.ids.getClientId( syncId );
+
+						return undefined !== clientId && isTypingIn( clientId );
+					} )
+			);
+		}
+
+		if ( ! typing ) {
+			state.typingHoldSince = null;
+
+			return false;
+		}
+
+		// The card stops waiting after a while, even for someone who
+		// never pauses. So do the writes.
+		const now = Date.now();
+
+		state.typingHoldSince = state.typingHoldSince ?? now;
+
+		return now - state.typingHoldSince < TYPING_HOLD_MAX_MS;
+	};
+
+	/**
 	 * Reads the markup of raw markup blocks from the editor and sends
 	 * what changed. The operations of a batch do not hold the whole markup
 	 * of such a block when a block inside it changed.
@@ -490,7 +546,7 @@ export function createIntentLogProvider(
 
 		state.forcePush = state.forcePush || force;
 
-		if ( options.shouldHoldPushes?.() ) {
+		if ( shouldHoldPushes( state ) ) {
 			if ( ! state.pushTimer ) {
 				state.pushTimer = setTimeout( () => {
 					state.pushTimer = null;
@@ -1050,6 +1106,7 @@ export function createIntentLogProvider(
 				pushTimer: null,
 				forcePush: false,
 				rawContentToRefresh: new Set(),
+				typingHoldSince: null,
 				counters: {
 					stalePreviousValue: 0,
 					caretFallback: 0,

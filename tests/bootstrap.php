@@ -3,12 +3,14 @@
  * PHPUnit bootstrap.
  *
  * The plugin owns the whole server side of collaborative editing (see
- * `includes/server/`). It still needs the Gutenberg it bundles, which
- * supplies the on/off switch (`wp_is_collaboration_enabled()`) and the
- * editor packages. Both are required in on `muplugins_loaded` below,
- * Gutenberg first, the same order as on a real site. The plugin stays
- * dormant beside any other Gutenberg, so the tests always use the bundled
- * copy at `gutenberg/gutenberg.php`.
+ * `includes/server/`). Gutenberg supplies the on/off switch
+ * (`wp_is_collaboration_enabled()`, which the plugin answers through a
+ * filter) and the editor. Both are required in on `muplugins_loaded`
+ * below, Gutenberg first, the same order as on a real site. The tests use
+ * the bundled copy at `gutenberg/gutenberg.php`.
+ *
+ * Collaboration is on for the whole suite without any setup: the plugin's
+ * `wp_rtc_enabled` setting is on until someone switches it off.
  *
  * @package GutenbergSyncEngines
  */
@@ -41,21 +43,6 @@ tests_add_filter(
 		}
 
 		require dirname( __DIR__ ) . '/wp-real-time-collaboration.php';
-
-		/*
-		 * Turn real-time collaboration on for the whole suite. The bundled
-		 * Gutenberg reads its `gutenberg-real-time-collaboration`
-		 * experiment, and the plugin checks it on `init` (the fallback
-		 * storage's post type) and again on `rest_api_init` (the transport
-		 * routes). That is earlier than any test's set_up, so it has to
-		 * happen here.
-		 */
-		$gse_experiments = get_option( 'gutenberg-experiments', array() );
-		if ( ! is_array( $gse_experiments ) ) {
-			$gse_experiments = array();
-		}
-		$gse_experiments['gutenberg-real-time-collaboration'] = true;
-		update_option( 'gutenberg-experiments', $gse_experiments );
 	}
 );
 

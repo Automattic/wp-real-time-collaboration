@@ -45,3 +45,14 @@ if ( typeof global.window !== 'undefined' && ! global.window.matchMedia ) {
 		dispatchEvent: () => false,
 	} );
 }
+
+// The Custom HTML block watches its own size through `ResizeObserver`,
+// which jsdom does not implement. The review dialogs render that block,
+// so give them a stub that never reports a size.
+if ( typeof global.ResizeObserver === 'undefined' ) {
+	global.ResizeObserver = class {
+		observe() {}
+		unobserve() {}
+		disconnect() {}
+	};
+}

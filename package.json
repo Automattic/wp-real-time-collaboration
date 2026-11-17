@@ -15,15 +15,11 @@
     "@wordpress/e2e-test-utils-playwright": "^1.51.0",
     "@wordpress/env": "^11.11.0",
     "@wordpress/scripts": "^30.0.0",
-    "@wordpress/sync": "file:./gutenberg/packages/sync",
     "@wp-playground/cli": "3.1.54",
     "babel-plugin-transform-import-meta": "^2.3.3",
     "diff": "^8.0.4",
-    "lib0": "^0.2.99",
     "typescript": "^5.5.0",
-    "ws": "^8.18.3",
-    "y-protocols": "^1.0.7",
-    "yjs": "^13.6.29"
+    "ws": "^8.18.3"
   },
   "overrides": {
     "@wordpress/env": "^11.11.0"

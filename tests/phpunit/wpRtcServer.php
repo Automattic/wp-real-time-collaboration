@@ -33,10 +33,6 @@ class Tests_Collaboration_WpRtcServer extends WP_UnitTestCase {
 		return implode( "\n", array_filter( $after, 'is_string' ) );
 	}
 
-	public function test_the_suite_runs_on_the_bundled_gutenberg() {
-		$this->assertTrue( gutenberg_sync_engines_bundled_gutenberg_is_loaded() );
-	}
-
 	public function test_the_setting_is_on_until_someone_switches_it_off() {
 		delete_option( 'wp_rtc_enabled' );
 		$this->assertTrue( wp_rtc_is_enabled_setting() );
@@ -58,37 +54,35 @@ class Tests_Collaboration_WpRtcServer extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The bundled Gutenberg reads its experiment, not the plugin's setting,
-	 * so saving the setting has to switch the experiment with it.
+	 * Gutenberg starts its `wp_is_collaboration_enabled` filter from its
+	 * own experiment. The plugin's setting decides, whatever that says.
 	 */
-	public function test_saving_the_setting_switches_the_gutenberg_experiment() {
-		update_option( 'wp_rtc_enabled', true );
-		update_option(
-			self::EXPERIMENTS,
-			array(
-				'gutenberg-something-else' => true,
-				self::EXPERIMENT           => true,
-			)
-		);
-
+	public function test_the_setting_decides_whatever_the_gutenberg_experiment_says() {
+		update_option( self::EXPERIMENTS, array( self::EXPERIMENT => true ) );
 		update_option( 'wp_rtc_enabled', false );
 		$this->assertFalse( wp_rtc_is_collaboration_enabled() );
-		$this->assertSame( array( 'gutenberg-something-else' => true ), get_option( self::EXPERIMENTS ) );
 
+		update_option( self::EXPERIMENTS, array() );
 		update_option( 'wp_rtc_enabled', true );
 		$this->assertTrue( wp_rtc_is_collaboration_enabled() );
-		$this->assertSame(
-			array(
-				'gutenberg-something-else' => true,
-				self::EXPERIMENT           => true,
-			),
-			get_option( self::EXPERIMENTS )
-		);
 	}
 
 	/**
-	 * A Gutenberg that has the `wp_is_collaboration_enabled` filter follows
-	 * the plugin's setting through this callback.
+	 * Saving the setting writes nothing to Gutenberg's experiments.
+	 */
+	public function test_saving_the_setting_leaves_the_gutenberg_experiments_alone() {
+		$experiments = array( 'gutenberg-something-else' => true );
+		update_option( self::EXPERIMENTS, $experiments );
+
+		update_option( 'wp_rtc_enabled', false );
+		update_option( 'wp_rtc_enabled', true );
+
+		$this->assertSame( $experiments, get_option( self::EXPERIMENTS ) );
+	}
+
+	/**
+	 * Gutenberg follows the plugin's setting through this callback on its
+	 * `wp_is_collaboration_enabled` filter.
 	 */
 	public function test_the_gutenberg_filter_answers_with_the_setting() {
 		$this->assertSame( 10, has_filter( 'wp_is_collaboration_enabled', 'wp_rtc_filter_collaboration_enabled' ) );

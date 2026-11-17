@@ -21,7 +21,7 @@ import { privateApis } from '@wordpress/editor';
 /**
  * Internal dependencies
  */
-import { unlockEditor } from '../lock-unlock';
+import { unlockEditor } from '../editor/lock-unlock';
 
 const api = unlockEditor( privateApis );
 

@@ -1,7 +1,7 @@
 /**
  * External dependencies
  */
-import { describe, expect, it, jest } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 
 /**
  * Internal dependencies
@@ -11,17 +11,21 @@ import {
 	INTENT_LOG_UPDATE_TYPES,
 	type IntentLogSession,
 } from '../../../src/engines/intent-log-session';
-import { createIntentLogUndoManager } from '../../../src/engines/intent-log-undo';
-import type { EngineUpdate } from '@wordpress/sync';
-import {
-	createServer,
-	serverDocAt,
-	serverIngestBatch,
-} from '../../../src/engines/intent-log/rebase.js';
 import {
 	createDocument,
 	getBlock,
 } from '../../../src/engines/intent-log/document.js';
+import { createUndoHistory } from '../../../src/editor/undo-history';
+import { connectToWire, createWireServer, type WireServer } from './wire';
+
+/*
+ * What undo sends: the reverse of the person's own accepted edits, worked
+ * out against the room's history. These tests make edits of many kinds
+ * and check the server's document after undo and redo.
+ *
+ * How steps are grouped, and what happens while the server has not
+ * answered yet, is in undo-history.test.ts.
+ */
 
 const GENESIS_BLOCKS = [
 	{ syncId: 'p1', blockType: 'core/paragraph', text: 'Hello world' },
@@ -35,166 +39,56 @@ const GENESIS_BLOCKS = [
 	},
 ];
 
-// Wire-level stand-in mirroring the session test harness (see
-// intent-log-session.test.ts): planner-backed ingest, rows then acks.
-function makeWireServer() {
-	const initialDoc = createDocument( GENESIS_BLOCKS );
-	const server = createServer( initialDoc );
-	const rows: EngineUpdate[] = [
-		{
-			data: JSON.stringify( { doc: initialDoc } ),
-			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
-		},
-	];
+const connect = ( wire: WireServer, session: IntentLogSession ) =>
+	connectToWire( wire, session );
 
-	// Ids the server has settled — the engine-class cancel lane's
-	// too-late test (mirrors WP_Intent_Log_Engine, not the frozen core).
-	const settledIds = new Set< string >();
-
-	return {
-		ingest( sent: EngineUpdate[] ) {
-			const cancelDispositions: Array< {
-				intentId: string;
-				status: string;
-				reason?: string;
-			} > = [];
-			const canceledIds = new Set< string >();
-			for ( const update of sent ) {
-				if ( INTENT_LOG_UPDATE_TYPES.CANCEL !== update.type ) {
-					continue;
-				}
-				const cancel = JSON.parse( update.data );
-				const tooLate = cancel.intentIds.some( ( id: string ) =>
-					settledIds.has( id )
-				);
-				if ( tooLate ) {
-					cancelDispositions.push( {
-						intentId: cancel.cancelId,
-						status: 'voided',
-						reason: 'cancel-too-late',
-					} );
-					continue;
-				}
-				for ( const id of cancel.intentIds ) {
-					canceledIds.add( id );
-					settledIds.add( id );
-					rows.push( {
-						data: JSON.stringify( {
-							intentId: id,
-							reason: 'canceled',
-						} ),
-						type: INTENT_LOG_UPDATE_TYPES.VOIDED,
-					} );
-				}
-				cancelDispositions.push( {
-					intentId: cancel.cancelId,
-					status: 'applied',
-				} );
-			}
-
-			const parsed = sent
-				.filter(
-					( update ) => INTENT_LOG_UPDATE_TYPES.INTENT === update.type
-				)
-				.map( ( update ) => JSON.parse( update.data ) );
-			const dropped = parsed.filter( ( intent ) =>
-				canceledIds.has( intent.intentId )
-			);
-			const intents = parsed.filter(
-				( intent ) => ! canceledIds.has( intent.intentId )
-			);
-			const logBefore = server.log.length;
-			const results = serverIngestBatch( server, intents );
-			for ( const intent of intents ) {
-				settledIds.add( intent.intentId );
-			}
-			for ( const entry of server.log.slice( logBefore ) ) {
-				rows.push( {
-					data: JSON.stringify( entry ),
-					type: INTENT_LOG_UPDATE_TYPES.INTENT,
-				} );
-			}
-			return [
-				...intents.map(
-					( intent: { intentId: string }, index: number ) => ( {
-						intentId: intent.intentId,
-						...results[ index ],
-					} )
-				),
-				...dropped.map( ( intent: { intentId: string } ) => ( {
-					intentId: intent.intentId,
-					status: 'voided',
-					reason: 'canceled',
-				} ) ),
-				...cancelDispositions,
-			];
-		},
-		rowsAfter: ( cursor: number ) => rows.slice( cursor ),
-		rowCount: () => rows.length,
-		doc: () => serverDocAt( server, server.log.length ),
-	};
-}
-
-function connect(
-	wire: ReturnType< typeof makeWireServer >,
-	session: IntentLogSession
-) {
-	const queue: EngineUpdate[] = [];
-	session.onLocalUpdate( ( update ) => queue.push( update ) );
-
-	return {
-		poll() {
-			const sent = queue.splice( 0 );
-			const dispositions = sent.length ? wire.ingest( sent ) : null;
-			const updates = wire.rowsAfter( this.cursor );
-			this.cursor = wire.rowCount();
-			for ( const update of updates ) {
-				session.receiveUpdate( update );
-			}
-			if ( dispositions && session.receiveDispositions ) {
-				session.receiveDispositions( dispositions );
-			}
-			return dispositions;
-		},
-		cursor: 0,
-	};
-}
-
-function harness( userId = 1, clientId = 11, captureTimeout = 0 ) {
-	const wire = makeWireServer();
+/**
+ * One tab with an undo history, connected to a server.
+ *
+ * @param userId   The user's id.
+ * @param clientId The tab's client id.
+ * @return The pieces a test drives.
+ */
+function harness( userId = 1, clientId = 11 ) {
+	const wire = createWireServer( GENESIS_BLOCKS );
 	const session = createIntentLogSession( { userId, clientId } );
 	const link = connect( wire, session );
-	const onStackChange = jest.fn();
-	// captureTimeout 0 keeps every edit() its own unit unless a test
-	// exercises the coalescing chain explicitly.
-	const undo = createIntentLogUndoManager( {
-		onStackChange,
-		captureTimeout,
-	} );
-	undo.attachSession( session );
-	link.poll(); // Bootstrap from the genesis snapshot.
+	const history = createUndoHistory();
+
+	history.attach( session, () => {} );
+	link.poll();
 
 	/**
-	 * Authors a "capture batch" the way the manager does.
-	 * @param intents
+	 * Makes a local edit as one undo step, the way the provider does for
+	 * a completed change.
+	 *
+	 * @param intents The edits.
+	 * @return The edits as the session sent them.
 	 */
 	const edit = (
 		intents: Array< { type: string; payload: Record< string, unknown > } >
 	) => {
 		const envelopes = session.authorBatch( intents, {
 			baseSeq: session.getSeq(),
+			observe: false,
 		} );
-		undo.noteAuthored( session, envelopes );
+
+		history.record( session, envelopes, true );
+
 		return envelopes;
 	};
-
+	const undo = {
+		undo: () => history.undo( session ),
+		redo: () => history.redo( session ),
+		reset: () => history.reset(),
+	};
 	const serverText = ( syncId: string, field = 'content' ) =>
-		( getBlock( wire.doc(), syncId ) as any )?.fields?.[ field ]?.text;
+		getBlock( wire.doc(), syncId )?.fields[ field ]?.text;
 
-	return { wire, session, link, undo, edit, onStackChange, serverText };
+	return { wire, session, link, undo, edit, serverText };
 }
 
-describe( 'intent-log collaborative undo', () => {
+describe( 'undo: the reverse edits', () => {
 	it.each( [ 'format_text', 'delete_text' ] )(
 		'undo and redo keep a split %s atomic',
 		( type ) => {
@@ -303,22 +197,16 @@ describe( 'intent-log collaborative undo', () => {
 		// Not yet settled — but undoable anyway: a fully-pending unit is
 		// CANCELABLE, so hasUndo no longer waits for the settle
 		// round trip.
-		expect( undo.hasUndo() ).toBe( true );
 		link.poll();
-		expect( undo.hasUndo() ).toBe( true );
 		expect( serverText( 'p1' ) ).toBe( 'Hello world EDIT' );
 
 		undo.undo();
 		link.poll();
 		expect( serverText( 'p1' ) ).toBe( 'Hello world' );
-		expect( undo.hasUndo() ).toBe( false );
-		expect( undo.hasRedo() ).toBe( true );
 
 		undo.redo();
 		link.poll();
 		expect( serverText( 'p1' ) ).toBe( 'Hello world EDIT' );
-		expect( undo.hasUndo() ).toBe( true );
-		expect( undo.hasRedo() ).toBe( false );
 	} );
 
 	it( 'undo inside the settle window CANCELS the pending unit', () => {
@@ -335,20 +223,16 @@ describe( 'intent-log collaborative undo', () => {
 				},
 			},
 		] );
-		expect( undo.hasUndo() ).toBe( true );
 		expect( session.getPendingCount() ).toBe( 1 );
 
 		// Undo BEFORE any poll: the intent cancels instead of no-oping.
-		expect( undo.undo() ).toEqual( [] );
+		expect( undo.undo() ).toBe( true );
 		expect( session.getPendingCount() ).toBe( 0 );
-		expect( undo.hasUndo() ).toBe( false );
 
 		// The queued intent and its cancel travel in the SAME batch: the
 		// server drops the pair and the edit never lands.
 		link.poll();
 		expect( serverText( 'p1' ) ).toBe( 'Hello world' );
-		expect( undo.hasUndo() ).toBe( false );
-		expect( undo.hasRedo() ).toBe( false );
 	} );
 
 	it( 'a cancel that lost the race resurrects the unit as a settled undo candidate', () => {
@@ -376,7 +260,7 @@ describe( 'intent-log collaborative undo', () => {
 		] );
 
 		// Local cancel still succeeds (no ack processed yet)…
-		expect( undo.undo() ).toEqual( [] );
+		expect( undo.undo() ).toBe( true );
 		expect( session.getPendingCount() ).toBe( 0 );
 
 		// …but the wire copy was ingested: the poll redelivers the intent
@@ -385,7 +269,6 @@ describe( 'intent-log collaborative undo', () => {
 		// normal settled candidate.
 		link.poll();
 		expect( serverText( 'p1' ) ).toBe( 'Hello world EDIT' );
-		expect( undo.hasUndo() ).toBe( true );
 
 		// The second undo inverts it the ordinary way.
 		undo.undo();
@@ -394,7 +277,7 @@ describe( 'intent-log collaborative undo', () => {
 	} );
 
 	it( 'cancellation is all-or-nothing: a settled unit does not cancel', () => {
-		const { session, link, undo, edit } = harness();
+		const { session, link, edit } = harness();
 
 		const envelopes = edit( [
 			{
@@ -414,7 +297,6 @@ describe( 'intent-log collaborative undo', () => {
 				envelopes.map( ( envelope ) => envelope.intentId )
 			)
 		).toBe( false );
-		expect( undo.hasUndo() ).toBe( true ); // Settled: inverse path.
 	} );
 
 	it( 'undo reverts only this client, transformed over a peer row that shifted the text', () => {
@@ -505,9 +387,7 @@ describe( 'intent-log collaborative undo', () => {
 		expect( serverText( 'p1' ) ).toBe( 'Hello world' );
 		expect( serverText( 'q1', 'citation' ) ).toBe( 'Shakespeare' );
 		// The attr write inverted to a removal (it had no prior value).
-		expect(
-			( getBlock( wire.doc(), 'p1' ) as any ).attrs.align
-		).toBeUndefined();
+		expect( getBlock( wire.doc(), 'p1' )?.attrs.align ).toBeUndefined();
 	} );
 
 	it( 'undoing a block removal reinserts the subtree with all its fields at its old position', () => {
@@ -519,14 +399,15 @@ describe( 'intent-log collaborative undo', () => {
 
 		undo.undo();
 		link.poll();
-		const restored = getBlock( wire.doc(), 'q1' ) as any;
+		const restored = getBlock( wire.doc(), 'q1' );
 		expect( restored ).not.toBeNull();
-		expect( restored.fields.content.text ).toBe( 'To be or not to be' );
-		expect( restored.fields.citation.text ).toBe( 'Shakespeare' );
+		expect( restored?.fields.content.text ).toBe( 'To be or not to be' );
+		expect( restored?.fields.citation.text ).toBe( 'Shakespeare' );
 		// Back at its old position: after p1 at the root.
-		expect( wire.doc().root.map( ( block: any ) => block.syncId ) ).toEqual(
-			[ 'p1', 'q1' ]
-		);
+		expect( wire.doc().root.map( ( block ) => block.syncId ) ).toEqual( [
+			'p1',
+			'q1',
+		] );
 	} );
 
 	it( 'a set_attr with a prior value restores it; walks past no-inverse units', () => {
@@ -556,82 +437,11 @@ describe( 'intent-log collaborative undo', () => {
 			},
 		] );
 		link.poll();
-		expect( ( getBlock( wire.doc(), 'p1' ) as any ).attrs.align ).toBe(
-			'full'
-		);
+		expect( getBlock( wire.doc(), 'p1' )?.attrs.align ).toBe( 'full' );
 
 		undo.undo();
 		link.poll();
-		expect( ( getBlock( wire.doc(), 'p1' ) as any ).attrs.align ).toBe(
-			'wide'
-		);
-	} );
-
-	it( 'per-keystroke batches within the capture window coalesce into one undo unit', () => {
-		// A realistic capture cadence: the manager authors one batch per
-		// editor update (a keystroke each). With the capture window on,
-		// the burst reverts as ONE unit.
-		const { link, undo, edit, serverText } = harness( 1, 11, 10_000 );
-
-		for ( const [ index, char ] of [ ...' EDIT' ].entries() ) {
-			edit( [
-				{
-					type: 'insert_text',
-					payload: {
-						syncId: 'p1',
-						field: 'content',
-						offset: 11 + index,
-						text: char,
-					},
-				},
-			] );
-		}
-		link.poll();
-		expect( serverText( 'p1' ) ).toBe( 'Hello world EDIT' );
-
-		undo.undo();
-		link.poll();
-		expect( serverText( 'p1' ) ).toBe( 'Hello world' );
-		expect( undo.hasUndo() ).toBe( false );
-
-		undo.redo();
-		link.poll();
-		expect( serverText( 'p1' ) ).toBe( 'Hello world EDIT' );
-	} );
-
-	it( 'stopCapturing forces the next batch into a fresh unit', () => {
-		const { link, undo, edit, serverText } = harness( 1, 11, 10_000 );
-
-		edit( [
-			{
-				type: 'insert_text',
-				payload: {
-					syncId: 'p1',
-					field: 'content',
-					offset: 11,
-					text: ' one',
-				},
-			},
-		] );
-		undo.stopCapturing();
-		edit( [
-			{
-				type: 'insert_text',
-				payload: {
-					syncId: 'p1',
-					field: 'content',
-					offset: 15,
-					text: ' two',
-				},
-			},
-		] );
-		link.poll();
-		expect( serverText( 'p1' ) ).toBe( 'Hello world one two' );
-
-		undo.undo();
-		link.poll();
-		expect( serverText( 'p1' ) ).toBe( 'Hello world one' );
-		expect( undo.hasUndo() ).toBe( true );
+		expect( getBlock( wire.doc(), 'p1' )?.attrs.align ).toBe( 'wide' );
 	} );
 
 	it( 'a new edit clears the redo stack', () => {
@@ -651,7 +461,6 @@ describe( 'intent-log collaborative undo', () => {
 		link.poll();
 		undo.undo();
 		link.poll();
-		expect( undo.hasRedo() ).toBe( true );
 
 		edit( [
 			{
@@ -664,36 +473,8 @@ describe( 'intent-log collaborative undo', () => {
 				},
 			},
 		] );
-		expect( undo.hasRedo() ).toBe( false );
-	} );
 
-	it( 'notifies stack-state transitions', () => {
-		const { link, undo, edit, onStackChange } = harness();
-		expect( onStackChange ).not.toHaveBeenCalled();
-
-		edit( [
-			{
-				type: 'insert_text',
-				payload: {
-					syncId: 'p1',
-					field: 'content',
-					offset: 0,
-					text: 'X',
-				},
-			},
-		] );
-		link.poll();
-		expect( onStackChange ).toHaveBeenLastCalledWith( {
-			hasUndo: true,
-			hasRedo: false,
-		} );
-
-		undo.undo();
-		link.poll();
-		expect( onStackChange ).toHaveBeenLastCalledWith( {
-			hasUndo: false,
-			hasRedo: true,
-		} );
+		expect( undo.redo() ).toBe( false );
 	} );
 
 	it( 'a horizon reset clears both stacks', () => {
@@ -711,7 +492,6 @@ describe( 'intent-log collaborative undo', () => {
 			},
 		] );
 		link.poll();
-		expect( undo.hasUndo() ).toBe( true );
 
 		// A compaction checkpoint beyond our cursor re-bootstraps the
 		// replica; documents below it are gone.
@@ -722,8 +502,9 @@ describe( 'intent-log collaborative undo', () => {
 			} ),
 			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
 		} );
-		expect( undo.hasUndo() ).toBe( false );
-		expect( undo.hasRedo() ).toBe( false );
+
+		expect( undo.undo() ).toBe( false );
+		expect( undo.redo() ).toBe( false );
 	} );
 
 	it( 'retention pins the replica log to the oldest tracked row', () => {

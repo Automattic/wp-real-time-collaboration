@@ -3,10 +3,15 @@
   "branch": "try/sync-engines-intent",
   "commit": "061056f94bda96ca20f3e36056737eb36010bda8",
   "trunk": "86264c189101f8468036d2452aa092e91306f604",
-  "tree": "9f8d9b56108f0d7ab8fc9997d45fd938f53576b6",
+  "tree": "c2146b8b3b6d888970766e507b8c68a78b62304d",
   "source": {
     "repository": "https://github.com/WordPress/gutenberg-sync-engines",
     "commit": "9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5"
   },
-  "local_changes": []
+  "local_changes": [
+    "packages/editor/CHANGELOG.md",
+    "packages/editor/src/private-apis.js",
+    "packages/editor/src/components/post-revisions-preview/revisions-canvas.jsx",
+    "packages/editor/src/components/post-revisions-preview/block-diff-view.tsx (added)"
+  ]
 }

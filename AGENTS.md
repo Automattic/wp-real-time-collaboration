@@ -33,37 +33,36 @@ shared editing session.
   engine), `shared/`, `transports/` (polling and `websocket/`),
   `admin/` (the settings screen), `storage/`, `diagnostics/`
   (dev-only).
-- `src/` — client TypeScript; `src/index.ts` builds `build/sync-engines.js`
-  with `@wordpress/sync` and `yjs` external: `engines/`, `shared/`,
+- `src/` — client TypeScript; `src/index.ts` builds
+  `build/sync-engines.js`: `engines/` (the intent-log core, its session,
+  and the comparison of two documents), `shared/`,
   `registry/` (the plugin's own transport and engine registries,
   connection errors, and the types an engine and a transport share),
   `providers/{http-polling,websocket,advisory}/`,
-  `awareness/`, `entity-sync/`, `review/` (the conflict review cards
-  and dialogs; see `docs/conflict-review.md`), `framework.ts`,
-  `editor/` (`gutenberg-contract.ts`: every non-public thing the plugin
-  relies on from Gutenberg goes here; the other files are the engine's
-  side of the newer Gutenberg sync contract, tested in
-  `tests/js/editor/` and not used by the editor yet: `provider.ts` is
-  the object core-data will call, `capture.ts`, `identity.ts` and
-  `text-change.ts` turn edit batches into engine edits, `apply.ts`
-  builds editor blocks from the document, `load.ts` matches blocks
-  when a post opens, `post-fields.ts` syncs the title, terms and meta,
-  `block-types.ts` reads block type definitions, `undo-history.ts`,
+  `awareness/`, `review/` (the conflict review cards
+  and dialogs; see `docs/conflict-review.md`),
+  `editor/` (the only folder that talks to the editor.
+  `gutenberg-contract.ts`: every non-public thing the plugin relies on
+  from Gutenberg goes here. `register.ts` hands the engine to core-data.
+  `provider.ts` is the object core-data calls for loads, edits, saves
+  and undo. `capture.ts`, `identity.ts` and `text-change.ts` turn
+  core-data's edit batches into engine edits, `apply.ts` builds editor
+  blocks from the document, `load.ts` matches blocks when a post opens,
+  `post-fields.ts` syncs the title, terms and meta, `block-types.ts`
+  reads block type definitions, `undo-history.ts`,
   `review-decisions.ts` and `collections.ts` hold undo, review
   decisions and the list rooms), `debug/inspector.ts`.
-- `gutenberg/` — a squashed Git subtree of Gutenberg, source only,
-  pinned by `gutenberg-pin.json` (`commit`, `trunk`, and `tree`, which
-  must equal `git rev-parse HEAD:gutenberg`). The plugin loads it when
-  no standalone Gutenberg is active. Framework changes live on the
-  Gutenberg `try/sync-engines` branch: rebase that branch on upstream
-  trunk, test it, then `git subtree pull --prefix=gutenberg <checkout>
-  <commit> --squash`, update the pin, rebuild, and run typecheck, Jest
-  and the browser tests. Keep the private API exports, the post-lock
-  fallback, the entity sync registration and the conflict-review
-  callbacks the vendored copy carries. Its
-  `lib/experimental/collaboration/` folder is trimmed on purpose: the
-  plugin owns those server pieces now (`gutenberg-pin.json` lists the
-  changed files). The release zip includes the built framework.
+- `gutenberg/` — a copy of Gutenberg's `try/sync-engines-intent` branch,
+  source only, pinned by `gutenberg-pin.json` (`commit`, `trunk`, and
+  `tree`, which must equal `git rev-parse HEAD:gutenberg`). The plugin
+  loads it when no standalone Gutenberg is active. To update it,
+  replace the folder from a Gutenberg checkout (`rm -rf gutenberg`,
+  then `git -C <checkout> archive --prefix=gutenberg/ <commit> | tar -x
+  -C .`), apply the changes listed under `local_changes` in the pin
+  again, update the pin, install and build, and run typecheck, Jest and
+  the browser tests. The new folder must be staged (`git add
+  gutenberg`) before it builds: one build step asks git which icon
+  files are tracked. The release zip includes the built copy.
 - `tests/` — `phpunit/`, `js/` (Jest, mirroring `src/`), `e2e/`
   (Playwright specs, config, fixture plugins, launchers in `bin/`),
   `benchmarks/`, `debugging/`, `fuzzer/`, `tools/`; each of the last
@@ -75,11 +74,15 @@ shared editing session.
 
 ## Setup
 
-The commands are in `README.md` (Development). The subtree build
-(`cd gutenberg && npm ci --ignore-scripts && npm run build`) is needed
-for Jest and `npm run typecheck` too, because they resolve
-`@wordpress/sync` and `yjs` from it; `--ignore-scripts` skips the
-subtree's Husky hook, which needs its own Git root.
+The commands are in `README.md` (Development). The bundled Gutenberg
+build (`cd gutenberg && npm ci --ignore-scripts && npm run build`) is
+needed for Jest and `npm run typecheck` too, because they resolve the
+editor packages from it; `--ignore-scripts` skips its Husky hook, which
+needs its own Git root. Gutenberg installs its dependencies per
+package (`gutenberg/packages/<name>/node_modules`, linked into
+`gutenberg/node_modules/.store`), so `gutenberg/node_modules` holds
+almost nothing by itself. `jest.config.js` and `tsconfig.json` point at
+the package folders for that reason.
 
 ## Environment
 
@@ -230,13 +233,15 @@ before a big change. A durable lesson from an issue goes here.
   so everything inside a dialog is wrapped in `ReviewSurface` or the
   cards render inside it. The rules and the engine's part:
   `docs/conflict-review.md`.
-- **The bundled Gutenberg carries one change on top of its pin: the
-  editor package exports its revision comparison** (four files under
-  `gutenberg/packages/editor/`, read through `src/lock-unlock.ts`).
-  Keep it when importing a framework update. A standalone Gutenberg
-  lacks it, so the review dialogs check `hasBlockDiff` and
-  `hasCodeDiff` (`src/review/revisions-diff.ts`) and show a text
-  comparison instead; a new use of those names needs the same check.
+- **The bundled Gutenberg carries changes on top of its pin**, listed
+  under `local_changes` in `gutenberg-pin.json`. One is that the editor
+  package exports its revision comparison (files under
+  `gutenberg/packages/editor/`, read through
+  `src/editor/lock-unlock.ts`). Apply them again when the folder is
+  replaced. A standalone Gutenberg lacks the export, so the review
+  dialogs check `hasBlockDiff` and `hasCodeDiff`
+  (`src/review/revisions-diff.ts`) and show a text comparison instead;
+  a new use of those names needs the same check.
 - **The intent-log core is frozen: do not edit it casually.** The
   core (`src/engines/intent-log/`) is kept identical to its PHP twin
   (`includes/engines/intent-log/`) through JSON test vectors kept in
@@ -261,15 +266,14 @@ before a big change. A durable lesson from an issue goes here.
   burst is over, then check whether the work is still needed.
 - **Reading the soak test's per-minute numbers as rates.** They are
   running totals. Subtract before concluding.
-- **Writing a change into the editor from inside `SyncManager.update()`.**
-  core-data hands the sync manager the edits BEFORE it saves them, and
-  every editor edit carries the editor's own block tree, so that save
-  replaces any `editRecord` made during the call. This is
+- **Writing a change into the editor from inside `applyEditBatch`.**
+  core-data hands the provider a local edit BEFORE it stores it, so
+  that store replaces any `editRecord` made during the call. This is
   deterministic, not a race. A change that reacts to the editor's own
-  edits must be written later, after the call returns (intent-log
-  waits until typing pauses; see `scheduleEditorSync`). Changes written
-  from a transport callback work normally. The symptom is an editor
-  whose blocks silently never get their syncIds.
+  edit must be written in a later task, after the call returns (see
+  `pushLater` in `src/editor/provider.ts`). Changes written from a
+  transport callback work normally. The symptom is an editor whose
+  blocks silently never get their syncIds.
 
 ### Code facts that look wrong but are right
 
@@ -325,24 +329,19 @@ before a big change. A durable lesson from an issue goes here.
 - `tests/bootstrap.php` loads the bundled Gutenberg, then the plugin,
   then the test fixtures on `plugins_loaded` at priority 20. The
   fixtures need the plugin's own classes, which load when it boots on
-  that hook. The plugin is dormant beside any Gutenberg but the bundled
-  one (`gutenberg_sync_engines_bundled_gutenberg_is_loaded()`), so
-  PHPUnit cannot run against another Gutenberg checkout.
+  that hook.
 - e2e must load a single `@playwright/test`: the subtree's `npm install`
   re-creates its own copy, and `pretest:e2e` removes it. The runner is
   `playwright test` directly, NOT `wp-scripts test-e2e`.
 - `tests/e2e/config/global-setup.ts` activates the plugin by file path
   (wp-env leaves mapped plugins INACTIVE on the tests site) and
   deactivates a stale `gutenberg-stub` from an aborted precedence run.
-- Collaboration is on only while the Gutenberg experiment
-  `gutenberg-real-time-collaboration` is; tests flip it through
-  `gutenberg-experiments` in `POST /wp/v2/settings` (the fixture's
-  `setCollaboration`), the CLI tools with a `wp eval`. The client flag
-  is `window.__experimentalEnableRealTimeCollaboration`. Activation
-  turns it on but does not pin it. The plugin's own switch is the
-  `wp_rtc_enabled` option: saving it switches the experiment too, and
-  it also answers the `wp_is_collaboration_enabled` filter, which the
-  bundled Gutenberg does not apply yet.
+- Collaboration is on while the plugin's `wp_rtc_enabled` option is.
+  The plugin answers Gutenberg's `wp_is_collaboration_enabled` filter
+  with it, and Gutenberg's own real-time collaboration experiment has
+  no say while the plugin is active. Activation turns the option on.
+  The client flag is `window.__experimentalEnableRealTimeCollaboration`,
+  which Gutenberg prints (false in the site editor).
 - Built subtree JS lands at `gutenberg/build/scripts/<pkg>/`.
 - A checkout in a folder with any name other than
   `wp-real-time-collaboration` (a git worktree, for example) is mounted

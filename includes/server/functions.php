@@ -32,10 +32,9 @@ if ( ! function_exists( 'wp_rtc_filter_collaboration_enabled' ) ) {
 	 * Answers Gutenberg's `wp_is_collaboration_enabled` filter with the
 	 * plugin's own setting.
 	 *
-	 * A Gutenberg that has this filter turns collaboration on and off from
-	 * the plugin's setting alone. The bundled Gutenberg does not have the
-	 * filter yet. There the plugin switches Gutenberg's experiment to
-	 * match the setting (see wp_rtc_sync_collaboration_experiment()).
+	 * Gutenberg turns collaboration on and off from the plugin's setting
+	 * alone. Its own real-time collaboration experiment, which is the
+	 * filter's starting value, has no say while this plugin is active.
 	 *
 	 * @since n.e.x.t
 	 *
@@ -43,55 +42,6 @@ if ( ! function_exists( 'wp_rtc_filter_collaboration_enabled' ) ) {
 	 */
 	function wp_rtc_filter_collaboration_enabled(): bool {
 		return wp_rtc_is_enabled_setting();
-	}
-}
-
-if ( ! function_exists( 'wp_rtc_set_collaboration_experiment' ) ) {
-	/**
-	 * Switches Gutenberg's `gutenberg-real-time-collaboration` experiment
-	 * for the current site, leaving the other experiments as they are.
-	 *
-	 * @since n.e.x.t
-	 *
-	 * @param bool $enabled Whether the experiment should be on.
-	 * @return void
-	 */
-	function wp_rtc_set_collaboration_experiment( bool $enabled ): void {
-		$experiments = get_option( 'gutenberg-experiments', array() );
-		if ( ! is_array( $experiments ) ) {
-			$experiments = array();
-		}
-
-		$current = ! empty( $experiments['gutenberg-real-time-collaboration'] );
-		if ( $current === $enabled ) {
-			return;
-		}
-
-		if ( $enabled ) {
-			$experiments['gutenberg-real-time-collaboration'] = true;
-		} else {
-			unset( $experiments['gutenberg-real-time-collaboration'] );
-		}
-
-		update_option( 'gutenberg-experiments', $experiments );
-	}
-}
-
-if ( ! function_exists( 'wp_rtc_sync_collaboration_experiment' ) ) {
-	/**
-	 * Keeps Gutenberg's experiment in step when the plugin's setting is
-	 * saved, so the site owner has one switch.
-	 *
-	 * Hooked to the option's add and update actions. It runs only when the
-	 * setting changes. It does not undo a change someone makes on
-	 * Gutenberg's own experiments screen.
-	 *
-	 * @since n.e.x.t
-	 *
-	 * @return void
-	 */
-	function wp_rtc_sync_collaboration_experiment(): void {
-		wp_rtc_set_collaboration_experiment( wp_rtc_is_enabled_setting() );
 	}
 }
 

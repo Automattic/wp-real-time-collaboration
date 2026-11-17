@@ -118,10 +118,12 @@ An engine is two pieces, registered through one filter on each side:
   `get_slug`, `get_protocol_version`, `get_update_types`,
   `handle_updates`, `get_updates_since`. Register it on the
   `wp_sync_engines` filter.
-- A JavaScript `SyncEngine`
-  (`gutenberg/packages/sync/src/engines/engine.ts`): `createEntity`,
-  `createCollection`, and the optional `createUndoManager` and `review`.
-  Register it with `registerSyncEngine`, as `src/index.ts` does.
+- A JavaScript engine registration (`src/registry/engines.ts`): a
+  slug, a protocol version, and `createProvider`, which returns the
+  object core-data calls for loads, edits, saves and undo (its shape is
+  in `src/editor/gutenberg-contract.ts`). Register it with
+  `registerSyncEngine`, as `src/index.ts` does, or through the
+  `sync.engines` filter.
 - Give a new room its starting field values from
   `WP_Sync_Post_Genesis_Props`, and register a benchmark profile on
   `wp_sync_bench_authoring_profiles` (`tests/benchmarks/README.md`).

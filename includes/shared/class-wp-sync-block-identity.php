@@ -12,12 +12,11 @@ if ( ! class_exists( 'WP_Sync_Block_Identity' ) ) {
 	 * `metadata.syncId`, and the blocks of a saved post get ids that any
 	 * minter can compute on its own.
 	 *
-	 * Shared by every engine whose blocks carry a syncId (intent-log and
-	 * de-rtc), so neither engine depends on the other. The editor-side
-	 * stamper (`includes/shared/sync-id.js`) computes the same ids with
-	 * WebCrypto; the frozen vectors in `sync-id.json` are the contract
-	 * (replayed through `WP_Intent_Log_Planner::genesis_sync_id`, which
-	 * delegates here).
+	 * Kept apart from the engine, so that any engine whose blocks carry a
+	 * syncId can use it. The editor does not compute these ids. It
+	 * receives them with the room's first document. The frozen vectors in
+	 * `sync-id.json` are the contract (replayed through
+	 * `WP_Intent_Log_Planner::genesis_sync_id`, which delegates here).
 	 *
 	 * @since n.e.x.t
 	 * @access private

@@ -16,7 +16,7 @@ import {
 	websocketManager,
 	resetWebSocketManagerForTesting,
 } from '../../../../src/providers/websocket/websocket-manager';
-import type { EngineSessionCodec } from '@wordpress/sync';
+import type { EngineSessionCodec } from '../../../../src/registry/types';
 
 jest.mock( '@wordpress/api-fetch' );
 

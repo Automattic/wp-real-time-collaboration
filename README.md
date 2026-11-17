@@ -40,8 +40,7 @@ environments and both Playground blueprints install it.
 2. Install the plugin zip and activate it. Build the zip with
    `npm run plugin-zip`, or take one from the repository's releases
    page (`TODO-REPOSITORY-URL/releases/latest`). Activation creates the
-   storage tables and turns the Gutenberg "Real-time collaboration"
-   experiment on.
+   storage tables and switches real-time collaboration on.
 3. Open the same post in two browsers as two users and type. Changes
    appear in the other window within seconds, each window shows the
    other person's avatar, and when both change the same paragraph at
@@ -97,21 +96,21 @@ The plugin owns the whole server side: the engine and transport
 contracts and registries, room names and permissions, the REST routes,
 and the settings printed for the browser (`includes/server/`). Its
 engine and transports register through the `wp_sync_engines` and
-`wp_sync_transports` PHP filters, so other code can add its own. In the
-browser the plugin still registers with the bundled Gutenberg's
-`@wordpress/sync` package, through the `registerSyncEngine` and
-`registerSyncTransport` JavaScript functions. The server says which
+`wp_sync_transports` PHP filters, so other code can add its own.
+
+The plugin touches Gutenberg in three places. In PHP it answers the
+`wp_is_collaboration_enabled` filter, which switches collaboration on.
+In the browser it registers one sync provider with core-data, which then
+hands it every local edit as a list of operations and takes remote
+changes back. The plugin keeps its own registries for engines and
+transports in front of that one registration. The server says which
 engine and transport to use, and the browser checks that it has them.
 If they do not match, the editor uses the classic post lock instead, so
-nothing is corrupted. Beside a Gutenberg other than the bundled copy,
-the plugin stays dormant and says so in an admin notice.
+nothing is corrupted.
 
 How an edit travels is in [docs/data-flow.md](docs/data-flow.md). How to
 add an engine or a transport is in [docs/protocol.md](docs/protocol.md).
-The framework's own design notes are at
-`gutenberg/prototypes/sync/ARCHITECTURE.md` inside this repository's
-bundled Gutenberg. Every page is indexed in
-[docs/README.md](docs/README.md).
+Every page is indexed in [docs/README.md](docs/README.md).
 
 ## Measuring the cost
 
@@ -127,10 +126,10 @@ benchmarks, the fuzzer, and the debugging tools are described in
 
 ## Development
 
-The framework is maintained in a separate Gutenberg branch and copied
-into `gutenberg/` as a squashed Git subtree. Each plugin commit pins one
-exact framework commit, and the plugin loads this bundled copy when no
-standalone Gutenberg plugin is active.
+The plugin needs a Gutenberg that lets a plugin supply the sync
+provider. That work is on a Gutenberg branch, and a copy of it is in
+`gutenberg/`. `gutenberg-pin.json` names the exact commit. The plugin
+loads this bundled copy when no standalone Gutenberg plugin is active.
 
 ```bash
 composer install          # PHP tooling

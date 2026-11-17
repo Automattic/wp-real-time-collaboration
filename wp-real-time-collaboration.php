@@ -40,12 +40,10 @@ if ( ! function_exists( 'gutenberg_sync_engines_activate' ) ) {
 	 * creates the storage tables and switches real-time collaboration on.
 	 *
 	 * A site that installs this plugin wants collaboration, so activation
-	 * turns on the plugin's own setting (`wp_rtc_enabled`). The bundled
-	 * Gutenberg does not read that setting yet. It reads its
-	 * `gutenberg-real-time-collaboration` experiment, which every fresh
-	 * site starts with off, so activation turns that on too and leaves
-	 * every other experiment alone. Switching collaboration off later is
-	 * honored until the plugin is activated again.
+	 * turns on the plugin's own setting (`wp_rtc_enabled`). Gutenberg asks
+	 * that setting through its `wp_is_collaboration_enabled` filter.
+	 * Switching collaboration off later is honored until the plugin is
+	 * activated again.
 	 *
 	 * The storage tables are per site and are created here (dbDelta, so a
 	 * re-activation is harmless). Deactivation leaves them and every
@@ -72,8 +70,8 @@ if ( ! function_exists( 'gutenberg_sync_engines_activate' ) ) {
 
 if ( ! function_exists( 'gutenberg_sync_engines_activate_site' ) ) {
 	/**
-	 * The per-site activation steps: storage tables, then the setting and
-	 * the experiment that switch collaboration on.
+	 * The per-site activation steps: storage tables, then the setting
+	 * that switches collaboration on.
 	 *
 	 * @since 0.0.1
 	 *
@@ -82,7 +80,6 @@ if ( ! function_exists( 'gutenberg_sync_engines_activate_site' ) ) {
 	function gutenberg_sync_engines_activate_site() {
 		WP_Sync_Table_Schema::install();
 		update_option( 'wp_rtc_enabled', '1' );
-		wp_rtc_set_collaboration_experiment( true );
 	}
 }
 
@@ -90,7 +87,7 @@ if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
 	/**
 	 * Sets up a site created on a network where this plugin is
 	 * network-active: the activation hook ran before the site existed, so
-	 * its tables and experiment are created here instead. A site on a
+	 * its tables and setting are created here instead. A site on a
 	 * network where the plugin is active per site gets them when it
 	 * activates the plugin itself.
 	 *
@@ -115,7 +112,7 @@ if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
 /*
  * Registered BEFORE the double-mount guard below: a worktree's second copy
  * returns early from this file, and activating that copy should still turn
- * the experiment on.
+ * collaboration on.
  */
 register_activation_hook( __FILE__, 'gutenberg_sync_engines_activate' );
 
@@ -198,31 +195,6 @@ if ( ! function_exists( 'gutenberg_sync_engines_load_bundled_gutenberg' ) ) {
 gutenberg_sync_engines_load_bundled_gutenberg();
 
 require_once GUTENBERG_SYNC_ENGINES_PATH . 'includes/class-gutenberg-sync-engines-plugin.php';
-
-if ( ! function_exists( 'gutenberg_sync_engines_bundled_gutenberg_is_loaded' ) ) {
-	/**
-	 * Whether the Gutenberg that is running is the copy this plugin
-	 * bundles.
-	 *
-	 * The plugin's browser code needs the editor packages of the bundled
-	 * copy. Beside any other Gutenberg the plugin stays dormant and says
-	 * so (see Gutenberg_Sync_Engines_Plugin::boot()).
-	 *
-	 * @since n.e.x.t
-	 *
-	 * @return bool True when the bundled copy supplied Gutenberg.
-	 */
-	function gutenberg_sync_engines_bundled_gutenberg_is_loaded(): bool {
-		if ( ! function_exists( 'gutenberg_pre_init' ) ) {
-			return false;
-		}
-
-		$loaded  = realpath( (string) ( new ReflectionFunction( 'gutenberg_pre_init' ) )->getFileName() );
-		$bundled = realpath( GUTENBERG_SYNC_ENGINES_PATH . 'gutenberg/gutenberg.php' );
-
-		return false !== $loaded && $loaded === $bundled;
-	}
-}
 
 if ( ! function_exists( 'gutenberg_sync_engines_storage' ) ) {
 	/**

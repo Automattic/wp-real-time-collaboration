@@ -5,8 +5,7 @@
  * Creation: random, minted at the moment a block is born.
  *
  * Only the creation regime lives here. Genesis ids are minted by the server
- * (`WP_Intent_Log_Planner::genesis_sync_id`) and by the build-free stamper
- * script (`includes/shared/sync-id.js`); the JS reference
+ * (`WP_Intent_Log_Planner::genesis_sync_id`); the JS reference
  * implementation that the frozen vectors pin lives with the harness at
  * `tests/js/engines/intent-log/genesis-sync-id.js`. See SPEC.md.
  */

@@ -4,22 +4,17 @@
 const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 
 /**
- * The plugin ships a single client bundle that registers its engine adapters
- * and transport providers with the framework (`@wordpress/sync`) at load time.
+ * The plugin ships one browser script. It registers the engine and the
+ * transports, and hands the engine to the editor.
  *
- * `@wordpress/sync` and Yjs are provided at runtime by WordPress as `wp.sync`
- * (and `wp.sync.Y`); they must NOT be bundled, so that this plugin consumes the
- * SAME Yjs instance as the framework (see https://github.com/yjs/yjs/issues/438)
- * and unlocks the same private-API registry.
+ * The WordPress packages it imports (`@wordpress/core-data`,
+ * `@wordpress/blocks`, and so on) are not bundled. The default config
+ * turns each into the matching `wp.*` global and lists it as a script
+ * dependency, so the plugin uses the same copies as the editor.
  */
 module.exports = {
 	...defaultConfig,
 	entry: {
 		'sync-engines': './src/index.ts',
-	},
-	externals: {
-		...defaultConfig.externals,
-		'@wordpress/sync': 'wp.sync',
-		yjs: 'wp.sync.Y',
 	},
 };

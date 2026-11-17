@@ -9,7 +9,7 @@ import {
 	it,
 	jest,
 } from '@jest/globals';
-import type { EngineDisposition } from '@wordpress/sync';
+import type { EngineDisposition } from '../../../src/registry/types';
 
 /**
  * Internal dependencies

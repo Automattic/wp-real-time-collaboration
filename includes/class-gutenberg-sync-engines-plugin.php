@@ -16,9 +16,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 	 * room names and permissions, the REST routes, and the settings printed
 	 * for the browser (all under `includes/server/`), plus the engine and
 	 * the transports that register through the `wp_sync_engines` and
-	 * `wp_sync_transports` filters. The editor packages still come from the
-	 * bundled Gutenberg, so beside any other Gutenberg the plugin stays
-	 * dormant.
+	 * `wp_sync_transports` filters. Gutenberg supplies the editor, a filter
+	 * to switch collaboration on, and the one place where the plugin's
+	 * browser code registers.
 	 *
 	 * @since 0.1.0
 	 */
@@ -30,15 +30,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @var Gutenberg_Sync_Engines_Plugin|null
 		 */
 		private static ?Gutenberg_Sync_Engines_Plugin $instance = null;
-
-		/**
-		 * Whether the Gutenberg that is running is the bundled copy, whose
-		 * editor packages the plugin's browser code needs.
-		 *
-		 * @since 0.1.0
-		 * @var bool
-		 */
-		private bool $framework_available = false;
 
 		/**
 		 * Returns the singleton instance.
@@ -62,9 +53,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		private function __construct() {}
 
 		/**
-		 * Boots the plugin: checks that the bundled Gutenberg is the one
-		 * running, then loads and registers everything. Beside another
-		 * Gutenberg the plugin stays dormant and shows an admin notice.
+		 * Boots the plugin: upgrades the storage tables when needed, then
+		 * loads and registers everything.
 		 *
 		 * @since 0.1.0
 		 *
@@ -72,29 +62,17 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 */
 		public function boot(): void {
 			/*
-			 * The storage tables come first and do not depend on the
-			 * framework: a plugin update that ships a newer schema upgrades
-			 * here (activation hooks do not fire on updates), and the
-			 * lifecycle CLI (`wp collaboration storage …`) must work on a
-			 * site where the plugin is dormant. A site that cannot create
-			 * the tables keeps working on the fallback storage
-			 * (see wp_rtc_get_storage()) and is told so.
+			 * The storage tables come first: a plugin update that ships a
+			 * newer schema upgrades here (activation hooks do not fire on
+			 * updates). A site that cannot create the tables keeps working
+			 * on the fallback storage (see wp_rtc_get_storage()) and is
+			 * told so.
 			 */
 			if ( ! WP_Sync_Table_Schema::maybe_upgrade() ) {
 				add_action( 'admin_notices', array( $this, 'render_storage_unavailable_notice' ) );
 			}
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				require_once GUTENBERG_SYNC_ENGINES_PATH . 'includes/storage/class-wp-sync-table-storage-cli-command.php';
-			}
-
-			// The plugin's browser code registers through the editor
-			// packages of the bundled Gutenberg. Another Gutenberg does not
-			// have them, so do nothing there but say so.
-			$this->framework_available = gutenberg_sync_engines_bundled_gutenberg_is_loaded();
-
-			if ( ! $this->framework_available ) {
-				add_action( 'admin_notices', array( $this, 'render_missing_framework_notice' ) );
-				return;
 			}
 
 			$this->load();
@@ -200,12 +178,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * @return void
 		 */
 		private function register(): void {
-			// The on/off switch. A Gutenberg with this filter follows the
-			// plugin's setting. The bundled one follows its experiment,
-			// which is kept in step whenever the setting is saved.
+			// The on/off switch. Gutenberg follows the plugin's setting.
 			add_filter( 'wp_is_collaboration_enabled', 'wp_rtc_filter_collaboration_enabled' );
-			add_action( 'add_option_wp_rtc_enabled', 'wp_rtc_sync_collaboration_experiment' );
-			add_action( 'update_option_wp_rtc_enabled', 'wp_rtc_sync_collaboration_experiment' );
 
 			// What Gutenberg used to do for the server side.
 			add_action( 'init', 'wp_rtc_register_storage_post_type' );
@@ -317,19 +291,12 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		}
 
 		/**
-		 * Enqueues the client engine/transport bundle in the editor when
-		 * collaboration is enabled, plus the intent-log block-identity stamper
-		 * when intent-log is the active engine.
+		 * Enqueues the plugin's browser script in the editor when
+		 * collaboration is on.
 		 *
-		 * The bundle registers this plugin's engine adapters and transport
-		 * providers with the framework (`wp.sync`) at load time, so the client
-		 * can supply whichever engine the server announces. Without it the
-		 * framework has no engines or transports and RTC stays disabled.
-		 *
-		 * The stamper fills `metadata.syncId` for blocks that lack one and
-		 * re-mints duplicates directly in the editor store, making block
-		 * identity durable. It is a raw script (no build), specific to the
-		 * intent-log engine.
+		 * The script registers the plugin's engine and transports with the
+		 * editor as it loads. Without it the editor has nothing to sync
+		 * with and falls back to the post lock.
 		 *
 		 * @since 0.1.0
 		 *
@@ -426,40 +393,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 					'before'
 				);
 			}
-
-			$storage = gutenberg_sync_engines_storage();
-			$engines = new WP_Sync_Engine_Registry( $storage );
-			// The editor-side identity stamper serves every engine whose
-			// blocks carry `metadata.syncId`: intent-log.
-			if ( 'intent-log' !== $engines->get_engine_slug_for_room( '' ) ) {
-				return;
-			}
-			$stamper = GUTENBERG_SYNC_ENGINES_PATH . 'includes/shared/sync-id.js';
-			wp_enqueue_script(
-				'gutenberg-sync-engines-block-identity-stamper',
-				GUTENBERG_SYNC_ENGINES_URL . 'includes/shared/sync-id.js',
-				array( 'wp-data' ),
-				file_exists( $stamper ) ? (string) filemtime( $stamper ) : GUTENBERG_SYNC_ENGINES_VERSION,
-				true
-			);
-		}
-
-		/**
-		 * Admin notice shown when the plugin is dormant because a Gutenberg
-		 * other than the bundled copy is running.
-		 *
-		 * @since 0.1.0
-		 *
-		 * @return void
-		 */
-		public function render_missing_framework_notice(): void {
-			if ( ! current_user_can( 'activate_plugins' ) ) {
-				return;
-			}
-
-			echo '<div class="notice notice-warning"><p>';
-			echo esc_html__( 'WP Real-Time Collaboration is inactive, because another copy of the Gutenberg plugin is active. For now it only works with the Gutenberg it bundles. Deactivate the Gutenberg plugin to use real-time collaboration.', 'gutenberg-sync-engines' );
-			echo '</p></div>';
 		}
 
 		/**

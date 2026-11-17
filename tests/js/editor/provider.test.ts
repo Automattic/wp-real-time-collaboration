@@ -679,7 +679,7 @@ describe( 'provider: someone else’s edits', () => {
 		const alice = await openTab(
 			[ paragraph( 'a-1', 'One', 'p1' ) ],
 			{},
-			{ shouldHoldPushes: () => held }
+			{ isComposing: () => held }
 		);
 		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
 		const pushesBefore = alice.pushes.length;
@@ -897,5 +897,319 @@ describe( 'provider: a room the server starts again', () => {
 		// The edit is on its way to the new room.
 		expect( tab.link.queued() ).toBeGreaterThan( 0 );
 		expect( tab.blocks()[ 0 ].attributes.content ).toBe( 'One and more' );
+	} );
+} );
+
+describe( 'provider: two people in one paragraph', () => {
+	it( 'brings both editors to the server’s text when both type at the end at once', async () => {
+		/*
+		 * Two people type at the end of the same paragraph before either
+		 * has seen the other. The later burst is set aside for review.
+		 * Both editors must end up showing exactly the server's text:
+		 * the set-aside text is in a review record, not in the editor.
+		 */
+		wire = createWireServer( [ roomParagraph( 'p1', 'Alpha' ) ] );
+
+		const alice = await openTab( [ paragraph( 'a-1', 'Alpha', 'p1' ) ] );
+		const bob = await openTab( [ paragraph( 'b-1', 'Alpha', 'p1' ) ] );
+		const typed = new Map< Tab, { text: string; pushes: number } >();
+		const typeBurst = ( tab: Tab, clientId: string, burst: string ) => {
+			let text = 'Alpha';
+
+			for ( const letter of burst ) {
+				tab.edit(
+					[
+						{
+							type: 'set-attribute',
+							clientId,
+							attribute: 'content',
+							previousValue: text,
+							value: text + letter,
+						},
+					],
+					{ isCached: text !== 'Alpha' }
+				);
+				text += letter;
+			}
+
+			typed.set( tab, { text, pushes: tab.pushes.length } );
+		};
+		// What the editor shows: the last pushed blocks, or the person's
+		// own typing when nothing was pushed since.
+		const shownText = ( tab: Tab ) => {
+			const own = typed.get( tab );
+
+			if ( own && own.pushes === tab.pushes.length ) {
+				return own.text;
+			}
+
+			return tab.blocks()[ 0 ].attributes.content;
+		};
+
+		typeBurst( alice, 'a-1', ' from-A' );
+		typeBurst( bob, 'b-1', ' from-B' );
+
+		for ( let round = 0; round < 4; round++ ) {
+			alice.sync();
+			bob.sync();
+		}
+
+		await Promise.resolve();
+
+		expect( serverText( 'p1' ) ).toBe( 'Alpha from-A' );
+		expect(
+			bob.provider.conflicts.getOpenConflicts( 'postType/post', '1' )
+		).not.toHaveLength( 0 );
+		expect( shownText( alice ) ).toBe( serverText( 'p1' ) );
+		expect( shownText( bob ) ).toBe( serverText( 'p1' ) );
+	} );
+} );
+
+describe( 'provider: joining a room that has a history', () => {
+	it( 'does not add the saved blocks a second time when a batch arrives early', async () => {
+		// Someone added a block earlier. The room's first document is
+		// older than that, and the row that added the block arrives right
+		// behind it.
+		const earlier = await openTab( [ paragraph( 'e-1', 'One', 'p1' ) ] );
+
+		earlier.edit( [
+			{
+				type: 'insert',
+				block: paragraph( 'e-new', 'Added later' ),
+				parent: null,
+				before: null,
+			},
+		] );
+		earlier.sync();
+
+		const addedId = wire.doc().root.at( -1 )?.syncId ?? '';
+		const provider = createIntentLogProvider( context, {
+			fetchTaxonomies: async () => [],
+		} );
+		const before = links.length;
+
+		// The saved post holds all three blocks, with their ids.
+		await provider.load(
+			'postType',
+			'post',
+			1,
+			{
+				blocks: [
+					paragraph( 'c-1', 'One', 'p1' ),
+					paragraph( 'c-2', 'Two', 'p2' ),
+					paragraph( 'c-3', 'Added later', addedId ),
+				],
+			},
+			{
+				editRecord: () => {},
+				getEditedRecord: async () => ( {} ),
+				refetchRecord: async () => {},
+				onUndoLevelOpened: () => {},
+			}
+		);
+
+		// The person types in the newest block before the server answers.
+		provider.applyEditBatch( 'postType', 'post', 1, {
+			operations: [
+				{
+					type: 'set-attribute',
+					clientId: 'c-3',
+					attribute: 'content',
+					previousValue: 'Added later',
+					value: 'Added later!',
+				},
+			],
+			options: { isCached: false, undoIgnore: false },
+		} );
+
+		const { link } = links[ before ];
+
+		link.poll();
+		jest.runOnlyPendingTimers();
+		link.poll();
+
+		expect( serverOrder() ).toEqual( [ 'p1', 'p2', addedId ] );
+		expect( serverText( addedId ) ).toBe( 'Added later!' );
+	} );
+} );
+
+describe( 'provider: an edit the server refuses because its history is gone', () => {
+	it( 'sends the lost edit again instead of dropping it', async () => {
+		/*
+		 * The server trimmed the history an edit was made against and
+		 * refused it without combining it. No newer copy of the room
+		 * follows, because the tab is up to date. The text must not
+		 * vanish from the person's editor.
+		 */
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+		const { session } = links[ 0 ];
+		const sent: string[] = [];
+
+		session.onLocalUpdate( ( update ) => sent.push( update.data ) );
+		tab.type( 'c-1', 'One', 'One!!' );
+
+		const first = JSON.parse( sent[ 0 ] );
+
+		session.receiveDispositions?.( [
+			{
+				intentId: first.intentId,
+				status: 'voided',
+				reason: 'stale-base',
+			},
+		] );
+		jest.runOnlyPendingTimers();
+
+		expect( sent.length ).toBeGreaterThan( 1 );
+
+		const again = JSON.parse( sent.at( -1 ) ?? '{}' );
+
+		expect( again.intentId ).not.toBe( first.intentId );
+		expect( JSON.stringify( again.payload ) ).toContain( '!!' );
+	} );
+} );
+
+describe( 'provider: presence', () => {
+	it( 'builds the presence object core-data describes, over a stand-in document', async () => {
+		const destroy = jest.fn();
+		const created: Array< { clientID: number } > = [];
+		const presence = {
+			clientID: 0,
+			getLocalState: () => ( { collaboratorInfo: { id: 7 } } ),
+			setLocalStateField: () => {},
+			getStates: () => new Map< number, object >(),
+			meta: new Map< number, { clock: number; lastUpdated: number } >(),
+			emit: () => {},
+			destroy,
+		};
+		const provider = createIntentLogProvider(
+			{
+				...context,
+				getSyncConfig: () => ( {
+					createAwareness: ( doc ) => {
+						created.push( doc );
+
+						return presence;
+					},
+				} ),
+			},
+			{ fetchTaxonomies: async () => [] }
+		);
+
+		await provider.load(
+			'postType',
+			'post',
+			1,
+			{},
+			{
+				editRecord: () => {},
+				getEditedRecord: async () => ( {} ),
+				refetchRecord: async () => {},
+				onUndoLevelOpened: () => {},
+			}
+		);
+
+		// The stand-in document carries the tab's client id.
+		expect( created ).toHaveLength( 1 );
+		expect( created[ 0 ].clientID ).toBe( links[ 0 ].session.clientId );
+		// The editor's presence display finds the object.
+		expect( provider.services?.getAwareness( 'postType/post', '1' ) ).toBe(
+			presence
+		);
+		// This tab's presence goes out with the session's requests.
+		expect( links[ 0 ].session.getLocalAwareness() ).toEqual( {
+			collaboratorInfo: { id: 7 },
+		} );
+
+		provider.unload( 'postType', 'post', 1 );
+
+		expect( destroy ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
+describe( 'provider: saving', () => {
+	it( 'sends what the transport holds back before a save', async () => {
+		const flushBeforeSave = jest.fn( async () => {} );
+		const tab = await openTab(
+			[ paragraph( 'c-1', 'One', 'p1' ) ],
+			{},
+			{ flushBeforeSave }
+		);
+
+		await tab.provider.beforeSave?.(
+			'postType',
+			'post',
+			1,
+			{},
+			{ isAutosave: false }
+		);
+
+		expect( flushBeforeSave ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it( 'does not hold an autosave up', async () => {
+		const flushBeforeSave = jest.fn( async () => {} );
+		const tab = await openTab(
+			[ paragraph( 'c-1', 'One', 'p1' ) ],
+			{},
+			{ flushBeforeSave }
+		);
+
+		await tab.provider.beforeSave?.(
+			'postType',
+			'post',
+			1,
+			{},
+			{ isAutosave: true }
+		);
+
+		expect( flushBeforeSave ).not.toHaveBeenCalled();
+	} );
+
+	it( 'fails a save when the held edits cannot be sent within five seconds', async () => {
+		const tab = await openTab(
+			[ paragraph( 'c-1', 'One', 'p1' ) ],
+			{},
+			{ flushBeforeSave: () => new Promise( () => {} ) }
+		);
+		const save = tab.provider.beforeSave?.(
+			'postType',
+			'post',
+			1,
+			{},
+			{ isAutosave: false }
+		);
+		const failed = expect( save ).rejects.toThrow(
+			'Collaboration updates could not be sent'
+		);
+
+		await jest.advanceTimersByTimeAsync( 5000 );
+		await failed;
+	} );
+
+	it( 'waits for the server’s answers, but not for ever', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+
+		// An edit the server never answers.
+		tab.type( 'c-1', 'One', 'One!' );
+
+		let saved = false;
+
+		void Promise.resolve(
+			tab.provider.beforeSave?.(
+				'postType',
+				'post',
+				1,
+				{},
+				{ isAutosave: false }
+			)
+		).then( () => {
+			saved = true;
+		} );
+
+		await jest.advanceTimersByTimeAsync( 1000 );
+		expect( saved ).toBe( false );
+
+		await jest.advanceTimersByTimeAsync( 5000 );
+		expect( saved ).toBe( true );
 	} );
 } );
