@@ -12,8 +12,8 @@ import { flushHeldUpdates } from '../../../src/providers/http-polling/polling-ma
 import { createDocument } from '../../../src/engines/intent-log/document';
 import { INTENT_LOG_UPDATE_TYPES as TYPES } from '../../../src/engines/intent-log-session';
 
-jest.mock( '../../../src/framework', () => ( {
-	...jest.requireActual( '../../../gutenberg/packages/sync/src/errors' ),
+jest.mock( '../../../src/framework', () => ( {} ) );
+jest.mock( '../../../src/registry/transports', () => ( {
 	getProviderCreators: () => [
 		jest
 			.requireActual(

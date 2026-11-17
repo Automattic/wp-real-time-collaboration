@@ -80,7 +80,6 @@ interface PeerLink {
 
 let host: AdvisoryLinkHost | null = null;
 let subscribed = false;
-let suspended = false;
 let overCap = false;
 const links: Map< string, PeerLink > = new Map();
 
@@ -98,9 +97,8 @@ function maxPeers(): number {
 }
 
 /**
- * Whether the channel wants this link up: started by a transport, not
- * suspended, under the peer cap, and the page has both the signaling lane
- * and WebRTC.
+ * Whether the channel wants this link up: started by a transport, under
+ * the peer cap, and the page has both the signaling lane and WebRTC.
  */
 function isActive(): boolean {
 	return null !== host && host.isActive();
@@ -481,7 +479,7 @@ function createLink( token: string, clientId: number ): PeerLink {
  * @param discovered The peers the last heartbeat reported.
  */
 function reconcile( discovered: DiscoveredPeer[] ): void {
-	if ( ! host || suspended ) {
+	if ( ! host ) {
 		return;
 	}
 	if ( discovered.length > maxPeers() ) {
@@ -635,7 +633,6 @@ export const webrtcLink: AdvisoryLink = {
 	 */
 	start( channel: AdvisoryLinkHost ): void {
 		host = channel;
-		suspended = false;
 		installSignaling();
 		if ( ! subscribed ) {
 			subscribed = true;
@@ -649,25 +646,6 @@ export const webrtcLink: AdvisoryLink = {
 		closeAll();
 		overCap = false;
 		host = null;
-	},
-
-	/**
-	 * The transport's switch: peers are told goodbye while suspended, and
-	 * the discovered ones are reconnected after.
-	 *
-	 * @param value Whether the transport wants the link off.
-	 */
-	setSuspended( value: boolean ): void {
-		if ( value === suspended ) {
-			return;
-		}
-		suspended = value;
-		if ( value ) {
-			closeAll();
-			emitCoverage();
-		} else {
-			reconcile( getDiscoveredPeers() );
-		}
 	},
 
 	canSend(): boolean {
@@ -716,7 +694,6 @@ export const webrtcLink: AdvisoryLink = {
 		seenSignalIds.clear();
 		host = null;
 		subscribed = false;
-		suspended = false;
 		overCap = false;
 	},
 };

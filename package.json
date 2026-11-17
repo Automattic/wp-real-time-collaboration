@@ -17,15 +17,12 @@
     "@wordpress/scripts": "^30.0.0",
     "@wordpress/sync": "file:./gutenberg/packages/sync",
     "@wp-playground/cli": "3.1.54",
-    "@y/websocket-server": "0.1.1",
     "babel-plugin-transform-import-meta": "^2.3.3",
     "diff": "^8.0.4",
-    "esbuild": "^0.27.2",
     "lib0": "^0.2.99",
     "typescript": "^5.5.0",
     "ws": "^8.18.3",
     "y-protocols": "^1.0.7",
-    "y-websocket": "^3.0.0",
     "yjs": "^13.6.29"
   },
   "overrides": {

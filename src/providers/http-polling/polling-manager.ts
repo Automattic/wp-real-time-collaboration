@@ -1,7 +1,6 @@
 /**
  * Internal dependencies
  */
-import { SseExchange } from '../sse/sse-exchange';
 import { getClientLimitPerRoom } from '../connection-limit';
 import {
 	ERROR_RETRY_DELAYS_SOLO_MS,
@@ -20,22 +19,21 @@ import {
 	ANNOUNCE_POLL_MIN_GAP_MS,
 	FAST_DISCOVERY_WINDOW_MS,
 } from './config';
-import { ConnectionError, ConnectionErrorCode } from '../../framework';
+import {
+	ConnectionError,
+	ConnectionErrorCode,
+} from '../../registry/connection-error';
 import {
 	advisoryCoversClients,
 	getChannelPresence,
 	onAdvisoryAnnounce,
 	onAdvisoryCoverageChanged,
 	onAdvisoryPresence,
-	setAdvisoryDisabledByTransport,
 	setPresenceSource,
 	startAdvisoryChannel,
 	stopAdvisoryChannel,
 } from '../advisory/channel';
-import {
-	announceLocalWrite,
-	onLocalAwarenessChange,
-} from '../advisory/announce';
+import { announceLocalWrite } from '../advisory/announce';
 import { BLOCK_FIELD } from '../../awareness/channels/sync-channel';
 import {
 	applyAnswer,
@@ -57,7 +55,7 @@ import type {
 	ConnectionStatus,
 	EngineDisposition,
 	EngineSessionCodec,
-} from '@wordpress/sync';
+} from '../../registry/types';
 import type { TransportSessionCodec } from '../session-extensions';
 import {
 	installSyncDebug,
@@ -121,23 +119,10 @@ export interface ReleasedRoom {
 	unsent: SyncUpdate[];
 }
 
-/**
- * What a send's answer carries, waiting for the receive lane to bring the
- * room's cursor up to the head the write saw (see the send lane).
- */
-interface HeldTail {
-	endCursor: number;
-	updates: SyncUpdate[];
-	dispositions?: EngineDisposition[];
-	shouldCompact?: boolean;
-}
-
 interface RoomState {
 	endCursor: number;
 	/** The room generation this session bootstrapped under (see types). */
 	generation?: string;
-	/** Answers to sends made beside the stream, oldest first. */
-	heldTails: HeldTail[];
 	isPrimaryRoom: boolean;
 	/** The awareness map the last poll response carried for this room. */
 	lastServerAwareness: AwarenessState;
@@ -427,11 +412,6 @@ let syncRequestBodySizeLimit = MAX_SYNC_REQUEST_BODY_SIZE_IN_BYTES;
  *   accepted, nobody is looking.
  * - No signaling lane on this page (a screen with no per-post room, or
  *   the channel disabled site-wide): the always-on cadence, unchanged.
- *
- * SSE keeps its own re-issue cadence (the next exchange right behind
- * each stream event) and turns the channel off while its stream is up;
- * the alone rule still applies to it (a held stream for a lone editor
- * pins a PHP worker for nothing).
  */
 let hasBootstrapped = false;
 let pollAgainRequested = false;
@@ -444,13 +424,14 @@ let hiddenFlushTimer: ReturnType< typeof setTimeout > | null = null;
  */
 let fastDiscoveryUntil = 0;
 /*
- * Requests that could carry updates (a poll off the stream, or a send on
- * the send lane), started and finished: what a flush waits for. A stream
- * receive never carries updates and is not counted.
+ * Polls started and finished. Every poll can carry queued updates, so
+ * this is what a flush waits for.
  */
 let sendsStarted = 0;
 let sendsFinished = 0;
-/** Flush waiters: resolve once request number `target` has finished. */
+/** Whether the poll in flight is counted as started and not yet finished. */
+let pollInFlightCounted = false;
+/** Flush waiters: resolve once poll number `target` has finished. */
 const sendDoneResolvers: Array< { target: number; resolve: () => void } > = [];
 let localUpdatePollTimer: ReturnType< typeof setTimeout > | null = null;
 let announcePollTimer: ReturnType< typeof setTimeout > | null = null;
@@ -467,12 +448,12 @@ function hasQueuedUpdates(): boolean {
 }
 
 /**
- * Never let a slow (or absent) timer sit on queued local work: a safety
- * or background delay, or no timer at all, is cut down to the on-demand
+ * Never let a slow (or absent) timer sit on queued local work: a
+ * background delay, or no timer at all, is cut down to the on-demand
  * send delay (the normal timer cadences send soon enough). The cadence
  * rules decide how often to LOOK for rows; queued rows go out promptly
- * regardless (found by a coverage flip that replaced a pending 1 s timer
- * with the 25 s safety timer while an undo's inverse intents were queued).
+ * regardless (found when a peer joined the channel and a pending 1 s
+ * timer was dropped while an undo's inverse intents were queued).
  *
  * @param delay The delay the cadence rules chose.
  */
@@ -531,8 +512,7 @@ export function flushHeldUpdates(): Promise< void > {
 		 * already in flight was built before the queues were released,
 		 * so its successor is the one that carries the held work.
 		 * Re-applying the holds any earlier would pause the queues
-		 * before that successor takes from them. On the stream the
-		 * successor is a send; off it, the next poll.
+		 * before that successor takes from them.
 		 */
 		sendDoneResolvers.push( {
 			target: sendsStarted + 1,
@@ -541,11 +521,7 @@ export function flushHeldUpdates(): Promise< void > {
 				resolve();
 			},
 		} );
-		if ( streamReceiving() ) {
-			scheduleSend();
-		} else {
-			pollNow();
-		}
+		pollNow();
 	} );
 }
 
@@ -583,23 +559,13 @@ function advisoryCoversEveryone(): boolean {
  */
 function nextScheduledDelay(): number | null {
 	if ( hasBootstrapped && isAlone() ) {
-		// Alone: the discovery window, then quiet. Under SSE quiet means no
-		// held stream either (scheduleNext closes it); the heartbeat's
-		// company report reopens it, as it restarts any HTTP transport.
+		// Alone: the discovery window, then quiet. The heartbeat's
+		// company report restarts the loop.
 		if ( Date.now() >= fastDiscoveryUntil ) {
 			return null;
 		}
-		return sseStreaming() ? sseDelay() : POLLING_INTERVAL_IN_MS;
+		return POLLING_INTERVAL_IN_MS;
 	}
-	if ( sseStreaming() ) {
-		return sseDelay();
-	}
-	// Short polling proper, including SSE while no stream can be opened:
-	// receiving then runs on the base transport, with its cadence rules
-	// and its advisory channel (switched back on by the failed exchange).
-	// A hidden SSE tab lands here too, with the channel still off (no
-	// mesh to rebuild on every tab switch), so it takes the background
-	// cadence below.
 	if ( advisoryCoversEveryone() ) {
 		return null;
 	}
@@ -629,10 +595,6 @@ function scheduleNext( delay: number | null ): void {
 	if ( null === delay ) {
 		isPolling = false;
 		pollingTimeoutId = null;
-		if ( sseMode ) {
-			// A quiet loop holds no PHP worker: drop the receive stream.
-			sseExchange.close();
-		}
 		return;
 	}
 	pollingTimeoutId = setTimeout( poll, delay );
@@ -675,9 +637,6 @@ function reschedule(): void {
 		const delay = boundedByQueuedWork( nextScheduledDelay() );
 		if ( null === delay ) {
 			isPolling = false;
-			if ( sseMode ) {
-				sseExchange.close();
-			}
 			return;
 		}
 		pollingTimeoutId = setTimeout( poll, delay );
@@ -690,14 +649,10 @@ function reschedule(): void {
 
 /**
  * Local work is waiting (a queued update): send it on demand when no
- * timer will pick it up soon. On the stream that is the send lane, at
- * once, beside the stream (which stays open). Off it, that is when the
- * loop is quiet (alone), a request is in flight with nothing scheduled
- * behind it (alone, mid-poll), or the pending timer is the slow safety
- * cadence (every peer on the channel). A scheduled timer at the normal
- * cadence needs no help. A stream still parked while the loop is off
- * the stream (the exchange just became unwilling) is woken so the work
- * does not wait for its next event.
+ * timer will pick it up soon. That is when the loop is quiet (alone), a
+ * request is in flight with nothing scheduled behind it (alone,
+ * mid-poll), or every peer is on the channel, where the loop keeps no
+ * regular timer. A scheduled timer at the normal cadence needs no help.
  *
  * @param held Whether the work sits in a held queue (alone, holdable
  *             codec), which waits for company or a flush instead.
@@ -706,54 +661,15 @@ function wakeForLocalWork( held = false ): void {
 	if ( held ) {
 		return;
 	}
-	if ( streamReceiving() ) {
-		scheduleSend();
-		return;
-	}
-	const needsWake = sseMode
-		? ! isPolling
-		: ! pollingTimeoutId || isAlone() || advisoryCoversEveryone();
-	if ( needsWake ) {
+	if ( ! pollingTimeoutId || isAlone() || advisoryCoversEveryone() ) {
 		pollSoonForLocalUpdate();
 	}
-	abortParkedStream();
 }
 
 /**
- * Drops a parked stream exchange on purpose (the tab went hidden, the
- * room set changed, the page is going away): the exchange sees a
- * deliberate abort, not a failure, and the loop re-polls at once. Under
- * short polling nothing is ever parked.
- */
-function abortParkedStream(): void {
-	if ( ! sseMode || ! inFlightParkController ) {
-		return;
-	}
-	parkAbortedOnPurpose = true;
-	const controller = inFlightParkController;
-	inFlightParkController = null;
-	controller.abort();
-}
-
-/**
- * Slow awareness named a new block on the local awareness state. Under
- * short polling the advisory channel's presence lane carries the field
- * to reachable peers, and the timer polls carry it to the rest, so
- * nothing needs to happen here. Under SSE the channel is off and the
- * value rides the send lane: send it now, beside the stream.
- */
-function onLocalAwarenessChanged(): void {
-	if ( streamReceiving() ) {
-		scheduleSend();
-		return;
-	}
-	abortParkedStream();
-}
-
-/**
- * A local update was queued while the loop is quiet or on the slow safety
- * cadence: poll shortly. The delay lets the rest of a burst pile in; it is
- * NOT reset by later updates, so a long burst cannot starve the send.
+ * A local update was queued while no timer will pick it up soon: poll
+ * shortly. The delay lets the rest of a burst pile in; it is NOT reset
+ * by later updates, so a long burst cannot starve the send.
  */
 function pollSoonForLocalUpdate(): void {
 	if ( localUpdatePollTimer ) {
@@ -849,22 +765,14 @@ function installAdvisoryHooks(): void {
 		applyHolds();
 		if ( others ) {
 			pollNow();
-			if ( streamReceiving() && hasQueuedUpdates() ) {
-				// Company released the held queues: on the stream the
-				// send lane carries them, not the next event.
-				scheduleSend();
-			}
 		} else {
 			reschedule();
 		}
 	} );
 	// An active loop carries queued handshake messages on its next poll;
-	// a quiet one leaves them to the heartbeat. So does an SSE loop: its
-	// exchanges send no probe (an open stream carries no request at all,
-	// so a probe could be dropped unanswered), which matters when SSE is
-	// down and the channel is back on as the fallback.
+	// a quiet one leaves them to the heartbeat.
 	setSignalCarrier( () => {
-		if ( isPolling && ! sseMode ) {
+		if ( isPolling ) {
 			pollNow();
 			return true;
 		}
@@ -915,149 +823,6 @@ function installAdvisoryHooks(): void {
 	);
 }
 
-/*
- * SSE mode: receiving rides one long-lived stream response per tab (the
- * SseExchange), each exchange returning the next stream event, so on a
- * successful exchange the client re-issues almost immediately rather than
- * waiting out a fixed interval. Sends go through the updates request
- * BESIDE the stream, which stays open across them (see the send lane,
- * sendNow). Failure backoff is unchanged. After a failed stream the
- * exchange refuses to open one for a while (growing with each failure in
- * a row); receiving then runs on short polling under ITS cadence rules —
- * the collaborator interval, quiet under channel coverage, the background
- * cadence — until the exchange is willing again, when the next receive
- * reopens a stream. Set once by the SSE provider (a single site-wide
- * transport). See providers/sse.
- */
-let sseMode = false;
-
-/*
- * Whether holding a stream open occupies a PHP worker.
- *
- * True for the `sse` transport, whose stream IS a web request and so
- * holds a worker for as long as the tab lives. The `sse-daemon`
- * transport streams from the sync daemon's own process, which keeps no
- * worker and no request per stream, and reaps the stream from the
- * socket when the browser lets go of it.
- */
-let sseStreamHoldsWorker = true;
-const sseExchange = new SseExchange();
-
-/*
- * After a room registers, the tab receives over ordinary requests for a
- * moment instead of opening a stream. The editor registers its rooms one
- * by one at load and its presence fills in right after, and each of those
- * would otherwise close and reopen the stream (two or three throwaway
- * streams per tab, each costing the server a worker, a subscription, and
- * a full read). Once the room set has been still for this long, one
- * stream opens with all of it; the bootstrap reads ride the requests.
- */
-const SSE_SETTLE_MS = 1000;
-let sseSettleUntil = 0;
-
-/**
- * Whether receiving is on the stream (or about to be, once the room set
- * settles): SSE is selected, the exchange is willing to open one, and
- * either the tab is visible or holding the stream costs no web worker.
- *
- * When it is not, receiving is short polling: after a failed stream (the
- * exchange refuses to open one for a while), and for a hidden tab whose
- * stream a web worker has to stay up for. Nobody is looking at a hidden
- * tab and a worker is a scarce thing, so such a tab polls at the
- * background cadence like short polling, and the stream reopens the
- * moment the tab is visible again (handleVisibilityChange polls at
- * once). A stream the sync daemon serves holds no worker, so it is kept
- * across the tab going hidden and the tab stays live to changes it
- * cannot see yet.
- */
-function sseStreaming(): boolean {
-	return (
-		sseMode &&
-		sseExchange.available &&
-		( isActiveBrowser || ! sseStreamHoldsWorker )
-	);
-}
-
-/**
- * Whether the next pure receive should open (or read from) the stream.
- */
-function sseStreamReady(): boolean {
-	return sseStreaming() && Date.now() >= sseSettleUntil;
-}
-
-/**
- * The delay before the next exchange while streaming: right behind each
- * stream event, or the rest of the settling window.
- */
-function sseDelay(): number {
-	return Math.max( STREAM_REISSUE_MS, sseSettleUntil - Date.now() );
-}
-
-/**
- * Select SSE receiving with ordinary REST sends.
- *
- * @param enabled Whether SSE is selected.
- */
-export function setSseMode( enabled: boolean ): void {
-	if ( sseMode !== enabled ) {
-		sseExchange.close();
-	}
-	sseMode = enabled;
-}
-
-/**
- * Declares who holds the stream open.
- *
- * Set false by a transport whose stream is served by the sync daemon
- * rather than by a web request, which decides whether a hidden tab keeps
- * its stream (see sseStreaming) or drops it for the background cadence.
- *
- * @param enabled Whether the stream occupies a PHP worker.
- */
-export function setSseStreamHoldsWorker( enabled: boolean ): void {
-	sseStreamHoldsWorker = enabled;
-}
-
-/**
- * Points SSE receiving at a different stream endpoint.
- *
- * The `sse` transport streams from the web tier's REST route; the
- * `sse-daemon` transport names the sync daemon instead, which serves the
- * same frames from its own process. Everything else about the exchange is
- * unchanged: the same room payloads, the same cursors, and the same retry
- * ladder.
- *
- * @param url The stream URL.
- */
-export function setSseStreamUrl( url: string ): void {
-	sseExchange.setStreamUrl( url );
-}
-
-/**
- * Sets (or clears) how an SSE stream request authenticates.
- *
- * @param provider Returns the headers for one stream open.
- */
-export function setSseAuthProvider(
-	provider?: () => Promise< Record< string, string > >
-): void {
-	sseExchange.setAuthProvider( provider );
-}
-
-/*
- * A parked stream exchange in flight (a pure receive, waiting for the next
- * stream event). Local work never waits for that event: it goes out on
- * the send lane beside the stream. The park is aborted only on purpose —
- * the tab went hidden, the room set changed, the page is going away —
- * and the loop then re-polls at once without recording a failure.
- */
-let inFlightParkController: AbortController | null = null;
-let parkAbortedOnPurpose = false;
-
-// Small delay between a delivered stream event and the next exchange, to
-// yield to the event loop without idling.
-const STREAM_REISSUE_MS = 50;
-
 // How long a tab going hidden waits before flushing held work (pagehide,
 // which follows a hide on reload/close, cancels it).
 const HIDDEN_FLUSH_DELAY_MS = 1500;
@@ -1088,13 +853,6 @@ function handleBeforeUnload(): void {
  */
 function handlePageHide(): void {
 	cancelHiddenFlush();
-	if ( sseMode ) {
-		// Drop the stream on purpose: through the park signal, so the
-		// exchange in flight sees a deliberate abort (no failure backoff,
-		// no "will retry" error logged as the page goes away).
-		abortParkedStream();
-		sseExchange.close();
-	}
 	const rooms = Array.from( roomStates.entries() ).map(
 		( [ room, state ] ) => ( {
 			after: 0,
@@ -1126,22 +884,6 @@ function handleVisibilityChange() {
 	isActiveBrowser = document.visibilityState === 'visible';
 
 	if ( ! isActiveBrowser ) {
-		if ( sseMode && sseStreamHoldsWorker ) {
-			/*
-			 * A hidden tab holds no stream (sseStreaming). Drop it the
-			 * way pagehide does: through the park signal, so the exchange
-			 * in flight sees a deliberate abort (no failure backoff, no
-			 * "will retry" error logged) and the loop goes on over
-			 * ordinary requests at the background cadence (sseDelay).
-			 *
-			 * Only for a stream that occupies a web worker: a stream the
-			 * sync daemon holds is kept, so a background tab is still
-			 * receiving and applies what arrived when it is focused
-			 * again, rather than spending a burst of requests to catch up.
-			 */
-			abortParkedStream();
-			sseExchange.close();
-		}
 		/*
 		 * Going hidden while alone with held work: a hidden tab's heartbeat
 		 * slows to two minutes, too slow to answer a joiner, so put the
@@ -1275,22 +1017,14 @@ function getUpdatePayloadSizeDelta(
  * under the body-size limit.
  *
  * @param selectedRoomStates The rooms, in send order.
- * @param takeUpdates        Whether to take queued updates out of the
- *                           room queues into the request. A stream
- *                           receive never carries updates (the send lane
- *                           owns them), nor does a poll while a send is
- *                           in flight.
  */
-function buildPayloadForRequest(
-	selectedRoomStates: RoomState[],
-	takeUpdates = true
-): {
+function buildPayloadForRequest( selectedRoomStates: RoomState[] ): {
 	payload: SyncPayload;
 	roomsInRequest: RoomState[];
 } {
 	const payload: SyncPayload = { rooms: [] };
 	const roomsInRequest: RoomState[] = [];
-	const probe = ! sseMode && isSignalingAvailable() ? buildProbe() : null;
+	const probe = isSignalingAvailable() ? buildProbe() : null;
 	if ( probe ) {
 		payload.advisory = probe;
 	}
@@ -1307,10 +1041,6 @@ function buildPayloadForRequest(
 
 		payload.rooms.push( room );
 		roomsInRequest.push( state );
-	}
-
-	if ( ! takeUpdates ) {
-		return { payload, roomsInRequest };
 	}
 
 	const pendingUpdates = roomsInRequest.map( ( state ) =>
@@ -1363,16 +1093,6 @@ function restoreExactUpdates( payload: SyncPayload ): void {
 		roomStates.get( room.room )!.updateQueue.restoreExact( room.updates );
 	}
 }
-
-/**
- * Which lane a response came from. A RECEIVE (a poll, or a stream event)
- * delivers stored rows and moves the room's cursor. A SEND (the updates
- * request marked `rows_received_separately: true`, issued beside an open stream) carries
- * no stored rows: its verdicts and any never-stored rows are HELD until
- * the stream has moved the cursor to the head the server saw at that
- * write, then applied in the usual order. See sendNow.
- */
-type ResponseLane = 'receive' | 'send';
 
 /**
  * Applies one room's rows, then its dispositions, then a compaction
@@ -1458,88 +1178,47 @@ function applyRoomRows(
 }
 
 /**
- * Applies the tails the send lane left behind, oldest first, as far as
- * the room's cursor has come: a tail waits until the receive lane has
- * delivered every stored row up to the head its write saw.
- *
- * @param state The room.
- */
-function drainHeldTails( state: RoomState ): void {
-	while (
-		state.heldTails.length > 0 &&
-		state.heldTails[ 0 ].endCursor <= state.endCursor
-	) {
-		const tail = state.heldTails.shift()!;
-		applyRoomRows(
-			state,
-			tail.updates,
-			tail.dispositions,
-			tail.shouldCompact
-		);
-	}
-}
-
-function hasHeldTails(): boolean {
-	for ( const state of roomStates.values() ) {
-		if ( state.heldTails.length > 0 ) {
-			return true;
-		}
-	}
-	return false;
-}
-
-/**
  * Applies one room's response envelope.
  *
  * @param state       The room.
  * @param room        Its envelope in the response.
- * @param lane        Which lane the response came from.
  * @param sentUpdates How many updates the request carried for this room.
  */
 function applyRoomResponse(
 	state: RoomState,
 	room: SyncResponse[ 'rooms' ][ number ],
-	lane: ResponseLane,
 	sentUpdates: number
 ): void {
-	if ( 'receive' === lane ) {
-		/*
-		 * Room generation: the server restarted this room (reset to
-		 * a fresh genesis from the saved post) if the token differs
-		 * from the one we bootstrapped under. Nothing else in this
-		 * response is ours to apply — its rows belong to the new
-		 * room and are re-fetched from cursor 0 by the immediate
-		 * re-poll (or the room is dropped, per the session).
-		 */
-		if ( 'string' === typeof room.generation ) {
-			if ( undefined === state.generation ) {
-				state.generation = room.generation;
-			} else if ( state.generation !== room.generation ) {
-				restartRoom( state, room.generation, room.updates );
-				return;
-			}
-		}
-
-		if ( room.end_cursor < state.endCursor ) {
-			// The room went back (a reset with no genesis yet reports
-			// cursor 0 and no token): tails waiting for the old head
-			// could never drain.
-			state.heldTails.length = 0;
-		}
-		state.endCursor = room.end_cursor;
-
-		// If a limit is exceeded, disconnect immediately without processing updates.
-		if ( checkConnectionLimit( room.awareness, state ) ) {
-			state.onStatusChange( {
-				status: 'disconnected',
-				error: new ConnectionError(
-					ConnectionErrorCode.CONNECTION_LIMIT_EXCEEDED,
-					'Connection limit exceeded'
-				),
-			} );
-			unregisterRoom( room.room );
+	/*
+	 * Room generation: the server restarted this room (reset to
+	 * a fresh genesis from the saved post) if the token differs
+	 * from the one we bootstrapped under. Nothing else in this
+	 * response is ours to apply — its rows belong to the new
+	 * room and are re-fetched from cursor 0 by the immediate
+	 * re-poll (or the room is dropped, per the session).
+	 */
+	if ( 'string' === typeof room.generation ) {
+		if ( undefined === state.generation ) {
+			state.generation = room.generation;
+		} else if ( state.generation !== room.generation ) {
+			restartRoom( state, room.generation, room.updates );
 			return;
 		}
+	}
+
+	state.endCursor = room.end_cursor;
+
+	// If a limit is exceeded, disconnect immediately without processing updates.
+	if ( checkConnectionLimit( room.awareness, state ) ) {
+		state.onStatusChange( {
+			status: 'disconnected',
+			error: new ConnectionError(
+				ConnectionErrorCode.CONNECTION_LIMIT_EXCEEDED,
+				'Connection limit exceeded'
+			),
+		} );
+		unregisterRoom( room.room );
+		return;
 	}
 
 	// Process awareness update: the server's copy, with the
@@ -1548,7 +1227,7 @@ function applyRoomResponse(
 	state.session.applyRemoteAwareness( mergedAwareness( state ) );
 
 	// Another collaborator on the primary entity means company:
-	// the loop keeps its timer cadence (or the safety cadence
+	// the loop keeps its timer cadence (or polls on demand
 	// under full channel coverage). Only the primary room is
 	// checked to avoid false positives from shared collection
 	// rooms (e.g. taxonomy/category).
@@ -1562,46 +1241,12 @@ function applyRoomResponse(
 		announceLocalWrite( room.room );
 	}
 
-	if ( 'send' === lane ) {
-		/*
-		 * A send's answer carries no stored rows, and the cursor is the
-		 * receive lane's to move. Hold what it does carry (verdicts, a
-		 * never-stored row an engine synthesized for us) until the
-		 * stream has delivered the head this write saw; its own notice
-		 * wakes the stream, so that is one round trip. An answer from a
-		 * room the server restarted meanwhile belongs to the old room:
-		 * the receive lane restarts the session, which re-derives its
-		 * pending work.
-		 */
-		if (
-			'string' === typeof room.generation &&
-			undefined !== state.generation &&
-			state.generation !== room.generation
-		) {
-			return;
-		}
-		if (
-			room.updates.length > 0 ||
-			( room.dispositions && room.dispositions.length > 0 ) ||
-			room.should_compact
-		) {
-			state.heldTails.push( {
-				endCursor: room.end_cursor,
-				updates: room.updates,
-				dispositions: room.dispositions,
-				shouldCompact: room.should_compact,
-			} );
-		}
-	} else {
-		applyRoomRows(
-			state,
-			room.updates,
-			room.dispositions,
-			room.should_compact
-		);
-	}
-
-	drainHeldTails( state );
+	applyRoomRows(
+		state,
+		room.updates,
+		room.dispositions,
+		room.should_compact
+	);
 }
 
 /**
@@ -1610,13 +1255,11 @@ function applyRoomResponse(
  *
  * @param rooms     The response envelopes.
  * @param payload   The request they answer.
- * @param lane      Which lane the response came from.
  * @param startedAt When the request started (for the inspector).
  */
 function applyResponseRooms(
 	rooms: SyncResponse[ 'rooms' ],
 	payload: SyncPayload,
-	lane: ResponseLane,
 	startedAt: number
 ): void {
 	// Reset before checking each room
@@ -1652,7 +1295,7 @@ function applyResponseRooms(
 			} );
 		}
 
-		applyRoomResponse( state, room, lane, requested?.updates.length ?? 0 );
+		applyRoomResponse( state, room, requested?.updates.length ?? 0 );
 	} );
 }
 
@@ -1678,15 +1321,14 @@ function markConnected( roomsInRequest: RoomState[] ): void {
 }
 
 /**
- * Handles a failed request on either lane: permission and engine fences
- * drop the affected rooms, a too-large body shrinks the next one, a
- * protocol mismatch ends everything, and anything else backs off with
- * the sent updates restored (or replaced by the codec's recovery update).
+ * Handles a failed request: permission and engine fences drop the
+ * affected rooms, a too-large body shrinks the next one, a protocol
+ * mismatch ends everything, and anything else backs off with the sent
+ * updates restored (or replaced by the codec's recovery update).
  *
  * @param error          What the request threw.
  * @param payload        The request.
  * @param roomsInRequest The rooms it carried.
- * @param lane           Which lane it was on.
  * @param startedAt      When it started (for the inspector).
  * @return Whether the loop must stop: every room is gone, or the server
  *         cannot speak our protocol.
@@ -1695,7 +1337,6 @@ function handleRequestFailure(
 	error: unknown,
 	payload: SyncPayload,
 	roomsInRequest: RoomState[],
-	lane: ResponseLane,
 	startedAt: number
 ): boolean {
 	if ( isSyncDebugEnabled() ) {
@@ -1781,13 +1422,6 @@ function handleRequestFailure(
 		}
 
 		return true;
-	}
-
-	// A disconnected transport has no wake of its own: let the
-	// advisory channel back in (a no-op unless a stream had
-	// switched it off). A failed SEND says nothing about the stream.
-	if ( 'receive' === lane ) {
-		setAdvisoryDisabledByTransport( false );
 	}
 
 	// Use the explicit retry delay schedule for backoff.
@@ -1881,97 +1515,8 @@ function handleRequestFailure(
 	return false;
 }
 
-/*
- * THE SEND LANE (SSE). While the receive lane is on the stream, local
- * work does not wait for the stream and does not close it: it goes out
- * on the updates request beside the stream, marked `rows_received_separately: true`.
- * The server stores the updates and answers with its verdicts, any
- * never-stored row an engine synthesizes for this client (de-rtc's
- * fetch answer), and the room's head cursor — but no stored rows, and
- * the answer moves no cursor. The stream stays the only path that
- * delivers stored rows, so nothing is delivered twice or skipped, and
- * the answer is held (see applyRoomResponse) until the stream has
- * carried the cursor to that head: rows first, verdicts after, the
- * order every engine relies on. The tab's awareness state (its cursor,
- * its selection) rides the same lane on change (checkAwareness), so a
- * cursor move never reopens the stream either.
- *
- * One send at a time: two requests carrying updates must never be in
- * flight together (an engine's rows have an order), so a poll takes no
- * updates while a send is in flight, and a send is never built while
- * one is. Outside the stream (the settling window, a hidden tab, a
- * failed stream's backoff, a stopped loop) nothing here runs: sends ride
- * the polls as under short polling.
- */
-let updatesInFlight = false;
-let pollInFlightCounted = false;
-let sendTimer: ReturnType< typeof setTimeout > | null = null;
-/** Per room, the awareness state (serialized) the server last got. */
-const lastSentAwareness = new Map< string, string >();
-// How often a streaming tab compares its awareness state with the copy
-// the server has (the framework already throttles cursor moves).
-const AWARENESS_SEND_CHECK_MS = 1000;
-let awarenessCheckTimer: ReturnType< typeof setInterval > | null = null;
-
 /**
- * Whether the receive lane is on the stream, so sends go beside it.
- */
-function streamReceiving(): boolean {
-	return sseStreamReady() && isPolling;
-}
-
-/**
- * Sends soon: at once by default (a burst coalesces behind the request
- * in flight), or after a backoff delay when the last send failed.
- *
- * @param delay Milliseconds to wait.
- */
-function scheduleSend( delay = 0 ): void {
-	if ( sendTimer ) {
-		return;
-	}
-	sendTimer = setTimeout( () => {
-		sendTimer = null;
-		void sendNow();
-	}, delay );
-}
-
-/**
- * Notes the awareness state a request carries to the server.
- *
- * @param payload The request.
- */
-function recordAwarenessSent( payload: SyncPayload ): void {
-	for ( const room of payload.rooms ) {
-		lastSentAwareness.set( room.room, JSON.stringify( room.awareness ) );
-	}
-}
-
-function awarenessChanged(): boolean {
-	for ( const state of roomStates.values() ) {
-		if (
-			lastSentAwareness.get( state.room ) !==
-			JSON.stringify( state.session.getLocalAwareness() )
-		) {
-			return true;
-		}
-	}
-	return false;
-}
-
-/**
- * A streaming tab with company sends its awareness state when it
- * changed since the server last got it (a solo tab has nobody to tell).
- */
-function checkAwareness(): void {
-	if ( streamReceiving() && hasCompany() && awarenessChanged() ) {
-		scheduleSend();
-	}
-}
-
-/**
- * Finishes a request that could carry updates (a poll off the stream,
- * or a send): the flush waiters count these.
+ * Finishes a poll: the flush waiters count these.
  */
 function finishSend(): void {
 	sendsFinished++;
@@ -1981,68 +1526,6 @@ function finishSend(): void {
 		} else {
 			sendDoneResolvers.push( waiter );
 		}
-	}
-}
-
-async function sendNow(): Promise< void > {
-	if ( 0 === roomStates.size || updatesInFlight ) {
-		// The send in flight re-checks the queues when it returns.
-		return;
-	}
-	if ( ! streamReceiving() ) {
-		// The receive lane is off the stream: the polls carry sends.
-		if ( hasQueuedUpdates() ) {
-			pollNow();
-		}
-		return;
-	}
-	if ( ! hasQueuedUpdates() && ! awarenessChanged() ) {
-		return;
-	}
-
-	const { payload, roomsInRequest } = buildPayloadForRequest(
-		selectRoomsForRequest(),
-		true
-	);
-	for ( const room of payload.rooms ) {
-		room.rows_received_separately = true;
-	}
-	recordAwarenessSent( payload );
-	updatesInFlight = true;
-	sendsStarted++;
-	const startedAt = Date.now();
-	let stopped = false;
-	try {
-		const { rooms } = await postSyncUpdate( payload );
-		markConnected( roomsInRequest );
-		applyResponseRooms( rooms, payload, 'send', startedAt );
-		applyHolds();
-		if ( hasHeldTails() && ! isPolling ) {
-			// The loop stopped meanwhile (the tab is alone now): nothing
-			// would carry the cursor to the held tails. One receive does.
-			pollNow();
-		}
-	} catch ( error ) {
-		stopped = handleRequestFailure(
-			error,
-			payload,
-			roomsInRequest,
-			'send',
-			startedAt
-		);
-		if ( ! stopped && hasQueuedUpdates() ) {
-			scheduleSend( pollInterval );
-		}
-	}
-	updatesInFlight = false;
-	finishSend();
-	if (
-		! stopped &&
-		! sendTimer &&
-		( hasQueuedUpdates() || awarenessChanged() )
-	) {
-		// Work that arrived while this send was in flight.
-		scheduleSend();
 	}
 }
 
@@ -2061,31 +1544,14 @@ function poll(): void {
 		// cancels a beforeunload dialog.
 		isUnloadPending = false;
 
-		/*
-		 * Decided once, before the payload is built: a stream receive
-		 * takes no updates (the send lane owns them, see sendNow), and
-		 * neither does a poll while a send is in flight (two requests
-		 * carrying updates must never overlap: an engine's rows have an
-		 * order).
-		 */
-		const streamReceive = sseStreamReady();
-		const takeUpdates = ! streamReceive && ! updatesInFlight;
-
 		// Create a payload with queued updates. We include rooms even if they
 		// have no updates to ensure we receive any incoming updates, while keeping
 		// the serialized body below the server's aggregate request-size limit.
 		const { payload, roomsInRequest } = buildPayloadForRequest(
-			selectRoomsForRequest(),
-			takeUpdates
+			selectRoomsForRequest()
 		);
-		pollInFlightCounted = takeUpdates;
-		if ( takeUpdates ) {
-			sendsStarted++;
-		} else if ( streamReceive && hasQueuedUpdates() ) {
-			// Queued work this receive leaves behind (the loop restarting
-			// onto the stream with edits waiting): the send lane's.
-			scheduleSend();
-		}
+		pollInFlightCounted = true;
+		sendsStarted++;
 
 		// Emit 'connecting' status only for rooms in this request. Rooms
 		// rotated out of this poll keep their prior status.
@@ -2096,43 +1562,13 @@ function poll(): void {
 		const pollStarted = Date.now();
 		let succeeded = false;
 		let nextDelay: number | null = null;
-		const isPureReceive = payload.rooms.every(
-			( room ) => 0 === room.updates.length
-		);
-		let parkSignal: AbortSignal | undefined;
-		if ( sseMode && isPureReceive ) {
-			inFlightParkController = new AbortController();
-			parkSignal = inFlightParkController.signal;
-		}
-		if ( ! streamReceive || ! sseExchange.isOpen() ) {
-			// This payload reaches the server: as a request, or as the
-			// stream that opens with it. (A reissue on an open stream
-			// sends nothing.)
-			recordAwarenessSent( payload );
-		}
 		try {
-			const { rooms, advisory } = streamReceive
-				? await sseExchange.exchange( payload, parkSignal )
-				: await postSyncUpdate( payload, parkSignal );
-			inFlightParkController = null;
-			parkAbortedOnPurpose = false;
+			const { rooms, advisory } = await postSyncUpdate( payload );
 			// The signaling answer rode this poll: company, peers, mailbox.
 			applyAnswer( advisory, payload.advisory?.seq );
 
 			markConnected( roomsInRequest );
-			applyResponseRooms( rooms, payload, 'receive', pollStarted );
-
-			/*
-			 * A stream delivers its own wake (an event the instant a row
-			 * lands), so while one is up the advisory channel would only
-			 * duplicate it: switch the channel off. While receiving runs
-			 * on polling instead (no stream could be opened), the channel
-			 * is the wake path again; a failed poll below also switches
-			 * it back on.
-			 */
-			if ( sseMode ) {
-				setAdvisoryDisabledByTransport( sseExchange.available );
-			}
+			applyResponseRooms( rooms, payload, pollStarted );
 
 			// The first successful poll is the genesis handshake; from
 			// here on the cadence rules decide the timer, and the holds
@@ -2148,29 +1584,11 @@ function poll(): void {
 			// Whatever the cause, the probe's signals never arrived: back to
 			// the outbox for the next carrier.
 			probeFailed( payload.advisory?.seq );
-			if ( parkAbortedOnPurpose ) {
-				/*
-				 * Deliberate wake: the parked request carried no updates, so
-				 * there is nothing to restore and no failure to record —
-				 * re-poll immediately (the tab went hidden, or the room
-				 * set changed under the stream).
-				 */
-				parkAbortedOnPurpose = false;
-				inFlightParkController = null;
-				if ( pollInFlightCounted ) {
-					pollInFlightCounted = false;
-					finishSend();
-				}
-				pollingTimeoutId = setTimeout( poll, 0 );
-				return;
-			}
-			inFlightParkController = null;
 			if (
 				handleRequestFailure(
 					error,
 					payload,
 					roomsInRequest,
-					'receive',
 					pollStarted
 				)
 			) {
@@ -2251,8 +1669,6 @@ function restartRoom(
 
 	roomState.generation = generation;
 	roomState.endCursor = 0;
-	// Answers to sends against the old room have nothing left to settle.
-	roomState.heldTails.length = 0;
 	// The queue held work written against the old room; the session
 	// re-derives anything still relevant after it re-bootstraps.
 	roomState.updateQueue.clear();
@@ -2374,7 +1790,6 @@ function registerRoom( {
 
 	const roomState: RoomState = {
 		endCursor: initialCursor,
-		heldTails: [],
 		isPrimaryRoom,
 		lastServerAwareness: {},
 		holdWhileAlone,
@@ -2388,26 +1803,11 @@ function registerRoom( {
 
 	session.onLocalUpdate( onLocalUpdate );
 	roomStates.set( room, roomState );
-	if ( sseMode ) {
-		// Let the room set settle before a stream (re)opens: the new
-		// room's bootstrap rides an ordinary request meanwhile, and an
-		// open stream would not cover it.
-		sseSettleUntil = Date.now() + SSE_SETTLE_MS;
-		abortParkedStream();
-		sseExchange.close();
-		if ( ! awarenessCheckTimer ) {
-			awarenessCheckTimer = setInterval(
-				checkAwareness,
-				AWARENESS_SEND_CHECK_MS
-			);
-		}
-	}
 
 	if ( ! areListenersRegistered ) {
 		window.addEventListener( 'beforeunload', handleBeforeUnload );
 		window.addEventListener( 'pagehide', handlePageHide );
 		document.addEventListener( 'visibilitychange', handleVisibilityChange );
-		onLocalAwarenessChange( onLocalAwarenessChanged );
 		areListenersRegistered = true;
 	}
 
@@ -2425,7 +1825,7 @@ function registerRoom( {
 	} else {
 		// A room that arrives mid-session (an entity loaded later) needs
 		// its bootstrap promptly, whatever the cadence rules have the timer
-		// at (the 25 s safety poll under coverage or alone).
+		// at (a slow one, or none at all under coverage or alone).
 		pollSoonForLocalUpdate();
 	}
 }
@@ -2434,10 +1834,6 @@ function unregisterRoom(
 	room: string,
 	{ sendDisconnectSignal = true }: { sendDisconnectSignal?: boolean } = {}
 ): void {
-	if ( sseMode ) {
-		abortParkedStream();
-		sseExchange.close();
-	}
 	const state = roomStates.get( room );
 	if ( state ) {
 		if ( sendDisconnectSignal ) {
@@ -2489,8 +1885,7 @@ function releaseRoom( room: string ): Promise< ReleasedRoom > {
 		return released;
 	};
 	const inFlight =
-		updatesInFlight ||
-		( isPolling && null === pollingTimeoutId && pollInFlightCounted );
+		isPolling && null === pollingTimeoutId && pollInFlightCounted;
 	if ( ! inFlight ) {
 		return Promise.resolve( finish() );
 	}
@@ -2535,15 +1930,6 @@ function dropRoom( room: string ): void {
 			clearTimeout( localUpdatePollTimer );
 			localUpdatePollTimer = null;
 		}
-		if ( sendTimer ) {
-			clearTimeout( sendTimer );
-			sendTimer = null;
-		}
-		if ( awarenessCheckTimer ) {
-			clearInterval( awarenessCheckTimer );
-			awarenessCheckTimer = null;
-		}
-		lastSentAwareness.clear();
 		if ( announcePollTimer ) {
 			clearTimeout( announcePollTimer );
 			announcePollTimer = null;

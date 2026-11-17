@@ -11,8 +11,11 @@ import type {
 	ConnectionStatus,
 	EngineSessionCodec,
 	EngineUpdate,
-} from '@wordpress/sync';
-import { ConnectionError, ConnectionErrorCode } from '../../framework';
+} from '../../registry/types';
+import {
+	ConnectionError,
+	ConnectionErrorCode,
+} from '../../registry/connection-error';
 import type { TransportSessionCodec } from '../session-extensions';
 import {
 	installSyncDebug,
@@ -262,7 +265,7 @@ function applyServerRoom( serverRoom: ServerRoom ): void {
 	if ( ! state ) {
 		return;
 	}
-	// Match polling/SSE: check the first room's initial response only.
+	// Match polling: check the first room's initial response only.
 	// Awareness includes this editor, so five means five total peers.
 	if ( state.isPrimaryRoom && ! hasCheckedConnectionLimit ) {
 		hasCheckedConnectionLimit = true;

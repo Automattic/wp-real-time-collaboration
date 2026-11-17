@@ -14,9 +14,10 @@ import {
 	createServer,
 	serverIngestBatch,
 } from '../../../src/engines/intent-log/rebase';
-import { getProviderCreators } from '../../../src/framework';
+import { getProviderCreators } from '../../../src/registry/transports';
 
-jest.mock( '../../../src/framework', () => ( {
+jest.mock( '../../../src/framework', () => ( {} ) );
+jest.mock( '../../../src/registry/transports', () => ( {
 	getProviderCreators: jest.fn(),
 } ) );
 jest.mock( '@wordpress/blocks', () => ( { getBlockType: () => undefined } ) );

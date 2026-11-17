@@ -59,7 +59,7 @@ describe( 'completed document validation', () => {
 	} );
 } );
 
-it( 'counts socket payloads and open stream bytes once, separately from HTTP requests', async () => {
+it( 'counts socket payloads once, separately from HTTP requests', async () => {
 	const handlers = {};
 	const page = {
 		on: ( event, handler ) => {
@@ -67,7 +67,6 @@ it( 'counts socket payloads and open stream bytes once, separately from HTTP req
 		},
 	};
 	const transport = {
-		sseBytesReceived: 20,
 		wsBytesSent: 30,
 		wsBytesReceived: 40,
 		wsFramesSent: 1,
@@ -79,22 +78,14 @@ it( 'counts socket payloads and open stream bytes once, separately from HTTP req
 		url: () => 'http://site/other',
 		body: async () => Buffer.alloc( 10 ),
 	} );
-	await handlers.response( {
-		url: () => 'http://site/?rest_route=%2Fwp-sync%2Fv1%2Fsse',
-		body: async () => {
-			throw new Error(
-				'An open stream must not be read as a complete body'
-			);
-		},
-	} );
 	expect( counters.snapshot() ).toEqual( {
 		requests: 1,
 		requestBytes: 35,
-		responseBytes: 70,
+		responseBytes: 50,
 		wsFrames: 3,
 	} );
-	transport.sseBytesReceived += 7;
-	expect( counters.snapshot().responseBytes ).toBe( 77 );
+	transport.wsBytesReceived += 7;
+	expect( counters.snapshot().responseBytes ).toBe( 57 );
 } );
 
 it( 'withholds total server costs when request logs cannot cover them', () => {
@@ -104,12 +95,6 @@ it( 'withholds total server costs when request logs cannot cover them', () => {
 		sockets: false,
 	};
 	expect( serverCoverageLimits( polling ) ).toEqual( [] );
-	expect(
-		serverCoverageLimits( { ...polling, transport: 'sse' } )[ 0 ]
-	).toContain( 'span phases' );
-	expect(
-		serverCoverageLimits( { ...polling, transport: 'sse', timeline: true } )
-	).toEqual( [] );
 	expect(
 		serverCoverageLimits( { ...polling, sockets: true } )[ 0 ]
 	).toContain( 'advisory relay' );

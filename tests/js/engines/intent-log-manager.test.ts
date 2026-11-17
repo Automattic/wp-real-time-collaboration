@@ -95,8 +95,8 @@ import {
 	registerSyncEngine,
 	resetEngineAdaptersForTesting,
 	resolveEngineAdapter,
-	resetProviderCreatorsForTesting,
 } from '../../../src/framework';
+import { resetProviderCreatorsForTesting } from '../../../src/registry/transports';
 import {
 	createDocument,
 	getBlock,

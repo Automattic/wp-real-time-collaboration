@@ -1,19 +1,17 @@
 /**
- * Client entry: registers this plugin's sync ENGINES and TRANSPORTS into the
- * collaborative-editing framework shipped by Gutenberg (`@wordpress/sync`).
+ * Client entry: registers this plugin's sync engine, its transports, and
+ * the conflict review screens.
  *
- * The framework exposes its registration surface through UNLOCKABLE PRIVATE
- * APIs. This plugin unlocks them with the shared consent string and adds:
- *   - the engine adapter (intent-log) via
- *     `registerSyncEngine`
- *   - transport providers (http-polling, websocket) via
- *     `registerSyncTransport`
- *   - the conflict review UI (src/review/), fed by the conflict source
- *     each engine adapter registers when it creates an engine
+ *   - The engine (intent-log) registers with Gutenberg's `@wordpress/sync`
+ *     package, through its private `registerSyncEngine`. The bundled
+ *     core-data finds an engine only there.
+ *   - The transports (http-polling, websocket) register with the plugin's
+ *     own registry (src/registry/transports.ts).
+ *   - The conflict review screens (src/review/) are fed by the conflict
+ *     source the engine adapter registers when it creates an engine.
  *
- * With this plugin inactive the framework registers nothing, so a session
- * finds no engine/transport to negotiate and the editor falls back to the
- * classic post lock — real-time collaboration effectively disabled.
+ * Without an engine the editor finds nothing to connect with and falls
+ * back to the classic post lock.
  *
  * Core-data receives record loads, edits, saves and cleanup through the
  * entity adapter registered below. The bundled bridge preserves each engine's
@@ -36,8 +34,9 @@ import { createHttpPollingProvider } from './providers/http-polling/http-polling
 import { createWebSocketProvider } from './providers/websocket/websocket-provider';
 import { bootstrapSlowAwareness } from './awareness';
 import { registerPluginEntitySync } from './entity-sync';
+import { registerSyncTransport } from './registry/transports';
 
-const { registerSyncEngine, registerSyncTransport } = unlock( privateApis );
+const { registerSyncEngine } = unlock( privateApis );
 
 // Engines: how concurrent edits merge.
 registerSyncEngine( createIntentLogEngineAdapter() );

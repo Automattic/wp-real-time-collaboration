@@ -74,30 +74,18 @@ export function matchesDocument( content, expected ) {
 
 /**
  * Whole-phase server totals require complete measurement coverage.
- * Stream shutdown rows cannot allocate work to editing and idle periods.
  * Socket processes are outside the PHP request logger.
  *
  * @param {Object}  options               Measurement configuration.
  * @param {boolean} options.muMeasurement Whether the baseline was measured.
  * @param {string}  options.transport     Observed content transport.
  * @param {boolean} options.sockets       Whether any sockets were used.
- * @param {boolean} options.timeline      Whether complete sampled measurements are available.
  * @return {Array<string>} Reasons totals cannot be reported.
  */
-export function serverCoverageLimits( {
-	muMeasurement,
-	transport,
-	sockets,
-	timeline = false,
-} ) {
+export function serverCoverageLimits( { muMeasurement, transport, sockets } ) {
 	const limits = [];
 	if ( ! muMeasurement ) {
 		limits.push( 'The baseline has no whole-request measurements.' );
-	}
-	if ( transport === 'sse' && ! timeline ) {
-		limits.push(
-			'SSE requests span phases; complete request timelines are required to report server costs.'
-		);
 	}
 	if ( transport === 'websocket' || sockets ) {
 		limits.push(
@@ -108,7 +96,7 @@ export function serverCoverageLimits( {
 }
 
 /**
- * Count HTTP body bytes, streamed SSE bytes, and all WebSocket payloads.
+ * Count HTTP body bytes and all WebSocket payloads.
  * Headers, compression, protocol overhead, and WebRTC are not measured.
  *
  * @param {Object}   page         Playwright page.
@@ -122,11 +110,6 @@ export function attachAllTrafficCounters( page, syncSnapshot ) {
 		c.requestBytes += request.postDataBuffer()?.length ?? 0;
 	} );
 	page.on( 'response', async ( response ) => {
-		if (
-			decodeURIComponent( response.url() ).includes( '/wp-sync/v1/sse' )
-		) {
-			return;
-		}
 		try {
 			c.responseBytes += ( await response.body() ).length;
 		} catch {
@@ -139,10 +122,7 @@ export function attachAllTrafficCounters( page, syncSnapshot ) {
 			return {
 				...c,
 				requestBytes: c.requestBytes + sync.wsBytesSent,
-				responseBytes:
-					c.responseBytes +
-					sync.sseBytesReceived +
-					sync.wsBytesReceived,
+				responseBytes: c.responseBytes + sync.wsBytesReceived,
 				wsFrames: sync.wsFramesSent + sync.wsFramesReceived,
 			};
 		},

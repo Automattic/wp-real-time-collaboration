@@ -184,11 +184,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		// Not applicable for sync endpoint.
 	}
 
-	/*
-	 * `rows_received_separately: true` (a send made beside an open stream).
-	 */
-
-	public function test_receive_false_stores_the_update_but_returns_no_stored_rows_and_the_head_cursor() {
+	public function test_a_send_stores_the_update_and_answers_with_the_unread_rows_and_the_head_cursor() {
 		wp_set_current_user( self::$editor_id );
 		$room = $this->get_post_room();
 
@@ -212,62 +208,31 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 		$response = $this->dispatch_sync(
 			array(
-				array_merge(
-					$this->build_room(
-						$room,
-						1,
-						0,
-						array(),
-						array(
-							array(
-								'data' => 'mine',
-								'type' => 'update',
-							),
-						)
-					),
-					array( 'rows_received_separately' => true )
-				),
-			)
-		);
-		$this->assertSame( 200, $response->get_status() );
-		$data = $response->get_data()['rooms'][0];
-		$this->assertSame( array(), $data['updates'], 'Neither the peer row nor the own row: the stream delivers stored rows.' );
-		$this->assertGreaterThan( $peer_head, $data['end_cursor'], 'The head, including the row this request stored.' );
-		$this->assertArrayHasKey( 'awareness', $data );
-		$this->assertCount( 2, $data['awareness'] );
-
-		// An ordinary read from where the sender was sees both rows.
-		$catch_up = $this->dispatch_sync( array( $this->build_room( $room, 3, 0 ) ) )->get_data()['rooms'][0];
-		$this->assertSame( array( 'peer', 'mine' ), array_column( $catch_up['updates'], 'data' ) );
-		$this->assertSame( $data['end_cursor'], $catch_up['end_cursor'], 'The ordinary read reaches the head the send reported.' );
-	}
-
-	public function test_receive_false_without_updates_reports_the_head_and_merges_awareness() {
-		wp_set_current_user( self::$editor_id );
-		$room      = $this->get_post_room();
-		$peer_head = $this->dispatch_sync(
-			array(
 				$this->build_room(
 					$room,
-					2,
+					1,
 					0,
 					array(),
 					array(
 						array(
-							'data' => 'peer',
+							'data' => 'mine',
 							'type' => 'update',
 						),
 					)
 				),
 			)
-		)->get_data()['rooms'][0]['end_cursor'];
+		);
+		$this->assertSame( 200, $response->get_status() );
+		$data = $response->get_data()['rooms'][0];
+		$this->assertSame( array( 'peer' ), array_column( $data['updates'], 'data' ), 'The peer row the sender had not read, without its own row.' );
+		$this->assertGreaterThan( $peer_head, $data['end_cursor'], 'The head, including the row this request stored.' );
+		$this->assertArrayHasKey( 'awareness', $data );
+		$this->assertCount( 2, $data['awareness'] );
 
-		// An awareness-only send (a cursor move on a streaming tab).
-		$response = $this->dispatch_sync( array( array_merge( $this->build_room( $room, 1, 0, array( 'cursor' => 7 ) ), array( 'rows_received_separately' => true ) ) ) );
-		$data     = $response->get_data()['rooms'][0];
-		$this->assertSame( array(), $data['updates'] );
-		$this->assertSame( $peer_head, $data['end_cursor'] );
-		$this->assertSame( array( 'cursor' => 7 ), $data['awareness'][1] );
+		// A later read from the start sees both rows.
+		$catch_up = $this->dispatch_sync( array( $this->build_room( $room, 3, 0 ) ) )->get_data()['rooms'][0];
+		$this->assertSame( array( 'peer', 'mine' ), array_column( $catch_up['updates'], 'data' ) );
+		$this->assertSame( $data['end_cursor'], $catch_up['end_cursor'], 'The later read reaches the head the send reported.' );
 	}
 
 	/*

@@ -45,7 +45,8 @@ import {
 	createIntentLogUndoManager,
 	type IntentLogUndoManager,
 } from './intent-log-undo';
-import { getProviderCreators, LOCAL_UNDO_IGNORED_ORIGIN } from '../framework';
+import { LOCAL_UNDO_IGNORED_ORIGIN } from '../framework';
+import { getProviderCreators } from '../registry/transports';
 import {
 	buildConflictRecords,
 	type ConflictRecord,

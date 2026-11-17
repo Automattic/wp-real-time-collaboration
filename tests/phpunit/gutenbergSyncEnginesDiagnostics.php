@@ -335,9 +335,9 @@ class Tests_Collaboration_GutenbergSyncEnginesDiagnostics extends WP_UnitTestCas
 		}
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Independent known query count.
 		$wpdb->get_var( 'SELECT 1' );
-		do_action( 'gutenberg_sync_engines_sse_checkpoint' );
+		Gutenberg_Sync_Engines_Request_Log::sample_timeline();
 		usleep( 30000 );
-		do_action( 'gutenberg_sync_engines_sse_checkpoint' );
+		Gutenberg_Sync_Engines_Request_Log::sample_timeline();
 		$this->assertSame( $query_start + 1, $wpdb->num_queries, 'Sampling must not query or write the database.' );
 		$cpu_end = getrusage();
 		$wall_ms = ( hrtime( true ) - $wall_start ) / 1000000;
@@ -383,9 +383,9 @@ class Tests_Collaboration_GutenbergSyncEnginesDiagnostics extends WP_UnitTestCas
 		$_SERVER['HTTP_X_RTC_TEST'] = '1';
 		$log                        = new Gutenberg_Sync_Engines_Request_Log();
 		$log->capture_whole_request();
-		do_action( 'gutenberg_sync_engines_sse_checkpoint' );
+		Gutenberg_Sync_Engines_Request_Log::sample_timeline();
 		Gutenberg_Sync_Engines_Request_Log::flush_whole_request();
-		do_action( 'gutenberg_sync_engines_sse_checkpoint' );
+		Gutenberg_Sync_Engines_Request_Log::sample_timeline();
 		$rows = Gutenberg_Sync_Engines_Request_Log::fetch_rows();
 		$this->assertCount( 1, $rows );
 		$this->assertNull( $rows[0]['timeline'] );

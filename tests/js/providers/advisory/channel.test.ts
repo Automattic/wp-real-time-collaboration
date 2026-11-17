@@ -459,7 +459,7 @@ describe( 'advisory channel', () => {
 		expect( a.channel.getAdvisoryDebugState().peers ).toEqual( [] );
 	} );
 
-	it( 'stands down above the peer cap and while the transport disables it', async () => {
+	it( 'stands down above the peer cap', async () => {
 		const a = createTab( 'tok-a', 1, 1 );
 		const b = createTab( 'tok-b', 2, 1 );
 		const c = createTab( 'tok-c', 3, 1 );
@@ -471,17 +471,6 @@ describe( 'advisory channel', () => {
 		expect( FakePeerConnection.all ).toHaveLength( 0 );
 
 		// Back under the cap: connects.
-		await connectTabs( a, b );
-		expect( a.channel.advisoryCoversClients( [ 1, 2 ] ) ).toBe( true );
-
-		// The active transport switches it off: peers are told goodbye.
-		a.channel.setAdvisoryDisabledByTransport( true );
-		expect( a.channel.isAdvisoryActive() ).toBe( false );
-		expect( a.channel.advisoryCoversClients( [ 1, 2 ] ) ).toBe( false );
-		expect( b.channel.advisoryCoversClients( [ 1, 2 ] ) ).toBe( false );
-
-		// And back on: reconnects to the discovered peers.
-		a.channel.setAdvisoryDisabledByTransport( false );
 		await connectTabs( a, b );
 		expect( a.channel.advisoryCoversClients( [ 1, 2 ] ) ).toBe( true );
 	} );

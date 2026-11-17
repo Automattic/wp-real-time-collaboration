@@ -49,8 +49,8 @@ import {
 	expect,
 	waitForSyncQuiet,
 } from '../../e2e/config/collaboration-fixtures';
-import type CollaborationUtils from '../../../gutenberg/test/e2e/specs/editor/collaboration/fixtures/collaboration-utils';
-import { SECOND_USER } from '../../../gutenberg/test/e2e/specs/editor/collaboration/fixtures/collaboration-utils';
+import type CollaborationUtils from '../../e2e/config/collaboration-utils';
+import { SECOND_USER } from '../../e2e/config/collaboration-utils';
 
 type Random = () => number;
 

@@ -385,9 +385,9 @@ describe( 'result lines', () => {
 					repeat
 				)
 			);
-		expect( key( { engine: 'another-engine', transport: 'sse' } ) ).toBe(
-			key( {} )
-		);
+		expect(
+			key( { engine: 'another-engine', transport: 'websocket' } )
+		).toBe( key( {} ) );
 		expect( key( { windows: 3 } ) ).not.toBe( key( {} ) );
 		expect( key( {}, 2 ) ).not.toBe( key( {} ) );
 	} );

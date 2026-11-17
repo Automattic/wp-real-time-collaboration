@@ -1,9 +1,10 @@
 /**
- * Plugin-local collaboration fixtures: the subtree's fixture wiring
- * (user setup, collaboration toggle, teardown) around a hardened
- * CollaborationUtils. Joining users authenticate through a bounded login
- * request before opening the editor. Both the browser specs and fuzzer use
- * this module; the pinned subtree remains unchanged.
+ * The collaboration fixtures: user setup, the collaboration switch, and
+ * teardown, around a hardened CollaborationUtils. Joining users
+ * authenticate through a bounded login request before opening the editor.
+ * Both the browser specs and the fuzzer use this module. The base helpers
+ * are in `collaboration-utils.ts`, the plugin's own copy of the file
+ * Gutenberg used to ship.
  */
 
 /**
@@ -16,10 +17,7 @@ export { expect } from '@wordpress/e2e-test-utils-playwright';
 /**
  * Internal dependencies
  */
-import {
-	SECOND_USER,
-	setCollaboration,
-} from '../../../gutenberg/test/e2e/specs/editor/collaboration/fixtures/collaboration-utils';
+import { SECOND_USER, setCollaboration } from './collaboration-utils';
 import CollaborationUtils from './authenticated-collaboration-utils';
 
 /**

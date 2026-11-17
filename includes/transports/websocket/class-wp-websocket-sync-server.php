@@ -407,16 +407,6 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			foreach ( $this->clients as $client ) {
 				$stream = $client['conn']->get_stream();
 
-				/*
-				 * Every socket is watched, including a receive stream
-				 * that will never send another byte. A readable event on
-				 * one of those is the browser closing the stream, which
-				 * is the only way the daemon can learn that the
-				 * connection is finished and release its slot; without
-				 * it the slot is held until the idle sweep, and a
-				 * browser that reopens a stream per event exhausts the
-				 * per-IP cap within a minute.
-				 */
 				$read[] = $stream;
 
 				if ( $client['conn']->has_pending_writes() ) {
@@ -447,15 +437,8 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 						continue;
 					}
 
-					/*
-					 * A failed write means the peer is gone, and takes
-					 * the connection's place in the client table with
-					 * it. Nothing else can reap a receive stream whose
-					 * peer vanished without closing it — the idle sweep
-					 * passes over a framing that never sends anything —
-					 * so the entry would otherwise hold its slot for
-					 * the life of the daemon.
-					 */
+					// A failed write means the peer is gone: drop the client
+					// now instead of holding its slot until the idle sweep.
 					if ( ! $this->clients[ $key ]['conn']->flush_writes() ) {
 						$this->disconnect( $key );
 					}
@@ -607,30 +590,6 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		}
 
 		/**
-		 * Re-frames an accepted socket as a receive stream.
-		 *
-		 * The listener cannot know which framing a connection wants until the
-		 * request head is read, so every socket starts as a WebSocket
-		 * candidate and this swaps in the stream framing for a request that
-		 * did not ask to upgrade. Whatever the first framing read past the
-		 * head — the request body — is handed over, and the socket is closed
-		 * only if the new framing cannot take it.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @param WP_Sync_Connection $conn The connection that read the head.
-		 * @return WP_Sync_SSE_Connection The stream framing.
-		 */
-		private function stream_on( WP_Sync_Connection $conn ) {
-			$stream = $conn->get_stream();
-
-			$framing = new WP_Sync_SSE_Connection( $stream );
-			$framing->adopt_buffered_bytes( $conn->buffered_bytes() );
-
-			return $framing;
-		}
-
-		/**
 		 * Gets the peer IP address for a stream.
 		 *
 		 * @since 7.4.0
@@ -677,15 +636,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			if ( ! $conn->is_open() ) {
 				$this->handle_handshake( $key );
 
-				if ( ! isset( $this->clients[ $key ] ) ) {
-					return;
-				}
-
-				// The handshake may have re-framed this socket, so take the
-				// connection the client entry holds now.
-				$conn = $this->clients[ $key ]['conn'];
-
-				if ( ! $conn->is_open() ) {
+				if ( ! isset( $this->clients[ $key ] ) || ! $conn->is_open() ) {
 					return;
 				}
 			}
@@ -741,9 +692,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			$conn = $this->clients[ $key ]['conn'];
 
 			/*
-			 * The head is parsed once and kept on the client entry, because
-			 * a receive stream is re-framed after the head is read and must
-			 * not try to parse it a second time.
+			 * The head is parsed once and kept on the client entry. A
+			 * connection that was answered and is waiting to close can
+			 * become readable again, and the bytes after its head are not
+			 * a new request.
 			 */
 			$request = $this->clients[ $key ]['request'];
 
@@ -783,59 +735,37 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 				return;
 			}
 
-			/*
-			 * Not an upgrade: the request wants a receive stream over this
-			 * same listener, so the connection is re-framed before anything
-			 * else. The framing writes its 200 only once authentication
-			 * below has passed, so a refused request never opens a stream.
-			 */
+			// Everything else must ask to upgrade to a WebSocket. Refused
+			// before authentication, so such a request never spends a token.
 			if ( ! $is_upgrade ) {
-				/*
-				 * A receive stream carries an Authorization header, so the
-				 * browser preflights it. The preflight is answered here
-				 * rather than falling into the framing, which would wait for
-				 * a body an OPTIONS request does not have.
-				 */
-				if ( 'OPTIONS' === $request['method'] ) {
-					$origin = $this->allowed_origin( $request );
-					$conn->queue_cors_response( '' !== $origin ? $this->cors_headers( $origin ) : '' );
-					$this->finish_or_mark_closing( $key );
-					return;
-				}
-
-				$this->clients[ $key ]['conn'] = $this->stream_on( $conn );
-				$conn                          = $this->clients[ $key ]['conn'];
+				$conn->send_http_response( 400, 'Bad Request' );
+				$this->finish_or_mark_closing( $key );
+				return;
 			}
 
 			/*
-			 * Authenticated once per connection, not once per read. A receive
-			 * stream's POST body can arrive across several reads and this runs
-			 * once per read, and the one-time token it carries is spent the
-			 * first time it is seen: authenticating again would refuse a stream
-			 * that was already accepted. The cookie kept with the result is
-			 * what the periodic re-validation checks.
+			 * This is a long-running process with an in-memory object cache.
+			 * Sessions, users, and permissions change in other processes
+			 * (web requests) without invalidating this process's cache, so
+			 * flush before authenticating to validate against fresh data.
 			 */
-			$auth = $this->clients[ $key ]['auth'] ?? null;
+			wp_cache_flush();
 
-			if ( null === $auth ) {
-				/*
-				 * This is a long-running process with an in-memory object cache.
-				 * Sessions, users, and permissions change in other processes
-				 * (web requests) without invalidating this process's cache, so
-				 * flush before authenticating to validate against fresh data.
-				 */
-				wp_cache_flush();
+			/*
+			 * A handshake that passes is accepted below in this same call,
+			 * and an open connection never comes back here. So a one-time
+			 * token, which is spent the first time it is seen, is never
+			 * checked twice for a connection that was let in. The cookie
+			 * kept with the result is what the periodic re-validation
+			 * checks.
+			 */
+			$auth = $this->authenticate_handshake( $request );
 
-				$auth = $this->authenticate_handshake( $request );
-
-				if ( is_wp_error( $auth ) ) {
-					$this->log( 'Handshake rejected: ' . $auth->get_error_message() );
-					$conn->send_http_response( 403, 'Forbidden', 'Forbidden' );
-					$this->finish_or_mark_closing( $key );
-					return;
-				}
-
-				$this->clients[ $key ]['auth'] = $auth;
+			if ( is_wp_error( $auth ) ) {
+				$this->log( 'Handshake rejected: ' . $auth->get_error_message() );
+				$conn->send_http_response( 403, 'Forbidden', 'Forbidden' );
+				$this->finish_or_mark_closing( $key );
+				return;
 			}
 
 			$this->clients[ $key ]['user_id']      = $auth['user_id'];
@@ -849,75 +779,11 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			$offered_protocols = (string) ( $headers['sec-websocket-protocol'] ?? '' );
 			$echoed_protocol   = false !== strpos( $offered_protocols, self::SUBPROTOCOL ) ? self::SUBPROTOCOL : '';
 
-			$stream_origin = $this->allowed_origin( $request );
-			$accepted      = $conn->accept_request(
-				$request,
-				array(
-					'cors'        => '' !== $stream_origin ? $this->cors_headers( $stream_origin ) : '',
-					'origin'      => $stream_origin,
-					'subprotocol' => $echoed_protocol,
-				)
-			);
-
-			/*
-			 * A receive stream's request body may still be arriving. The
-			 * connection is not open yet, so the socket stays in the read
-			 * set and this runs again when more bytes land.
-			 */
-			if ( null === $accepted ) {
-				return;
-			}
-
-			if ( is_wp_error( $accepted ) ) {
-				$conn->send_http_response( 400, 'Bad Request', $accepted->get_error_message() );
-				$this->finish_or_mark_closing( $key );
-				return;
-			}
-
-			/*
-			 * A receive stream carries its room envelope in the request
-			 * BODY, where a socket carries it in a frame — and the stream
-			 * never writes again, so this is the only chance to subscribe
-			 * it. Running it through the ordinary message path is what
-			 * gives the stream the same rooms, permissions, cursors and
-			 * first response a socket gets.
-			 *
-			 * Without this the connection is accepted and held but belongs
-			 * to no room, and broadcast_room() skips it: the browser sees
-			 * a live stream that only ever carries keepalives.
-			 */
-			if ( ! $is_upgrade ) {
-				$body = $conn->request_body();
-
-				if ( '' !== $body ) {
-					/*
-					 * A stream carries the room envelope a socket carries in
-					 * a `sync` frame, and carries it in the request body
-					 * instead. The body is therefore the frame's payload with
-					 * the tag left off, and the message path reads the tag
-					 * first: without it the request is refused as malformed
-					 * and the stream, though accepted, belongs to no room and
-					 * can only ever be sent keepalives.
-					 */
-					$envelope = json_decode( $body, true );
-
-					if ( is_array( $envelope ) ) {
-						$envelope['type'] = 'sync';
-						$body             = (string) wp_json_encode( $envelope );
-					}
-
-					$this->handle_message( $key, $body );
-				}
-			}
+			$conn->accept_request( $request, array( 'subprotocol' => $echoed_protocol ) );
 		}
 
 		/**
 		 * The request's Origin, when it is one this daemon serves.
-		 *
-		 * Shared by the handshake check and by the receive stream's CORS
-		 * answer, so both refuse and permit exactly the same origins: a
-		 * stream that passed the allowlist here must not then be rejected
-		 * by the browser, and one that failed must not be echoed back.
 		 *
 		 * @since n.e.x.t
 		 *
@@ -956,33 +822,6 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			}
 
 			return $origin;
-		}
-
-		/**
-		 * The CORS headers a receive stream answers with.
-		 *
-		 * A WebSocket handshake is not a CORS request, so the socket path
-		 * never needs these and the daemon checks Origin by hand instead. A
-		 * receive stream IS an ordinary cross-origin request when the daemon
-		 * is on its own port, and the browser enforces that on its own — the
-		 * Authorization header makes it preflight, and the session cookie
-		 * the token is checked against only rides along with
-		 * `credentials: include`, which the browser will not do without
-		 * `Allow-Credentials`. So the stream grants exactly one origin, the
-		 * same one the allowlist approved.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @param string $origin The allowed origin.
-		 * @return string The header block, with a trailing blank line.
-		 */
-		private function cors_headers( string $origin ): string {
-			return 'Access-Control-Allow-Origin: ' . $origin . "\r\n"
-				. "Access-Control-Allow-Credentials: true\r\n"
-				. "Access-Control-Allow-Methods: POST, OPTIONS\r\n"
-				. "Access-Control-Allow-Headers: Authorization, Content-Type\r\n"
-				. "Access-Control-Max-Age: 600\r\n"
-				. "Vary: Origin\r\n\r\n";
 		}
 
 		/**
@@ -1030,11 +869,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			}
 
 			/*
-			 * A receive stream is an ordinary request and can set an
-			 * Authorization header, which a WebSocket handshake cannot, so
-			 * that is the second place the credential may arrive from. The
-			 * token is still short-lived and single-purpose; only the
-			 * envelope differs between the two framings.
+			 * A client that is not a browser can set an Authorization
+			 * header on its upgrade request, so that is the second place
+			 * the credential may arrive from. The token is the same
+			 * short-lived, single-purpose one.
 			 */
 			if ( '' === $token ) {
 				$authorization = (string) ( $headers['authorization'] ?? '' );
@@ -1846,18 +1684,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 				$this->last_ping_at = $now;
 
 				foreach ( $this->clients as $key => $client ) {
-					/*
-					 * Silence only means "gone" when the client was going to
-					 * say something. A receive stream writes its one request
-					 * and then nothing, so last_seen never advances on it
-					 * and timing it out would end a live stream every
-					 * IDLE_TIMEOUT_S, which the browser experiences as a
-					 * stream that dies and reconnects forever. Such a stream
-					 * is ended by its socket instead: it stays in the read
-					 * set, so the browser closing it is noticed at once.
-					 */
-					if ( $client['conn']->sends_messages()
-						&& $now - $client['last_seen'] > self::IDLE_TIMEOUT_S ) {
+					if ( $now - $client['last_seen'] > self::IDLE_TIMEOUT_S ) {
 						$this->log( 'Closing idle connection' );
 						$this->disconnect( $key );
 						continue;

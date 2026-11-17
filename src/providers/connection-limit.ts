@@ -10,7 +10,7 @@ import { DEFAULT_CLIENT_LIMIT_PER_ROOM } from './http-polling/config';
 import { intValueOrDefault } from './http-polling/utils';
 
 /**
- * Gets the total editor limit shared by polling, SSE, and WebSocket.
+ * Gets the total editor limit shared by polling and WebSocket.
  * Keep the existing filter name so site overrides and benchmarks still work.
  *
  * @param room Primary room being joined.

@@ -100,6 +100,47 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		$this->assertInstanceOf( 'WP_WebSocket_Sync_Server', $server );
 	}
 
+	public function test_the_daemon_refuses_a_request_that_does_not_ask_to_upgrade() {
+		$server  = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() ), '127.0.0.1', 8799 );
+		$conn    = new class() extends WP_WebSocket_Connection {
+			public array $response = array();
+			// phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod.Found -- No network socket in this test.
+			public function __construct() {}
+			public function parse_handshake_request() {
+				return array(
+					'headers' => array( 'origin' => home_url() ),
+					'method'  => 'POST',
+					'path'    => '/',
+					'query'   => array(),
+				);
+			}
+			public function send_http_response( int $status_code, string $reason, string $body = '' ): void {
+				$this->response = array( $status_code, $reason );
+			}
+		};
+		$clients = new ReflectionProperty( $server, 'clients' );
+		$clients->setAccessible( true );
+		$clients->setValue(
+			$server,
+			array(
+				1 => array(
+					'advisory' => array(),
+					'conn'     => $conn,
+					'request'  => null,
+					'rooms'    => array(),
+				),
+			)
+		);
+		$handle = new ReflectionMethod( $server, 'handle_handshake' );
+		$handle->setAccessible( true );
+		$handle->invoke( $server, 1 );
+
+		// 400, not the 403 a failed login check answers with: the request
+		// is refused before authentication.
+		$this->assertSame( array( 400, 'Bad Request' ), $conn->response );
+		$this->assertSame( array(), $clients->getValue( $server ), 'The connection is dropped once it is answered.' );
+	}
+
 	/**
 	 * Invokes the daemon's private room-request validator.
 	 *

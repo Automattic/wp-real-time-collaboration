@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-import { ObservableV2 } from 'lib0/observable';
-
-/**
  * Internal dependencies
  */
 import type {
@@ -11,7 +6,8 @@ import type {
 	EngineSessionCodec,
 	ProviderCreator,
 	ProviderCreatorResult,
-} from '@wordpress/sync';
+} from '../../registry/types';
+import { ProviderEvents } from '../../registry/events';
 import { websocketManager } from './websocket-manager';
 
 interface ProviderOptions {
@@ -19,16 +15,12 @@ interface ProviderOptions {
 	session: EngineSessionCodec;
 }
 
-type WebSocketProviderEvents = {
-	status: ( status: ConnectionStatus ) => void;
-};
-
 /**
  * Provider that moves the engine session codec's updates and awareness over
  * a WebSocket (its server counterpart is the WP_WebSocket_Sync_Server
  * daemon). Push-based: remote edits arrive the instant peers make them.
  */
-class WebSocketProvider extends ObservableV2< WebSocketProviderEvents > {
+class WebSocketProvider extends ProviderEvents {
 	protected status: ConnectionStatus[ 'status' ] = 'disconnected';
 
 	public constructor( protected options: ProviderOptions ) {
@@ -36,7 +28,7 @@ class WebSocketProvider extends ObservableV2< WebSocketProviderEvents > {
 		websocketManager.registerRoom( {
 			room: options.room,
 			session: options.session,
-			onStatusChange: ( status ) => this.emit( 'status', [ status ] ),
+			onStatusChange: ( status ) => this.emit( 'status', status ),
 		} );
 	}
 
@@ -55,13 +47,11 @@ export function createWebSocketProvider(): ProviderCreator {
 	return async ( { objectType, objectId, session } ) => {
 		const room = objectId ? `${ objectType }:${ objectId }` : objectType;
 		const provider = new WebSocketProvider( { room, session } );
-		return {
+		const result: ProviderCreatorResult = {
 			destroy: () => provider.destroy(),
-			on: ( event, cb ) =>
-				provider.on(
-					event as 'status',
-					cb as ( status: ConnectionStatus ) => void
-				),
-		} as ProviderCreatorResult;
+			on: ( event, callback ) => provider.on( event, callback ),
+		};
+
+		return result;
 	};
 }

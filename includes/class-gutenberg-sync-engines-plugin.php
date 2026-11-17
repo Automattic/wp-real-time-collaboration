@@ -153,7 +153,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 			$transports = GUTENBERG_SYNC_ENGINES_PATH . 'includes/transports/';
 			require_once $transports . 'class-wp-sync-connection.php';
 			require_once $transports . 'class-wp-rtc-http-polling-sync-server.php';
-			require_once $transports . 'sse/class-wp-sync-sse-connection.php';
 			require_once $transports . 'websocket/class-wp-websocket-access-token.php';
 			require_once $transports . 'websocket/class-wp-websocket-token-controller.php';
 			require_once $transports . 'websocket/class-wp-websocket-connection.php';

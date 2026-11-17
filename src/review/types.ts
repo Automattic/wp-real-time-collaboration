@@ -9,8 +9,7 @@
 /**
  * WordPress dependencies
  */
-// eslint-disable-next-line import/no-unresolved -- Provided at runtime as wp.sync.
-import type { ObjectID, ObjectType } from '@wordpress/sync';
+import type { ObjectID, ObjectType } from '../registry/types';
 
 /**
  * One parked edit, described for review.

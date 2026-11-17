@@ -30,16 +30,18 @@ shared editing session.
   the engine and transport contracts and registries, room names and
   permissions, routes, the settings printed for the browser, the on/off
   setting, the fallback storage), `engines/intent-log/` (the one
-  engine), `shared/`, `transports/` (polling, `websocket/`, and an
-  unused leftover in `sse/`; see Traps), `admin/` (the settings
-  screen), `storage/`, `diagnostics/` (dev-only).
+  engine), `shared/`, `transports/` (polling and `websocket/`),
+  `admin/` (the settings screen), `storage/`, `diagnostics/`
+  (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds `build/sync-engines.js`
   with `@wordpress/sync` and `yjs` external: `engines/`, `shared/`,
-  `providers/{http-polling,websocket,advisory}/` (and an unused
-  leftover in `providers/sse/`; see Traps),
+  `registry/` (the plugin's own transport registry, connection errors,
+  and the types an engine and a transport share),
+  `providers/{http-polling,websocket,advisory}/`,
   `awareness/`, `entity-sync/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`), `framework.ts`,
-  `debug/inspector.ts`.
+  `editor/gutenberg-contract.ts` (every non-public thing the plugin
+  relies on from Gutenberg goes here), `debug/inspector.ts`.
 - `gutenberg/` — a squashed Git subtree of Gutenberg, source only,
   pinned by `gutenberg-pin.json` (`commit`, `trunk`, and `tree`, which
   must equal `git rev-parse HEAD:gutenberg`). The plugin loads it when
@@ -164,8 +166,6 @@ Test traps:
     iterate there first. Playwright cannot hide a tab, so the specs
     override `document.visibilityState` in the page and fire
     `visibilitychange`.
-  - `@y/websocket-server` stays pinned to 0.1.1 (0.1.5 crashes with a
-    13.x client); the old y-websocket fixture is used by no suite.
 - `npm run rtc:ws` starts the real websocket transport for manual
   two-window testing (the daemon must bind 0.0.0.0 with port 8787
   published; wp-env alone cannot publish extra ports); `npm run
@@ -292,24 +292,6 @@ before a big change. A durable lesson from an issue goes here.
   many editors connected"), checked once on the page's first
   connection. Give extra test tabs their own post, or raise
   `sync.pollingProvider.maxClientsPerRoom`.
-- **Some server-sent events code is still in the tree, and nothing
-  can switch it on.** No transport uses it. The pieces are the stream
-  mode in `src/providers/http-polling/polling-manager.ts` (with
-  `src/providers/sse/sse-exchange.ts` and its Jest test), and the
-  stream handling in the daemon
-  (`includes/transports/websocket/class-wp-websocket-sync-server.php`,
-  with `includes/transports/sse/class-wp-sync-sse-connection.php`).
-  They are unused leftovers. Do not build on them, and do not read
-  their comments as a description of a feature.
-- **The daemon authenticates once per connection, not once per read.**
-  The one-time token is spent the first time it is seen, so
-  authenticating the same connection again would refuse it. The check
-  was written for the unused stream handling, whose request body can
-  arrive across several reads. Keep it while that code remains.
-- **The polling manager's "safety poll" comments are stale.** There is
-  no safety timer: a tab alone schedules no polls after its 30-second
-  discovery window, and a tab that can reach every peer polls on
-  demand.
 
 ### Environment and test traps
 

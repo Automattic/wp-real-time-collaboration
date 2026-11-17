@@ -21,6 +21,7 @@ import type {
 	IntentEnvelope,
 } from './intent-log/engine-types';
 import { applyServerAwarenessStates } from '../shared/awareness-sync';
+import type { PresenceObject } from '../editor/gutenberg-contract';
 import type {
 	AwarenessState,
 	EngineDisposition,
@@ -28,7 +29,7 @@ import type {
 	EngineLocalUpdateListener,
 	EngineUpdate,
 	LocalAwarenessState,
-} from '@wordpress/sync';
+} from '../registry/types';
 
 /*
  * The intent-log engine's client half behind the transport-facing
@@ -135,7 +136,7 @@ export interface IntentLogSessionOptions {
 	 * collaborator UI works; when omitted, awareness passes through plain
 	 * objects (tests, headless use).
 	 */
-	awareness?: import('y-protocols/awareness').Awareness;
+	awareness?: PresenceObject;
 }
 
 /** Origin tag for awareness removals applied by this session. */

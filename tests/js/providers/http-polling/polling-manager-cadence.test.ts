@@ -27,7 +27,6 @@ const mockCallbacks: {
 	presence: Array< ( room: string ) => void >;
 	cursor: Array< ( cursor: number ) => void >;
 	engine: Array< ( engine: string ) => void >;
-	awareness: Array< () => void >;
 } = {
 	others: [],
 	coverage: [],
@@ -35,23 +34,9 @@ const mockCallbacks: {
 	presence: [],
 	cursor: [],
 	engine: [],
-	awareness: [],
 };
-const mockSetDisabled = jest.fn();
 const mockSetSignalCarrier = jest.fn();
 const mockAnnounceLocalWrite = jest.fn();
-const mockSseExchange = {
-	available: true,
-	close: jest.fn(),
-	isOpen: jest.fn( () => false ),
-	exchange:
-		jest.fn<
-			(
-				payload: { rooms: Array< { room: string } > },
-				signal?: AbortSignal
-			) => Promise< ReturnType< typeof response > >
-		>(),
-};
 
 jest.mock( '@wordpress/hooks', () => ( {
 	addAction: jest.fn(),
@@ -80,10 +65,6 @@ jest.mock( '../../../../src/providers/advisory/signaling', () => ( {
 	setSyncClientId: jest.fn(),
 } ) );
 
-jest.mock( '../../../../src/providers/sse/sse-exchange', () => ( {
-	SseExchange: jest.fn( () => mockSseExchange ),
-} ) );
-
 jest.mock( '../../../../src/providers/advisory/channel', () => ( {
 	advisoryCoversClients: () => mockCoverage,
 	getChannelPresence: () => mockChannelPresence,
@@ -93,7 +74,6 @@ jest.mock( '../../../../src/providers/advisory/channel', () => ( {
 		mockCallbacks.coverage.push( cb ),
 	onAdvisoryPresence: ( cb: ( room: string ) => void ) =>
 		mockCallbacks.presence.push( cb ),
-	setAdvisoryDisabledByTransport: mockSetDisabled,
 	setPresenceSource: jest.fn(),
 	startAdvisoryChannel: jest.fn(),
 	stopAdvisoryChannel: jest.fn(),
@@ -101,8 +81,6 @@ jest.mock( '../../../../src/providers/advisory/channel', () => ( {
 
 jest.mock( '../../../../src/providers/advisory/announce', () => ( {
 	announceLocalWrite: mockAnnounceLocalWrite,
-	onLocalAwarenessChange: ( cb: () => void ) =>
-		mockCallbacks.awareness.push( cb ),
 } ) );
 
 jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
@@ -144,7 +122,6 @@ function createMockSession( clientId = 1, sendsWhileAlone = false ) {
 
 describe( 'polling-manager cadence', () => {
 	let pollingManager: Manager[ 'pollingManager' ];
-	let setSseMode: Manager[ 'setSseMode' ];
 	let flushHeldUpdates: Manager[ 'flushHeldUpdates' ];
 	let mockPostSyncUpdate: jest.Mock<
 		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdate
@@ -162,17 +139,11 @@ describe( 'polling-manager cadence', () => {
 		mockCallbacks.presence.length = 0;
 		mockCallbacks.cursor.length = 0;
 		mockCallbacks.engine.length = 0;
-		mockCallbacks.awareness.length = 0;
-		mockSetDisabled.mockClear();
 		mockSetSignalCarrier.mockClear();
 		mockAnnounceLocalWrite.mockClear();
-		mockSseExchange.available = true;
-		mockSseExchange.close.mockClear();
-		mockSseExchange.exchange.mockReset();
 		jest.isolateModules( () => {
 			const managerModule: Manager = require( '../../../../src/providers/http-polling/polling-manager' );
 			pollingManager = managerModule.pollingManager;
-			setSseMode = managerModule.setSseMode;
 			flushHeldUpdates = managerModule.flushHeldUpdates;
 			mockPostSyncUpdate =
 				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdate;
@@ -466,22 +437,6 @@ describe( 'polling-manager cadence', () => {
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
 	} );
 
-	it( 'a changed awareness state under coverage rides the presence lane, not a poll', async () => {
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
-		mockOthers = true;
-		mockCoverage = true;
-		register();
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-
-		// Slow awareness names a new block: the advisory channel's
-		// presence lane carries the field, so no poll and no rumor.
-		mockCallbacks.awareness.forEach( ( cb ) => cb() );
-		await jest.advanceTimersByTimeAsync( 10000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-		expect( mockAnnounceLocalWrite ).not.toHaveBeenCalled();
-	} );
-
 	it( 'a local update under coverage polls on demand', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
 		mockOthers = true;
@@ -626,67 +581,6 @@ describe( 'polling-manager cadence', () => {
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 	} );
 
-	it( 'SSE: rooms registering at load ride ordinary requests; one stream opens once they settle', async () => {
-		setSseMode( true );
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
-		mockSseExchange.exchange.mockResolvedValue( response( [ 1 ] ) );
-		register();
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-		// A second room registers 300 ms later, as the editor's collection
-		// rooms do: its bootstrap is the usual prompt request for a late
-		// room (300 ms), and the settling window restarts from its
-		// registration.
-		await jest.advanceTimersByTimeAsync( 300 );
-		pollingManager.registerRoom( {
-			room: 'test-room-2',
-			session: createMockSession( 1 ) as unknown as EngineSessionCodec,
-			log: jest.fn(),
-			onStatusChange: jest.fn(),
-		} );
-		await jest.advanceTimersByTimeAsync( 300 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		await jest.advanceTimersByTimeAsync( 699 );
-		expect( mockSseExchange.exchange ).not.toHaveBeenCalled();
-		// The window closes: one stream, covering both rooms.
-		await jest.advanceTimersByTimeAsync( 1 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		expect(
-			mockSseExchange.exchange.mock.calls[ 0 ][ 0 ].rooms.map(
-				( room: { room: string } ) => room.room
-			)
-		).toEqual( [ 'test-room', 'test-room-2' ] );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-	} );
-
-	it( 'SSE: a lone tab streams through the discovery window, then closes its stream and stops; company reopens it', async () => {
-		setSseMode( true );
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
-		mockSseExchange.exchange.mockResolvedValue( response( [ 1 ] ) );
-		register();
-		// The first second is the settling window: ordinary requests.
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		// Inside the window the loop re-issues right behind each event.
-		await jest.advanceTimersByTimeAsync( 50 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 2 );
-		mockSseExchange.close.mockClear();
-		// Past the window: the stream is closed (no held PHP worker) and
-		// nothing is scheduled.
-		await jest.advanceTimersByTimeAsync( 31000 );
-		expect( mockSseExchange.close ).toHaveBeenCalled();
-		const afterWindow = mockSseExchange.exchange.mock.calls.length;
-		await jest.advanceTimersByTimeAsync( 120000 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( afterWindow );
-		// Company from the heartbeat restarts the loop, which reopens one.
-		mockOthers = true;
-		mockCallbacks.others.forEach( ( cb ) => cb( true ) );
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes(
-			afterWindow + 1
-		);
-	} );
-
 	function setVisibility( state: 'hidden' | 'visible' ) {
 		Object.defineProperty( document, 'visibilityState', {
 			configurable: true,
@@ -695,140 +589,46 @@ describe( 'polling-manager cadence', () => {
 		document.dispatchEvent( new Event( 'visibilitychange' ) );
 	}
 
-	// A stream exchange that parks until the manager aborts it, the way a
-	// real stream waits for its next event.
-	function parkUntilAborted() {
-		mockSseExchange.exchange.mockImplementation(
-			( _payload, signal ) =>
-				new Promise( ( _resolve, reject ) => {
-					signal?.addEventListener( 'abort', () =>
-						reject( new DOMException( 'Aborted', 'AbortError' ) )
-					);
-				} )
-		);
-	}
-
-	it( 'SSE: a hidden tab drops its stream and receives at the background cadence; visible again reopens it at once', async () => {
-		setSseMode( true );
+	it( 'a hidden tab with company polls at the background cadence; visible again polls at once', async () => {
 		mockOthers = true;
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
-		parkUntilAborted();
 		register();
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		mockSseExchange.close.mockClear();
-
-		// Hidden: the parked stream is dropped on purpose (no failure, no
-		// backoff) and the tab receives over ordinary requests instead.
-		setVisibility( 'hidden' );
-		expect( mockSseExchange.close ).toHaveBeenCalled();
 		await jest.advanceTimersByTimeAsync( 0 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+
+		// Hidden: the timer already pending fires, and the polls after it
+		// are 25 s apart.
+		setVisibility( 'hidden' );
+		await jest.advanceTimersByTimeAsync( 1000 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		// The background cadence, not the stream re-issue.
 		await jest.advanceTimersByTimeAsync( 24999 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 		await jest.advanceTimersByTimeAsync( 1 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-		await jest.advanceTimersByTimeAsync( 25000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
 
-		// Visible again: the stream reopens at once.
+		// Visible again: one poll at once, then the collaborator interval.
 		setVisibility( 'visible' );
 		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 2 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
+		await jest.advanceTimersByTimeAsync( 1000 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 5 );
 	} );
 
-	it( 'SSE: a tab hidden while alone polls like short polling through the discovery window, then goes quiet', async () => {
-		setSseMode( true );
+	it( 'a tab hidden while alone polls through the discovery window, then goes quiet', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
-		parkUntilAborted();
 		register();
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		mockSseExchange.close.mockClear();
-
-		setVisibility( 'hidden' );
-		expect( mockSseExchange.close ).toHaveBeenCalled();
 		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		// Not streaming, so short polling's own rules: alone inside the
-		// discovery window is the solo interval, past it nothing at all —
-		// no stream, no timer.
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+
+		// Alone inside the discovery window is the solo interval, hidden
+		// or not. Past it there is no timer at all.
+		setVisibility( 'hidden' );
 		await jest.advanceTimersByTimeAsync( 4000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 		await jest.advanceTimersByTimeAsync( 30000 );
 		const afterWindow = mockPostSyncUpdate.mock.calls.length;
 		await jest.advanceTimersByTimeAsync( 120000 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( afterWindow );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-	} );
-
-	it( 'SSE: handshake signals ride the heartbeat, never a poll', async () => {
-		setSseMode( true );
-		mockOthers = true;
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
-		mockSseExchange.exchange.mockResolvedValue( response( [ 1, 2 ] ) );
-		register();
-		await jest.advanceTimersByTimeAsync( 0 );
-		const carrier = mockSetSignalCarrier.mock.calls.at( -1 )?.[ 0 ] as
-			| ( () => boolean )
-			| undefined;
-		expect( carrier?.() ).toBe( false );
-	} );
-
-	it( 'SSE: switches the channel off while streaming and back on while receiving runs on polling', async () => {
-		setSseMode( true );
-		mockOthers = true;
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
-		mockSseExchange.exchange.mockResolvedValueOnce( response( [ 1, 2 ] ) );
-		register();
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-		expect( mockSetDisabled ).toHaveBeenLastCalledWith( true );
-		// The stream failed and receiving runs on polling for a while: the
-		// channel is the wake path again until SSE is retried.
-		mockSseExchange.available = false;
-		await jest.advanceTimersByTimeAsync( 50 );
-		expect( mockSetDisabled ).toHaveBeenLastCalledWith( false );
-		expect( mockSseExchange.exchange ).toHaveBeenCalledTimes( 1 );
-	} );
-
-	it( 'SSE: while no stream can be opened, receiving follows the short-polling cadence rules', async () => {
-		setSseMode( true );
-		mockOthers = true;
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
-		// A stream failed a moment ago: the exchange refuses to open one
-		// for a while, and every receive is an ordinary request.
-		mockSseExchange.available = false;
-		register();
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-		expect( mockSseExchange.exchange ).not.toHaveBeenCalled();
-		// With company: the collaborator interval (1 s), not the solo one.
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-		// Every peer reachable over the channel: no timer at all, and a
-		// peer's announcement polls on demand.
-		mockCoverage = true;
-		mockCallbacks.coverage.forEach( ( cb ) => cb() );
-		await jest.advanceTimersByTimeAsync( 10000 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-		mockCallbacks.announce.forEach( ( cb ) => cb( 'test-room' ) );
-		await jest.advanceTimersByTimeAsync( 150 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
-		// The exchange willing again: the next receive reopens a stream.
-		mockSseExchange.available = true;
-		mockSseExchange.exchange.mockResolvedValue( response( [ 1, 2 ] ) );
-		mockCallbacks.announce.forEach( ( cb ) => cb( 'test-room' ) );
-		await jest.advanceTimersByTimeAsync( 300 );
-		expect( mockSseExchange.exchange ).toHaveBeenCalled();
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
 	} );
 
 	it( 'overlays channel presence on the poll response and re-applies it when it changes', async () => {
@@ -905,87 +705,5 @@ describe( 'polling-manager cadence', () => {
 			await jest.advanceTimersByTimeAsync( 0 );
 			expect( released ).toEqual( { cursor: 3, unsent: [] } );
 		} );
-	} );
-
-	it( 'SSE: a send answered after the loop stopped is settled by one receive', async () => {
-		/*
-		 * A codec that sends while alone (de-rtc). Its send goes out
-		 * beside the stream, marked receive:false, and its answer waits
-		 * for the stream to carry the cursor to the head the write saw.
-		 * If the loop stops meanwhile (a stream event shows the tab alone
-		 * past the discovery window), nobody would carry the cursor
-		 * there: the manager polls once for it.
-		 */
-		setSseMode( true );
-		const parked: Array<
-			( event: ReturnType< typeof response > ) => void
-		> = [];
-		mockSseExchange.exchange.mockImplementation(
-			( _payload, signal ) =>
-				new Promise( ( resolve, reject ) => {
-					parked.push( resolve );
-					signal?.addEventListener( 'abort', () =>
-						reject( new DOMException( 'Aborted', 'AbortError' ) )
-					);
-				} )
-		);
-		mockSseExchange.isOpen.mockReturnValue( true );
-		let answer!: ( response: unknown ) => void;
-		const send = new Promise( ( resolve ) => {
-			answer = resolve;
-		} );
-		mockPostSyncUpdate.mockImplementation(
-			( payload ) =>
-				( true ===
-				(
-					payload as {
-						rooms: Array< { rows_received_separately?: boolean } >;
-					}
-				 ).rooms[ 0 ].rows_received_separately
-					? send
-					: Promise.resolve( response( [ 1 ] ) ) ) as ReturnType<
-					typeof mockPostSyncUpdate
-				>
-		);
-		const dispositions = [ { intentId: 'p-1', status: 'applied' } ];
-		const session = {
-			...createMockSession( 1, true ),
-			receiveDispositions: jest.fn(),
-		};
-		register( session );
-		// Settled onto the stream, then parked past the discovery window
-		// with no event so far.
-		await jest.advanceTimersByTimeAsync( 31000 );
-		expect( parked ).toHaveLength( 1 );
-
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
-		onLocalUpdate( { data: 'x', type: 'update' }, 1 );
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-
-		// The event shows the tab alone past the window: the loop stops
-		// and drops its stream, with the send still in flight.
-		mockSseExchange.close.mockClear();
-		parked.shift()!( response( [ 1 ] ) );
-		await jest.advanceTimersByTimeAsync( 50 );
-		expect( mockSseExchange.close ).toHaveBeenCalled();
-		expect( parked ).toHaveLength( 0 );
-
-		answer( {
-			...response( [ 1 ], 2 ),
-			rooms: [ { ...response( [ 1 ], 2 ).rooms[ 0 ], dispositions } ],
-		} );
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( session.receiveDispositions ).not.toHaveBeenCalled();
-		// One receive for the held answer.
-		expect( parked ).toHaveLength( 1 );
-		parked.shift()!( response( [ 1 ], 2 ) );
-		await jest.advanceTimersByTimeAsync( 50 );
-		expect( session.receiveDispositions ).toHaveBeenCalledWith(
-			dispositions
-		);
 	} );
 } );

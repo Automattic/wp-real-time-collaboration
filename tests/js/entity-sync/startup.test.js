@@ -9,6 +9,7 @@ import {
 import { privateApis } from '@wordpress/core-data';
 import { privateApis as syncApis } from '@wordpress/sync';
 import { flushHeldUpdates } from '../../../src/providers/http-polling/polling-manager';
+import { registerSyncTransport } from '../../../src/registry/transports';
 
 jest.mock(
 	'@wordpress/core-data',
@@ -25,8 +26,10 @@ jest.mock(
 jest.mock( '@wordpress/sync', () => ( {
 	privateApis: {
 		registerSyncEngine: jest.fn(),
-		registerSyncTransport: jest.fn(),
 	},
+} ) );
+jest.mock( '../../../src/registry/transports', () => ( {
+	registerSyncTransport: jest.fn(),
 } ) );
 jest.mock( '../../../src/lock-unlock', () => ( {
 	unlock: ( value ) => value,
@@ -84,12 +87,12 @@ it( 'registers the adapter from normal startup after all engines and transports'
 		)
 	).toEqual( [ 'intent-log' ] );
 	expect(
-		syncApis.registerSyncTransport.mock.calls.map(
+		registerSyncTransport.mock.calls.map(
 			( [ transport ] ) => transport.slug
 		)
 	).toEqual( [ 'http-polling', 'websocket' ] );
 	expect(
-		Math.max( ...syncApis.registerSyncTransport.mock.invocationCallOrder )
+		Math.max( ...registerSyncTransport.mock.invocationCallOrder )
 	).toBeLessThan(
 		privateApis.createDefaultEntitySyncManager.mock.invocationCallOrder[ 0 ]
 	);

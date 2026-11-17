@@ -58,8 +58,6 @@ export interface AdvisoryLink {
 	start: ( host: AdvisoryLinkHost ) => void;
 	/** Says goodbye and closes everything; the link may be started again. */
 	stop: () => void;
-	/** The transport's switch: closed while suspended, reconnects after. */
-	setSuspended: ( suspended: boolean ) => void;
 	/** Whether a presence message would reach anyone right now. */
 	canSend: () => boolean;
 	sendPresence: ( entry: PresenceEntry ) => void;

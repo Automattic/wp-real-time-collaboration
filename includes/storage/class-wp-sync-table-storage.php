@@ -235,7 +235,7 @@ if ( ! class_exists( 'WP_Sync_Table_Storage' ) ) {
 		/**
 		 * The version counters of several rooms in one lookup, for a reader
 		 * waiting on "did anything change?". Not part of the WP_RTC_Storage
-		 * contract; the SSE stream uses it when this storage is active.
+		 * contract, and nothing in the plugin calls it now.
 		 *
 		 * @since 0.0.2
 		 *

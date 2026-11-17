@@ -80,7 +80,6 @@ type ServerFrame =
 	| { type: 'error'; code?: string; message?: string };
 
 let host: AdvisoryLinkHost | null = null;
-let suspended = false;
 let socket: WebSocket | null = null;
 let connecting = false;
 let reconnectAttempts = 0;
@@ -101,7 +100,7 @@ function isOpen(): boolean {
 }
 
 function wantsConnection(): boolean {
-	return null !== host && ! suspended && host.isActive();
+	return null !== host && host.isActive();
 }
 
 /**
@@ -419,23 +418,8 @@ export const websocketLink: AdvisoryLink = {
 
 	stop(): void {
 		closeSocket();
-		suspended = false;
 		reconnectAttempts = 0;
 		host = null;
-	},
-
-	setSuspended( value: boolean ): void {
-		if ( value === suspended ) {
-			return;
-		}
-		suspended = value;
-		if ( value ) {
-			closeSocket();
-			host?.coverageChanged();
-		} else {
-			reconnectAttempts = 0;
-			connect();
-		}
 	},
 
 	canSend(): boolean {
@@ -516,7 +500,6 @@ export const websocketLink: AdvisoryLink = {
 	reset(): void {
 		closeSocket();
 		host = null;
-		suspended = false;
 		reconnectAttempts = 0;
 		attempt = 0;
 	},

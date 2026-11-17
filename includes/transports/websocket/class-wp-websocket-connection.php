@@ -61,7 +61,7 @@ if ( ! class_exists( 'WP_WebSocket_Connection' ) ) {
 		 * @param array $request Parsed request head.
 		 * @param array $context Framing context; `subprotocol` is the
 		 *                       protocol to echo, or '' for none.
-		 * @return true|WP_Error True once upgraded, WP_Error to reject.
+		 * @return true True once upgraded.
 		 */
 		public function accept_request( array $request, array $context = array() ) {
 			$this->accept_handshake(

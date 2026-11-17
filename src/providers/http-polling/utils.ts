@@ -14,8 +14,7 @@ import {
 	type UpdateQueue,
 } from './types';
 
-// The REST path the shared manager posts to. The SSE transport keeps its
-// sends here too; only its receive half moves to the stream route.
+// The REST path the polling manager posts to.
 const syncApiPath = '/wp-sync/v1/updates';
 
 export function uint8ArrayToBase64( data: Uint8Array ): string {
@@ -131,20 +130,15 @@ export function createUpdateQueue(
  * Post a sync update and receive updates the client is missing.
  *
  * @param payload The sync payload including data and after cursor
- * @param signal  Optional abort signal (a parked stream exchange is aborted
- *                when local updates arrive so sends never wait for the
- *                next event).
  * @return The sync server response
  */
 export function postSyncUpdate(
-	payload: SyncPayload,
-	signal?: AbortSignal
+	payload: SyncPayload
 ): Promise< SyncResponse > {
 	return apiFetch( {
 		method: 'POST',
 		path: syncApiPath,
 		data: payload,
-		signal,
 	} );
 }
 

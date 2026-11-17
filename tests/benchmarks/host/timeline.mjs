@@ -39,7 +39,7 @@ const counters = {
 
 /**
  * Require complete, monotonic traces whose final counters match request totals.
- * A killed worker or missing shutdown row must not look like a cheap stream.
+ * A killed worker or missing shutdown row must not look like a cheap request.
  *
  * @param {Array<Object>} rows     Completed request rows.
  * @param {Set<string>}   expected Request IDs known to have reached PHP.

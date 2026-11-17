@@ -17,10 +17,6 @@ import type {
 	AwarenessPeerState,
 } from '../../../src/awareness/channels/sync-channel';
 import { registerAwareness } from '../../../src/awareness/registry';
-import {
-	onLocalAwarenessChange,
-	resetAnnounceForTesting,
-} from '../../../src/providers/advisory/announce';
 
 /**
  * A fake typed awareness: a local state, per-field equality checks, and a
@@ -85,17 +81,10 @@ describe( 'sync channel', () => {
 		channel.start();
 		expect( host.setUp ).toHaveBeenCalled();
 
-		// Each publish also tells the transport to carry the state now.
-		resetAnnounceForTesting();
-		const onChange = jest.fn();
-		onLocalAwarenessChange( onChange );
 		channel.publish( 's1' );
 		expect( local[ BLOCK_FIELD ] ).toBe( 's1' );
-		expect( onChange ).toHaveBeenCalledTimes( 1 );
 		channel.publish( null );
 		expect( local[ BLOCK_FIELD ] ).toBeNull();
-		expect( onChange ).toHaveBeenCalledTimes( 2 );
-		resetAnnounceForTesting();
 
 		channel.stop();
 		expect( local[ BLOCK_FIELD ] ).toBeUndefined();

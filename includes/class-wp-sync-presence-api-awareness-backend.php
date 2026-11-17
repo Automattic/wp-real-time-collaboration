@@ -205,7 +205,7 @@ if ( ! class_exists( 'WP_Sync_Presence_API_Awareness_Backend' ) ) {
 		}
 
 		/**
-		 * Wakes streams waiting on the room without writing to it.
+		 * Tells listeners that the room changed, without writing to it.
 		 *
 		 * @since n.e.x.t
 		 *

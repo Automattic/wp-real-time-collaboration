@@ -215,8 +215,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 
 		/**
 		 * The stored transport slug, with the retired long-polling transport
-		 * read as polling. (It used to be read as its stream successor, the
-		 * SSE transport, which this plugin no longer ships.)
+		 * read as polling.
 		 *
 		 * @since 0.0.2
 		 *

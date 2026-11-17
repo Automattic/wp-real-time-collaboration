@@ -1,9 +1,10 @@
 /**
- * The runtime surface this plugin consumes from the collaborative-editing
- * framework (`@wordpress/sync`). Types are imported directly from
- * `@wordpress/sync` (public); runtime VALUES that live behind the framework's
- * private API are unlocked ONCE here and re-exported, so the engine adapters
- * and transport providers don't each repeat the unlock.
+ * What this plugin still takes at runtime from Gutenberg's
+ * `@wordpress/sync` package. These values sit behind that package's
+ * private API, so they are unlocked once here and re-exported.
+ *
+ * The transport registry and the connection error types are not here any
+ * more. The plugin owns them (src/registry/).
  */
 
 /**
@@ -20,11 +21,7 @@ import { unlock } from './lock-unlock';
 const api = unlock( privateApis );
 
 export const registerSyncEngine = api.registerSyncEngine;
-export const registerSyncTransport = api.registerSyncTransport;
-export const getProviderCreators = api.getProviderCreators;
 export const createSyncManager = api.createSyncManager;
-export const ConnectionError = api.ConnectionError;
-export const ConnectionErrorCode = api.ConnectionErrorCode;
 export const resolveEngineAdapter = api.resolveEngineAdapter;
 
 // Origin marker for editor-originated updates (used by the yjs undo manager
@@ -35,8 +32,11 @@ export const LOCAL_EDITOR_ORIGIN = api.LOCAL_EDITOR_ORIGIN;
 // steps (core-data's `undoIgnore` edits and save responses).
 export const LOCAL_UNDO_IGNORED_ORIGIN = api.LOCAL_UNDO_IGNORED_ORIGIN;
 
-// Test-support: reset the shared framework registries between unit tests.
+// Test-support: reset the framework's registries between unit tests. The
+// second one resets the framework's own transport list, which only the
+// framework's `createSyncManager` reads. The plugin's transports reset
+// through src/registry/transports.ts.
 export const getEngineAdapters = api.getEngineAdapters;
 export const resetEngineAdaptersForTesting = api.resetEngineAdaptersForTesting;
-export const resetProviderCreatorsForTesting =
+export const resetFrameworkProviderCreatorsForTesting =
 	api.resetProviderCreatorsForTesting;

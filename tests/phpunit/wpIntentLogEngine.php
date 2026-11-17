@@ -139,10 +139,9 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$this->assertArrayNotHasKey( 'dispositions', $room_response );
 	}
 
-	public function test_a_send_marked_receive_false_is_answered_with_the_verdict_and_head_but_no_stored_rows() {
-		// A tab receiving over an open stream sends beside it: the server
-		// stores the intent and answers with its verdict and the room's
-		// head cursor, but delivers no stored rows (the stream does).
+	public function test_a_send_is_answered_with_the_verdict_and_the_head_cursor() {
+		// The server stores the intent and answers with its verdict and
+		// the room's head cursor.
 		$insert        = self::intent_update(
 			array(
 				'intentId' => 'i-1',
@@ -156,9 +155,8 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				),
 			)
 		);
-		$room_response = $this->poll( array( $insert ), array( 'rows_received_separately' => true ) );
+		$room_response = $this->poll( array( $insert ) );
 
-		$this->assertSame( array(), $room_response['updates'], 'No stored rows: the stream delivers them.' );
 		$this->assertSame(
 			array(
 				array(
@@ -168,7 +166,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			),
 			$room_response['dispositions']
 		);
-		$this->assertGreaterThan( 0, $room_response['end_cursor'], 'The head this write produced, for the client to wait for on its stream.' );
+		$this->assertGreaterThan( 0, $room_response['end_cursor'], 'The head this write produced.' );
 
 		// The rows are there for any reader, the author included.
 		$author = $this->poll();
@@ -176,7 +174,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			array( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, WP_Intent_Log_Engine::UPDATE_TYPE_INTENT ),
 			array_column( $author['updates'], 'type' )
 		);
-		$this->assertSame( $room_response['end_cursor'], $author['end_cursor'], 'The send reported the head the ordinary read reaches.' );
+		$this->assertSame( $room_response['end_cursor'], $author['end_cursor'], 'The send reported the head a later read reaches.' );
 		$this->assertArrayNotHasKey( 'dispositions', $author );
 	}
 

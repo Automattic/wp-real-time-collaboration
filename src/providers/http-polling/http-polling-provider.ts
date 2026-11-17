@@ -1,9 +1,4 @@
 /**
- * External dependencies
- */
-import { ObservableV2 } from 'lib0/observable';
-
-/**
  * Internal dependencies
  */
 import type {
@@ -11,7 +6,8 @@ import type {
 	EngineSessionCodec,
 	ProviderCreator,
 	ProviderCreatorResult,
-} from '@wordpress/sync';
+} from '../../registry/types';
+import { ProviderEvents } from '../../registry/events';
 import { pollingManager } from './polling-manager';
 
 export interface ProviderOptions {
@@ -21,19 +17,11 @@ export interface ProviderOptions {
 }
 
 /**
- * Event types for HttpPollingProvider. ObservableV2 expects event handlers as
- * functions. `status` mirrors the generic `ProviderEventMap`.
- */
-type HttpPollingEvents = {
-	status: ( status: ConnectionStatus ) => void;
-};
-
-/**
  * Sync provider that uses HTTP polling for real-time synchronization. It moves
  * typed updates and awareness states between a central sync server and the
  * engine session codec, without interpreting either.
  */
-class HttpPollingProvider extends ObservableV2< HttpPollingEvents > {
+class HttpPollingProvider extends ProviderEvents {
 	protected status: ConnectionStatus[ 'status' ] = 'disconnected';
 
 	public constructor( protected options: ProviderOptions ) {
@@ -97,9 +85,8 @@ class HttpPollingProvider extends ObservableV2< HttpPollingEvents > {
 
 		this.log( 'Status change', { status, error } );
 
-		// ObservableV2 expects arguments as an array
 		this.status = status;
-		this.emit( 'status', [ connectionStatus ] );
+		this.emit( 'status', connectionStatus );
 	};
 
 	/**
@@ -148,8 +135,6 @@ export function createHttpPollingProvider(): ProviderCreator {
 
 		return {
 			destroy: () => provider.destroy(),
-			// Adapter: ObservableV2.on is compatible with ProviderOn
-			// The callback receives data as the first parameter
 			on: ( event, callback ) => {
 				provider.on( event, callback );
 			},

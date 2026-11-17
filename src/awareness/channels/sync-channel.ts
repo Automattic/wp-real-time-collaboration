@@ -4,11 +4,10 @@
  *
  * Nothing between `setLocalStateField` and the peers' `onStateChange`
  * inspects awareness content (the server stores it opaquely), so this
- * needs no engine, transport, or PHP change and works over http-polling,
- * sse, and websocket alike. Under short polling the advisory channel's
+ * needs no engine, transport, or PHP change and works over http-polling
+ * and websocket alike. Under short polling the advisory channel's
  * presence lane carries the field to every reachable peer within a
- * moment, and the timer polls carry it to the rest; under SSE it rides
- * the next request (a parked exchange is reissued); under websocket it
+ * moment, and the timer polls carry it to the rest; under websocket it
  * goes with the periodic awareness frame. The Heartbeat channel is the one
  * with its own cadence.
  *
@@ -22,8 +21,8 @@
 /**
  * Internal dependencies
  */
-import { announceLocalAwarenessChange } from '../../providers/advisory/announce';
 import type { Channel, PeerIdentity, PeerRoster } from '../types';
+import type { PostEditorPresenceObject } from '../../editor/gutenberg-contract';
 
 /** The sync channel: the publisher hands it each new block. */
 export interface SyncChannel extends Channel {
@@ -31,23 +30,22 @@ export interface SyncChannel extends Channel {
 }
 
 /**
- * The awareness-instance surface this channel relies on. Structurally
- * matches core-data's `PostEditorAwareness` (a typed y-protocols Awareness
- * with subscription helpers).
+ * The presence object this channel relies on: the one core-data builds
+ * for a post (see src/editor/gutenberg-contract.ts), with its listener
+ * helper typed for this channel's peer states.
  */
-export interface AwarenessHost {
-	clientID: number;
-	setUp?: () => void;
+export interface AwarenessHost
+	extends Pick<
+		PostEditorPresenceObject,
+		| 'clientID'
+		| 'setUp'
+		| 'setLocalStateField'
+		| 'getLocalState'
+		| 'equalityFieldChecks'
+	> {
 	onStateChange?: (
 		callback: ( states: AwarenessPeerState[] ) => void
 	) => () => void;
-	setLocalStateField: ( field: string, value: unknown ) => void;
-	getLocalState: () => Record< string, unknown > | null;
-	/** Per-field equality checks, on core-data's typed awareness. */
-	equalityFieldChecks?: Record<
-		string,
-		( a?: unknown, b?: unknown ) => boolean
-	>;
 }
 
 export interface AwarenessPeerState {
@@ -159,9 +157,6 @@ export function createSyncChannel( options: SyncChannelOptions ): SyncChannel {
 		},
 		publish( block ) {
 			awareness.setLocalStateField( BLOCK_FIELD, block );
-			// A parked long poll would hold the value until the server
-			// answers: let the transport reissue it now.
-			announceLocalAwarenessChange();
 		},
 	};
 }

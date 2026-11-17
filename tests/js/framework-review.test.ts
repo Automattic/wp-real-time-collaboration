@@ -30,7 +30,7 @@ import { addFilter, removeFilter } from '@wordpress/hooks';
  */
 import {
 	createSyncManager,
-	resetProviderCreatorsForTesting,
+	resetFrameworkProviderCreatorsForTesting as resetProviderCreatorsForTesting,
 } from '../../src/framework';
 
 // eslint-disable-next-line import/no-unresolved -- Resolved to the subtree.

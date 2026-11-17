@@ -4,9 +4,9 @@
  * The plugin brings its own e2e runner (`@playwright/test`,
  * `@wordpress/e2e-test-utils-playwright`, `@wordpress/scripts`); the **runtime**
  * Gutenberg comes from the pinned subtree in `../../gutenberg` (mounted by this
- * plugin's `.wp-env.json`). Specs live in `./specs` and import Gutenberg's
- * collaboration fixtures from the subtree while importing engine internals
- * (e.g. `genesisSyncId`) from this plugin's own source.
+ * plugin's `.wp-env.json`). Specs live in `./specs`. The collaboration
+ * fixtures they use are the plugin's own, in `./config`, and they import
+ * engine internals (e.g. `genesisSyncId`) from this plugin's source.
  *
  * External dependencies
  */

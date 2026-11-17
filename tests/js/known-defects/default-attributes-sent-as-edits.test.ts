@@ -28,10 +28,8 @@ import type {
 import { createIntentLogManager } from '../../../src/engines/intent-log-manager';
 import type { BridgeBlock } from '../../../src/engines/intent-log-bridge';
 import { INTENT_LOG_UPDATE_TYPES } from '../../../src/engines/intent-log-session';
-import {
-	resetEngineAdaptersForTesting,
-	resetProviderCreatorsForTesting,
-} from '../../../src/framework';
+import { resetEngineAdaptersForTesting } from '../../../src/framework';
+import { resetProviderCreatorsForTesting } from '../../../src/registry/transports';
 import { resetConflictSourcesForTesting } from '../../../src/review/conflicts';
 import { createDocument } from '../../../src/engines/intent-log/document.js';
 import {

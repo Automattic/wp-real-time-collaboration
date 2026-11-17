@@ -61,16 +61,10 @@ export function attachCounters( page ) {
 		requests: 0,
 		requestBytes: 0,
 		responseBytes: 0,
-		// Data-plane requests only (/updates, /sse) — `requests` also
+		// Data-plane requests only (/updates) — `requests` also
 		// counts auxiliary routes like /ws-token, whose retry loop must
 		// not read as a live session.
 		dataRequests: 0,
-		sseRequests: 0,
-		sseStreams: 0,
-		sseBytesReceived: 0,
-		// What the last stream slept on, from the X-WP-Sync-SSE-Wait
-		// response header: redis | version-cache | version-table | reads.
-		sseWait: null,
 		wsSyncFramesSent: 0,
 		wsSyncFramesReceived: 0,
 		wsFramesSent: 0,
@@ -102,9 +96,6 @@ export function attachCounters( page ) {
 		}
 		c.requests += 1;
 		c.requestBytes += request.postDataBuffer()?.length ?? 0;
-		if ( url.includes( '/sse' ) ) {
-			c.sseRequests += 1;
-		}
 		if ( url.includes( '/updates' ) ) {
 			c.dataRequests += 1;
 		}
@@ -112,9 +103,6 @@ export function attachCounters( page ) {
 	page.on( 'response', async ( response ) => {
 		if ( ! isSync( response.url() ) && ! isCommit( response.request() ) ) {
 			return;
-		}
-		if ( decoded( response.url() ).includes( '/sse' ) ) {
-			return; // Count streamed bytes through CDP as they arrive.
 		}
 		try {
 			c.responseBytes += ( await response.body() ).length;
@@ -145,53 +133,7 @@ export function attachCounters( page ) {
 			c.wsBytesReceived += frameBytes( frame );
 		} );
 	} );
-	// Fetch-based SSE responses do not finish until the stream closes.
-	// Chromium reports received bytes while the response is still open.
-	const ready = page
-		.context()
-		.newCDPSession( page )
-		.then( async ( session ) => {
-			const streams = new Set();
-			session.on(
-				'Network.responseReceived',
-				( { requestId, response } ) => {
-					if (
-						decoded( response.url ).includes( '/wp-sync/v1/sse' ) &&
-						response.status === 200 &&
-						response.mimeType === 'text/event-stream'
-					) {
-						streams.add( requestId );
-						c.sseStreams++;
-						for ( const [ name, value ] of Object.entries(
-							response.headers ?? {}
-						) ) {
-							if ( 'x-wp-sync-sse-wait' === name.toLowerCase() ) {
-								c.sseWait = value;
-							}
-						}
-					}
-				}
-			);
-			session.on(
-				'Network.dataReceived',
-				( { requestId, dataLength } ) => {
-					if ( streams.has( requestId ) ) {
-						c.sseBytesReceived += dataLength;
-						c.responseBytes += dataLength;
-					}
-				}
-			);
-			for ( const event of [
-				'Network.loadingFinished',
-				'Network.loadingFailed',
-			] ) {
-				session.on( event, ( { requestId } ) =>
-					streams.delete( requestId )
-				);
-			}
-			await session.send( 'Network.enable' );
-		} );
-	return { ready, snapshot: () => ( { ...c } ) };
+	return { snapshot: () => ( { ...c } ) };
 }
 
 /**
@@ -272,7 +214,7 @@ export async function dismissWelcomeGuide( page ) {
  * @return {string} Transport slug.
  */
 export function deliveryTransport( delivery ) {
-	if ( delivery === 'sse' || delivery === 'websocket' ) {
+	if ( delivery === 'websocket' ) {
 		return delivery;
 	}
 	return 'http-polling';
@@ -288,7 +230,7 @@ function transportDelivery( transport ) {
 	if ( transport === 'http-polling' ) {
 		return 'polling';
 	}
-	if ( transport === 'sse' || transport === 'websocket' ) {
+	if ( transport === 'websocket' ) {
 		return transport;
 	}
 	throw new Error( `Unknown transport: ${ transport }` );
@@ -675,7 +617,7 @@ export async function collectServerSide( rest ) {
 
 /**
  * Waits until a window's sync session is live — gated on DATA-PLANE
- * traffic only (/updates POSTs, stream bytes, or socket frames). Auxiliary
+ * traffic only (/updates POSTs or socket frames). Auxiliary
  * requests must not count: a dead websocket setup retries /ws-token
  * forever, which would read as "live".
  *
@@ -689,7 +631,6 @@ export async function waitForSyncTraffic( page, counters, label ) {
 		const c = counters.snapshot();
 		return (
 			c.dataRequests >= 2 ||
-			( c.sseStreams > 0 && c.sseBytesReceived > 0 ) ||
 			c.wsSyncFramesSent + c.wsSyncFramesReceived >= 2
 		);
 	};
@@ -705,18 +646,6 @@ export async function waitForSyncTraffic( page, counters, label ) {
 		}
 		await page.waitForTimeout( 250 );
 	}
-}
-
-/**
- * What the SSE streams a counter set saw slept on, from the response
- * header the transport sends: redis, version-cache, version-table, reads,
- * or 'none' when no stream was seen.
- *
- * @param {Object} counters Counter handle.
- * @return {string} Observed wait kind.
- */
-export function observeSseWait( counters ) {
-	return counters.snapshot().sseWait ?? 'none';
 }
 
 const REPO_ROOT = nodePath.resolve(
@@ -985,9 +914,6 @@ function setHostCache( config, cache ) {
  */
 export function observeTransport( counters ) {
 	const c = counters.snapshot();
-	if ( c.sseStreams > 0 && c.sseBytesReceived > 0 ) {
-		return 'sse';
-	}
 	if ( c.wsSyncFramesSent + c.wsSyncFramesReceived > 0 ) {
 		return 'websocket';
 	}

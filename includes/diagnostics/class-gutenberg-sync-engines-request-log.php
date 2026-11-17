@@ -266,7 +266,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 				if ( ! headers_sent() ) {
 					header( 'X-RTC-Request-ID: ' . $request_id );
 				}
-				add_action( 'gutenberg_sync_engines_sse_checkpoint', array( __CLASS__, 'sample_timeline' ) );
 			}
 			register_shutdown_function( array( __CLASS__, 'flush_whole_request' ) );
 			register_shutdown_function( array( $this, 'decrement_concurrent' ) );
@@ -372,8 +371,11 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 		}
 
 		/**
-		 * Sample cumulative costs without database writes or stream frames.
-		 * Only the benchmark's opt-in header enables this hook.
+		 * Sample cumulative costs without database writes, as one more
+		 * point on the request's timeline. Does nothing unless the
+		 * benchmark's opt-in header asked for a timeline. Nothing in the
+		 * plugin calls this now. It stays for code that holds a request
+		 * open.
 		 */
 		public static function sample_timeline(): void {
 			if ( null === self::$whole || null === self::$whole['timeline'] ) {
@@ -421,7 +423,6 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 		 * @return void
 		 */
 		public static function reset_whole_request(): void {
-			remove_action( 'gutenberg_sync_engines_sse_checkpoint', array( __CLASS__, 'sample_timeline' ) );
 			self::$whole         = null;
 			self::$whole_flushed = false;
 		}
@@ -430,7 +431,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 		 * The database server's cumulative disk-I/O counters: InnoDB data
 		 * file reads/writes, redo/binlog-style fsyncs (the number that
 		 * dominates real-world burst IOPS — every write transaction forces
-		 * at least one), and buffer-pool read MISSES (reads that actually
+		 * at least one), and buffer-pool read misses (reads that actually
 		 * went to disk). Counters are SERVER-GLOBAL, so deltas between two
 		 * samples are trustworthy only when this site is the database's
 		 * only traffic — the host benchmark samples them at span
@@ -828,11 +829,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 				$engine = WP_Sync_Engine_Registry::DEFAULT_ENGINE;
 			}
 
-			$transport = false !== strpos( $request->get_route(), '/sse' )
-				? 'sse'
-				: 'http-polling';
-
-			return $engine . '/' . $transport;
+			return $engine . '/http-polling';
 		}
 
 		/**
@@ -1037,7 +1034,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 
 		/**
 		 * Decrements the concurrent-requests counter (shutdown handler, so
-		 * held SSE streams count for their full length).
+		 * a request counts for its full length).
 		 *
 		 * @since 0.4.0
 		 *

@@ -20,9 +20,8 @@ them meaning. The intent-log vocabulary itself is in
 The sync daemon (`wp collaboration sync-server`, port 8787 by default)
 serves the WebSocket (the browser offers `Sec-WebSocket-Protocol:
 wp-sync, wp-sync-token.<token>`; the daemon echoes `wp-sync`) and
-`GET /health`. The daemon also still holds code that answers a plain
-POST with an event stream. It is an unused leftover: no transport
-opens such a stream.
+`GET /health`. It answers 400 to any other request that does not ask
+to upgrade to a WebSocket.
 
 ## The room envelope
 
@@ -34,7 +33,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 { "rooms": [ { "room": "postType/post:123", "client_id": 12345, "after": 987654,
                "engine": "intent-log", "engine_protocol": 2, "awareness": {},
                "updates": [ { "type": "intent", "data": "…" } ],
-               "presence_token": "…", "rows_received_separately": false, "debug": false } ],
+               "presence_token": "…", "debug": false } ],
   "advisory": { "seq": 7 } }
 ```
 
@@ -58,7 +57,6 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `requires-unfiltered-html`, `resync-required`. |
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |
-| `rows_received_separately` | An unused leftover, always `false`. When `true`, the server stores the updates and answers with the verdicts but no rows. Nothing sets it now. |
 | `advisory` | The advisory channel's discovery probe, answered beside the rooms. |
 | `debug` / `_debug` | Asks for the engine's diagnostics, served when the `wp_sync_debug_enabled` filter allows (default `SCRIPT_DEBUG`). |
 

@@ -282,7 +282,7 @@ describe( 'advisory channel over the websocket link', () => {
 		] );
 	} );
 
-	it( 'reconnects with backoff after a drop and replays its presence; stays closed while the transport disables it', async () => {
+	it( 'reconnects with backoff after a drop and replays its presence', async () => {
 		settings();
 		const coverage = jest.fn();
 		channel.onAdvisoryCoverageChanged( coverage );
@@ -326,32 +326,20 @@ describe( 'advisory channel over the websocket link', () => {
 			},
 		] );
 
-		// A stream transport switches the channel off: the socket closes and
-		// nothing reconnects; switching it back on reconnects at once.
-		channel.setAdvisoryDisabledByTransport( true );
-		expect( second.readyState ).toBe( 3 );
-		expect( channel.isAdvisoryActive() ).toBe( false );
-		await jest.advanceTimersByTimeAsync( 60000 );
-		expect( FakeWebSocket.instances ).toHaveLength( 2 );
-		channel.setAdvisoryDisabledByTransport( false );
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( FakeWebSocket.instances ).toHaveLength( 3 );
-
 		// The tab going away closes the socket at once (the daemon drops
 		// it from the rosters); a tab restored from the back-forward cache
 		// comes back on the pending retry.
-		FakeWebSocket.instances[ 2 ].open();
 		window.dispatchEvent( new Event( 'pagehide' ) );
-		expect( FakeWebSocket.instances[ 2 ].readyState ).toBe( 3 );
+		expect( second.readyState ).toBe( 3 );
 		await jest.advanceTimersByTimeAsync( 1000 );
-		expect( FakeWebSocket.instances ).toHaveLength( 4 );
+		expect( FakeWebSocket.instances ).toHaveLength( 3 );
 
 		// Stopping says goodbye by closing the socket, for good.
-		FakeWebSocket.instances[ 3 ].open();
+		FakeWebSocket.instances[ 2 ].open();
 		channel.stopAdvisoryChannel();
-		expect( FakeWebSocket.instances[ 3 ].readyState ).toBe( 3 );
+		expect( FakeWebSocket.instances[ 2 ].readyState ).toBe( 3 );
 		await jest.advanceTimersByTimeAsync( 60000 );
-		expect( FakeWebSocket.instances ).toHaveLength( 4 );
+		expect( FakeWebSocket.instances ).toHaveLength( 3 );
 	} );
 
 	it( 'retries when the token cannot be fetched', async () => {

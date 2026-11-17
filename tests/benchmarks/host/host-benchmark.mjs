@@ -36,7 +36,7 @@
  * memory, concurrency. Because the mu-plugin works with the plugin
  * DEACTIVATED, the baseline phase gets real server-side numbers too,
  * so CPU, worker share, and memory are true baseline/sync/delta
- * comparisons. Opt-in timelines divide open-stream costs across phases
+ * comparisons. Opt-in timelines divide a request's costs across phases
  * with explicit sample and clock bounds. Missing timelines and WebSocket
  * process costs remain unavailable. Raw rows and samples remain in JSON.
  *
@@ -112,7 +112,6 @@ import {
 	ensureCollaborationEnabled,
 	login,
 	makeRestClient,
-	observeSseWait,
 	observeTransport,
 	parseCliOptions,
 	restoreHostCache,
@@ -363,17 +362,13 @@ async function installGlobalTagging(
 			const requestPath =
 				url.searchParams.get( 'rest_route' ) || url.pathname;
 			requests.set( id, { path: requestPath, scenario: tag.scenario } );
-			// Streams opened during setup can cross a measured period. Other
-			// setup requests use the MU response header: load-scripts.php and
+			// Setup requests use the MU response header: load-scripts.php and
 			// load-styles.php do not boot plugins and finish before measurement.
 			const phpRoute =
 				url.pathname.endsWith( '.php' ) ||
 				url.pathname.includes( '/wp-json/' ) ||
 				url.searchParams.has( 'rest_route' );
-			if (
-				requestPath.includes( '/wp-sync/v1/sse' ) ||
-				( tag.scenario.startsWith( 'host-' ) && phpRoute )
-			) {
+			if ( tag.scenario.startsWith( 'host-' ) && phpRoute ) {
 				expected.add( id );
 			}
 			await route.continue( {
@@ -689,7 +684,6 @@ async function openEditorWindow( context, measured, postId, index ) {
 	} );
 	const sync = attachCounters( page );
 	const all = attachAllTrafficCounters( page, () => sync.snapshot() );
-	await sync.ready;
 	await page.goto(
 		`${ BASE }/wp-admin/post.php?post=${ postId }&action=edit`
 	);
@@ -1881,36 +1875,23 @@ async function main() {
 			await waitForSyncTraffic( win.page, win.sync, String( index ) );
 			wins.push( win );
 		}
-		// Polling carries the initial join even when SSE is selected. Wait
-		// for the selected receive transport after all peers have joined.
-		// A solo SSE editor may correctly remain quiet without a stream.
-		let observed = observeTransport( wins[ 0 ].sync );
+		// Polling carries the initial join even when WebSocket is selected.
+		// Wait for the selected transport after all peers have joined.
 		const selectedTransport = originalSettings.active.transport;
-		if (
-			! (
-				WINDOWS === 1 &&
-				[ 'sse', 'sse-daemon' ].includes( selectedTransport )
+		const deadline = Date.now() + 45000;
+		while (
+			wins.some(
+				( win ) => observeTransport( win.sync ) !== selectedTransport
 			)
 		) {
-			const deadline = Date.now() + 45000;
-			while (
-				wins.some(
-					( win ) =>
-						observeTransport( win.sync ) !==
-						( selectedTransport === 'sse-daemon'
-							? 'sse'
-							: selectedTransport )
-				)
-			) {
-				if ( Date.now() >= deadline ) {
-					throw new Error(
-						`selected transport "${ selectedTransport }" did not become active in every editor`
-					);
-				}
-				await wins[ 0 ].page.waitForTimeout( 250 );
+			if ( Date.now() >= deadline ) {
+				throw new Error(
+					`selected transport "${ selectedTransport }" did not become active in every editor`
+				);
 			}
-			observed = observeTransport( wins[ 0 ].sync );
+			await wins[ 0 ].page.waitForTimeout( 250 );
 		}
+		let observed = observeTransport( wins[ 0 ].sync );
 
 		let phase;
 		try {
@@ -1950,7 +1931,6 @@ async function main() {
 			const edited = phase.perWindow[ win.index ].editing.sync;
 			if (
 				0 === edited.dataRequests &&
-				0 === edited.sseBytesReceived &&
 				0 === edited.wsSyncFramesSent + edited.wsSyncFramesReceived
 			) {
 				throw new Error(
@@ -1977,8 +1957,7 @@ async function main() {
 			.catch( () => null );
 
 		// ---------------- Collect and report ----------------------------
-		// A closed browser stream can occupy PHP until its next write notices
-		// the disconnect. Wait for every tagged PHP request's shutdown row.
+		// Wait for every tagged PHP request's shutdown row.
 		let serverRows = [];
 		const collectionDeadline = Date.now() + 20000;
 		while ( true ) {
@@ -2041,12 +2020,7 @@ async function main() {
 
 		const coverageLimits = serverCoverageLimits( {
 			muMeasurement: muPresent,
-			timeline: Boolean( timeline ),
-			transport: wins.some(
-				( win ) => win.sync.snapshot().sseStreams > 0
-			)
-				? 'sse'
-				: observed,
+			transport: observed,
 			sockets: wins.some( ( win ) => {
 				const counters = win.sync.snapshot();
 				return counters.wsFramesSent + counters.wsFramesReceived > 0;
@@ -2090,7 +2064,7 @@ async function main() {
 					: null,
 				serverCoverageLimits: coverageLimits,
 				traffic:
-					'HTTP body, SSE, and WebSocket payload bytes; excludes headers, protocol overhead, compression effects, and WebRTC.',
+					'HTTP body and WebSocket payload bytes; excludes headers, protocol overhead, compression effects, and WebRTC.',
 			},
 			environment: {
 				date: new Date().toISOString(),
@@ -2118,7 +2092,6 @@ async function main() {
 			engine: {
 				engine,
 				transport: observed,
-				sseWait: observeSseWait( wins[ 0 ].sync ),
 				postId: post,
 				roomSize,
 				...summarize(

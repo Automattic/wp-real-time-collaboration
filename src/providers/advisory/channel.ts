@@ -46,7 +46,6 @@ export type { PresenceEntry } from './link';
 const PRESENCE_SEND_INTERVAL_MS = 250;
 
 let started = false;
-let disabledByTransport = false;
 let link: AdvisoryLink | null = null;
 let localWriteSubscribed = false;
 const presence: Map< string, Map< number, unknown > > = new Map();
@@ -76,16 +75,12 @@ function selectLink(): AdvisoryLink {
 
 /**
  * Whether the channel is running and allowed to connect: started by a
- * transport, not disabled by the active transport, and its link has what
- * it needs on this page and has not stood itself down.
+ * transport, and its link has what it needs on this page and has not
+ * stood itself down.
  */
 export function isAdvisoryActive(): boolean {
 	return (
-		started &&
-		! disabledByTransport &&
-		null !== link &&
-		link.isAvailable() &&
-		! link.isStoodDown()
+		started && null !== link && link.isAvailable() && ! link.isStoodDown()
 	);
 }
 
@@ -184,7 +179,6 @@ export function startAdvisoryChannel(): void {
 	}
 	window.addEventListener( 'pagehide', onPageHide );
 	presenceTimer = setInterval( sendPresenceTick, PRESENCE_SEND_INTERVAL_MS );
-	link.setSuspended( disabledByTransport );
 	link.start( host );
 }
 
@@ -205,24 +199,6 @@ export function stopAdvisoryChannel(): void {
 	presence.clear();
 	lastSentPresence.clear();
 	emitCoverage();
-}
-
-/**
- * The active transport's switch. A transport that delivers its own wake
- * signal (SSE's open stream) turns the channel off while it is
- * connected; the request is honored only while the transport says it is
- * connected, and turning it back on reconnects.
- *
- * @param disabled Whether the transport wants the channel off.
- */
-export function setAdvisoryDisabledByTransport( disabled: boolean ): void {
-	if ( disabled === disabledByTransport ) {
-		return;
-	}
-	disabledByTransport = disabled;
-	if ( started && link ) {
-		link.setSuspended( disabled );
-	}
 }
 
 /**
@@ -297,7 +273,7 @@ export function onAdvisoryPresence( callback: ( room: string ) => void ): void {
 
 /**
  * Registers a listener for coverage changes (a peer connected, dropped,
- * said hello, or the channel was switched off or on).
+ * said hello, or the channel stopped).
  *
  * @param callback Called on every change.
  */
@@ -312,7 +288,6 @@ export function getAdvisoryDebugState(): Record< string, unknown > {
 	return {
 		active: isAdvisoryActive(),
 		started,
-		disabledByTransport,
 		channel: getAdvisoryChannelSlug(),
 		token: getPresenceToken(),
 		peers: [],
@@ -336,7 +311,6 @@ export function resetAdvisoryChannelForTesting(): void {
 	started = false;
 	link = null;
 	localWriteSubscribed = false;
-	disabledByTransport = false;
 	presence.clear();
 	lastSentPresence.clear();
 	presenceSource = null;

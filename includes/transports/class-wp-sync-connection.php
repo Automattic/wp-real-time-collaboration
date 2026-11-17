@@ -14,14 +14,11 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 	 *
 	 * This is the socket half of a connection: the stream, the read and
 	 * write buffers, and generic HTTP request parsing. Everything that
-	 * differs between the framings the daemon serves — what a completed
-	 * handshake looks like, what an inbound message is, how a payload
-	 * reaches the browser, how a keepalive is written — belongs to the
-	 * subclass, so the daemon can hold either in one `$clients` table and
-	 * fan out to both through the same call sites.
+	 * depends on the wire format (what a completed handshake looks like,
+	 * what an inbound message is, how a payload reaches the browser, how
+	 * a keepalive is written) is in the subclass.
 	 *
-	 * The subclasses are WP_WebSocket_Connection (RFC 6455) and
-	 * WP_Sse_Connection (a chunked `text/event-stream` response).
+	 * The one subclass is WP_WebSocket_Connection (RFC 6455).
 	 *
 	 * @since n.e.x.t
 	 * @access private
@@ -132,39 +129,6 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		}
 
 		/**
-		 * The request body, for a framing that carries one.
-		 *
-		 * A socket carries its first message as a frame and has none; a
-		 * receive stream carries its whole room envelope in the body and
-		 * never frames anything. Defaults to none so the daemon can ask
-		 * either framing without caring which it holds.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @return string Request body, or '' when the framing has none.
-		 */
-		public function request_body(): string {
-			return '';
-		}
-
-		/**
-		 * Whether the client ever sends another message on this connection.
-		 *
-		 * A socket answers the daemon's pings, so its silence is evidence it
-		 * has gone. A receive stream writes its request and then nothing, so
-		 * silence carries no information about it at all: it is live until
-		 * the socket stops taking writes, which flush_writes() establishes
-		 * by closing the connection the moment a write fails.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @return bool True when the client sends messages.
-		 */
-		public function sends_messages(): bool {
-			return true;
-		}
-
-		/**
 		 * Marks the framing handshake complete.
 		 *
 		 * @since n.e.x.t
@@ -204,8 +168,7 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		 * Bytes read from the socket but not yet consumed.
 		 *
 		 * The request head is stripped as it is parsed, so whatever follows
-		 * it — a request body, or a client that pipelined early — is what
-		 * this returns.
+		 * it (the client's first frames) is what this returns.
 		 *
 		 * @since n.e.x.t
 		 *
@@ -237,8 +200,8 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		/**
 		 * Attempts to parse a complete HTTP request head from the buffer.
 		 *
-		 * The head ends at the blank line; a body, where the framing has
-		 * one, stays buffered for that framing to read.
+		 * The head ends at the blank line; what follows it stays buffered
+		 * for the framing to read.
 		 *
 		 * @since n.e.x.t
 		 *
@@ -297,23 +260,8 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		}
 
 		/**
-		 * Takes over bytes another connection already read from this socket.
-		 *
-		 * The daemon does not know which framing a request uses until it has
-		 * read the head, so it hands the remainder to the framing that turns
-		 * out to be right.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @param string $bytes Bytes read from the socket, not yet consumed.
-		 */
-		public function adopt_buffered_bytes( string $bytes ): void {
-			$this->read_buffer = $bytes;
-		}
-
-		/**
-		 * Sends a complete plain HTTP response, for pre-handshake answers on
-		 * any framing: a health check, a rejection.
+		 * Sends a complete plain HTTP response, for answers given before
+		 * the handshake: a health check, a rejection.
 		 *
 		 * @since n.e.x.t
 		 *
@@ -333,36 +281,10 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		}
 
 		/**
-		 * Answers a CORS preflight and stops there.
-		 *
-		 * A cross-origin stream carrying an Authorization header is
-		 * preflighted by the browser, and the preflight is a bare OPTIONS
-		 * with no body — nothing in the framing would consume it.
-		 *
-		 * @since n.e.x.t
-		 *
-		 * @param string $cors_headers The CORS header block, ending in a
-		 *                             blank line, or '' to refuse.
-		 */
-		public function queue_cors_response( string $cors_headers ): void {
-			$status = '' === $cors_headers ? '403 Forbidden' : '204 No Content';
-			$body   = '' === $cors_headers ? 'Forbidden' : '';
-
-			$response = 'HTTP/1.1 ' . $status . "\r\n"
-				. $cors_headers
-				. 'Content-Length: ' . strlen( $body ) . "\r\n"
-				. "Connection: close\r\n\r\n"
-				. $body;
-
-			$this->queue_write( $response );
-		}
-
-		/**
 		 * Writes a liveness probe in this framing.
 		 *
-		 * The daemon calls this on its ping tick whatever the framing is, so
-		 * the name is the generic one; each framing writes the bytes its own
-		 * protocol uses for it.
+		 * The daemon calls this on its ping tick. The name is the generic
+		 * one; the framing writes the bytes its own protocol uses for it.
 		 *
 		 * @since n.e.x.t
 		 */
@@ -440,10 +362,7 @@ if ( ! class_exists( 'WP_Sync_Connection' ) ) {
 		 * @param array $request Parsed request head.
 		 * @param array $context Framing context, for values the daemon has
 		 *                       already resolved from the request.
-		 * @return true|null|WP_Error True once the connection is open, null when
-		 *                           the request is not yet complete and the daemon
-		 *                           should call again once more bytes arrive,
-		 *                           WP_Error to reject it.
+		 * @return true True once the connection is open.
 		 */
 		abstract public function accept_request( array $request, array $context = array() );
 

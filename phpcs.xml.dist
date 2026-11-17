@@ -52,8 +52,6 @@
 		<exclude-pattern>/tests/*</exclude-pattern>
 		<exclude-pattern>/includes/transports/websocket/*</exclude-pattern>
 		<exclude-pattern>/includes/transports/class-wp-sync-connection.php</exclude-pattern>
-		<exclude-pattern>/includes/transports/sse/class-wp-sync-sse-connection.php</exclude-pattern>
-		<exclude-pattern>/includes/transports/sse/class-wp-sync-redis.php</exclude-pattern>
 	</rule>
 
 	<!-- Test fixtures and benchmark profiles colocate small helper

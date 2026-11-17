@@ -82,7 +82,6 @@ import {
 	kb,
 	login,
 	makeRestClient,
-	observeSseWait,
 	observeTransport,
 	parseCliOptions,
 	percentile,
@@ -149,7 +148,6 @@ async function main() {
 		const contextB = contextA;
 
 		const countersA = attachCounters( pageA );
-		await countersA.ready;
 
 		// Window A creates a fresh post.
 		await pageA.goto( `${ BASE }/wp-admin/post-new.php` );
@@ -220,7 +218,6 @@ async function main() {
 		}
 
 		const countersB = attachCounters( pageB );
-		await countersB.ready;
 		for ( const [ key, page ] of [
 			[ 'a', pageA ],
 			[ 'b', pageB ],
@@ -573,7 +570,6 @@ async function main() {
 				transportRequested: settings.active.transport,
 				transportObserved: observedTransport,
 				cache: CACHE,
-				sseWaitObserved: observeSseWait( countersA ),
 				trials: TRIALS,
 				warmup: WARMUP,
 				idleSeconds: IDLE_SECONDS,
