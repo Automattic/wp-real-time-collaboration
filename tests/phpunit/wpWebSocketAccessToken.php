@@ -250,6 +250,40 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 		$this->assertSame( 403, $this->dispatch( array() )->get_status() );
 	}
 
+	/**
+	 * The daemon reads the credential from one place: the
+	 * Sec-WebSocket-Protocol offer, the only handshake header a web page
+	 * can set. A valid token in an Authorization header is not looked at.
+	 */
+	public function test_the_daemon_ignores_a_token_in_an_authorization_header() {
+		$server = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() ), '127.0.0.1', 8797 );
+		$auth   = new ReflectionMethod( WP_WebSocket_Sync_Server::class, 'authenticate_handshake' );
+		$auth->setAccessible( true );
+		$origin = wp_parse_url( home_url() );
+		$origin = $origin['scheme'] . '://' . $origin['host'] . ( isset( $origin['port'] ) ? ':' . $origin['port'] : '' );
+
+		$access_token = WP_WebSocket_Access_Token::mint( self::$editor_id, WP_WebSocket_Access_Token::grants( $this->room() ) );
+
+		$refused = $auth->invoke(
+			$server,
+			array(
+				'headers' => array(
+					'origin'                 => $origin,
+					'sec-websocket-protocol' => 'wp-sync',
+					'authorization'          => 'Bearer ' . $access_token,
+				),
+				'method'  => 'GET',
+				'path'    => '/',
+				'query'   => array(),
+			)
+		);
+
+		// With no token found, the daemon falls back to the login cookie,
+		// and this request has none.
+		$this->assertWPError( $refused );
+		$this->assertSame( 'websocket_invalid_cookie', $refused->get_error_code() );
+	}
+
 	public function test_the_daemon_accepts_a_access_token_without_a_cookie_and_keeps_the_socket_through_revalidation() {
 		$storage = new WP_Sync_Table_Storage();
 		$server  = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( $storage ), '127.0.0.1', 8797 );

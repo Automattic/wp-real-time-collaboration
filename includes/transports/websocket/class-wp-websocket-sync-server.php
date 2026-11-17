@@ -868,19 +868,6 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 				}
 			}
 
-			/*
-			 * A client that is not a browser can set an Authorization
-			 * header on its upgrade request, so that is the second place
-			 * the credential may arrive from. The token is the same
-			 * short-lived, single-purpose one.
-			 */
-			if ( '' === $token ) {
-				$authorization = (string) ( $headers['authorization'] ?? '' );
-				if ( 0 === stripos( $authorization, 'bearer ' ) ) {
-					$token = trim( substr( $authorization, 7 ) );
-				}
-			}
-
 			$cookie_header = $headers['cookie'] ?? '';
 			$cookie_value  = $this->get_cookie_value( $cookie_header, LOGGED_IN_COOKIE );
 
