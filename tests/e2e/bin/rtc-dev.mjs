@@ -140,12 +140,6 @@ function runWpCli( wpArgs, { allowFailure = false, configFile = null } = {} ) {
 }
 
 /**
- * Turns real-time collaboration on. Since WordPress/gutenberg#80658 the
- * framework gates RTC on the `gutenberg-real-time-collaboration`
- * experiment rather than the old `wp_collaboration_enabled` option (which
- * Gutenberg now deletes on upgrade). Other experiments are left alone.
- */
-/**
  * Whether the site runs a persistent object cache (the drop-in loaded).
  *
  * @param {Object}      options            Options.
@@ -199,15 +193,17 @@ async function cacheMode() {
 	);
 }
 
-async function enableCollaborationExperiment( { configFile = null } = {} ) {
-	process.stdout.write( 'Enabling collaboration experiment... ' );
-	await runWpCli(
-		[
-			'eval',
-			"$experiments = get_option( 'gutenberg-experiments', array() ); $experiments['gutenberg-real-time-collaboration'] = true; update_option( 'gutenberg-experiments', $experiments );",
-		],
-		{ configFile }
-	);
+/**
+ * Turns real-time collaboration on, through the plugin's own setting.
+ *
+ * @param {Object}      [options]            Options.
+ * @param {string|null} [options.configFile] The wp-env config to use.
+ */
+async function enableCollaboration( { configFile = null } = {} ) {
+	process.stdout.write( 'Switching collaboration on... ' );
+	await runWpCli( [ 'option', 'update', 'wp_rtc_enabled', '1' ], {
+		configFile,
+	} );
 	process.stdout.write( 'done\n' );
 }
 
@@ -441,7 +437,7 @@ async function runWebSocketsMode( mode ) {
 		const transport = 'websocket';
 
 		process.stdout.write( `Selecting the ${ transport } transport... ` );
-		await enableCollaborationExperiment();
+		await enableCollaboration();
 		await runWpCli( [ 'option', 'update', TRANSPORT_OPTION, transport ] );
 		process.stdout.write( 'done\n' );
 	}
@@ -555,7 +551,7 @@ async function runHttpMode() {
 	await runWpCli( [ 'option', 'update', TRANSPORT_OPTION, 'http-polling' ] );
 	process.stdout.write( 'done\n' );
 
-	await enableCollaborationExperiment();
+	await enableCollaboration();
 
 	process.stdout.write( 'Stopping the websocket daemon (if running)... ' );
 	spawnSync( 'docker', [ 'rm', '-f', DAEMON_CONTAINER_NAME ], {
@@ -730,7 +726,7 @@ async function runDoctorMode() {
 		const options = await runWpCli(
 			[
 				'eval',
-				"echo gutenberg_is_experiment_enabled( 'gutenberg-real-time-collaboration' ) ? '1' : '';",
+				"echo function_exists( 'wp_rtc_is_collaboration_enabled' ) && wp_rtc_is_collaboration_enabled() ? '1' : '';",
 			],
 			{ configFile, allowFailure: true }
 		);

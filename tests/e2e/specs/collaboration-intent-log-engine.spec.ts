@@ -797,6 +797,65 @@ test.describe( 'Collaboration - intent-log engine @engine-intent-log', () => {
 		}
 	} );
 
+	/*
+	 * Two people each type in their own paragraph at the same moment. The
+	 * edits do not touch each other, so no review card should appear. An
+	 * edit names only what changed, so neither tab writes the paragraphs'
+	 * default attribute values (a paragraph's `dropCap: false`), which the
+	 * server's first copy of the post leaves out. Two tabs writing the
+	 * same default would each be set aside for review.
+	 */
+	test( 'two people typing in their own paragraphs get no review card', async ( {
+		collaborationUtils,
+		requestUtils,
+		editor,
+		page,
+	} ) => {
+		const post = await requestUtils.createPost( {
+			title: 'Own paragraphs',
+			status: 'draft',
+			content:
+				'<!-- wp:paragraph -->\n<p>Alice:</p>\n<!-- /wp:paragraph -->\n\n<!-- wp:paragraph -->\n<p>Bob:</p>\n<!-- /wp:paragraph -->',
+			date_gmt: new Date().toISOString(),
+		} );
+
+		await collaborationUtils.openCollaborativeSession( post.id );
+		const { editor2, page2 } = collaborationUtils;
+
+		await editor.canvas
+			.getByRole( 'document', { name: 'Block: Paragraph' } )
+			.nth( 0 )
+			.click();
+		await editor2.canvas
+			.getByRole( 'document', { name: 'Block: Paragraph' } )
+			.nth( 1 )
+			.click();
+		await page.keyboard.press( 'End' );
+		await page2.keyboard.press( 'End' );
+
+		// Both first edits leave before either tab hears of the other.
+		await Promise.all( [
+			page.keyboard.type( ' one' ),
+			page2.keyboard.type( ' two' ),
+		] );
+
+		// Both words reach both editors.
+		for ( const canvas of [ editor.canvas, editor2.canvas ] ) {
+			await expect( canvas.getByText( 'Alice: one' ) ).toBeVisible( {
+				timeout: 15000,
+			} );
+			await expect( canvas.getByText( 'Bob: two' ) ).toBeVisible( {
+				timeout: 15000,
+			} );
+		}
+
+		// Give a set-aside edit time to show its card.
+		await page.waitForTimeout( 3000 );
+		for ( const canvas of [ editor.canvas, editor2.canvas ] ) {
+			await expect( canvas.getByText( CONFLICT_CARD ) ).toHaveCount( 0 );
+		}
+	} );
+
 	test( 'concurrent same-paragraph edits surface a review card instead of silently merging', async ( {
 		collaborationUtils,
 		requestUtils,

@@ -46,7 +46,7 @@
     "lint:php": "composer lint",
     "playground": "wp-playground-cli server --mount=.:/wordpress/wp-content/plugins/wp-real-time-collaboration --blueprint=blueprint.local.json --login --workers=1",
     "plugin-zip": "bash bin/build-plugin-zip.sh",
-    "preplayground": "test -f build/sync-engines.js -a -d gutenberg/build || { echo \"playground: build first (npm run build; cd gutenberg && npm install --ignore-scripts && npm run build)\" >&2; exit 1; }",
+    "preplayground": "test -f build/sync-engines.js -a -d gutenberg/build || { echo \"playground: build first (npm run build; cd gutenberg && npm ci --ignore-scripts && npm run build)\" >&2; exit 1; }",
     "pretest:e2e": "rimraf gutenberg/node_modules/@playwright/test gutenberg/node_modules/playwright",
     "pretest:e2e:websocket": "rimraf gutenberg/node_modules/@playwright/test gutenberg/node_modules/playwright",
     "redis:destroy": "REDIS_PROJECT=$(npm run --silent redis:project) && REDIS_NAME=\"$REDIS_PROJECT-redis\" && docker info >/dev/null && if docker container inspect \"$REDIS_NAME\" >/dev/null 2>&1; then docker rm -f \"$REDIS_NAME\"; fi",

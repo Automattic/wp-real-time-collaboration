@@ -35,7 +35,7 @@ rsync -a build/ "$DIST/build/"
 rsync -a --exclude vendor/ --exclude node_modules/ includes/ "$DIST/includes/"
 
 # The bundled Gutenberg plugin: the same file list Gutenberg's own release
-# zip ships (see gutenberg/bin/build-plugin-zip.sh), minus its non-public
+# zip ships (see gutenberg/tools/release/plugin-files.mts), minus its non-public
 # icon pruning (harmless extras).
 echo "Staging the bundled Gutenberg plugin..."
 mkdir -p "$DIST/gutenberg"

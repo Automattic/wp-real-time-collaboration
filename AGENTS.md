@@ -233,13 +233,14 @@ before a big change. A durable lesson from an issue goes here.
   so everything inside a dialog is wrapped in `ReviewSurface` or the
   cards render inside it. The rules and the engine's part:
   `docs/conflict-review.md`.
-- **The bundled Gutenberg carries changes on top of its pin**, listed
-  under `local_changes` in `gutenberg-pin.json`. One is that the editor
-  package exports its revision comparison (files under
-  `gutenberg/packages/editor/`, read through
-  `src/editor/lock-unlock.ts`). Apply them again when the folder is
-  replaced. A standalone Gutenberg lacks the export, so the review
-  dialogs check `hasBlockDiff` and `hasCodeDiff`
+- **A change made inside `gutenberg/` is listed under `local_changes`
+  in `gutenberg-pin.json`** until the Gutenberg branch has it too, and
+  must be applied again when the folder is replaced. The list is empty
+  when the copy equals the pinned commit.
+- **The review dialogs use the editor package's revision comparison**,
+  a private export that so far only this Gutenberg branch has (read
+  through `src/editor/lock-unlock.ts`). Another Gutenberg lacks it, so
+  the dialogs check `hasBlockDiff` and `hasCodeDiff`
   (`src/review/revisions-diff.ts`) and show a text comparison instead;
   a new use of those names needs the same check.
 - **The intent-log core is frozen: do not edit it casually.** The
@@ -310,10 +311,10 @@ before a big change. A durable lesson from an issue goes here.
 
 - **Some tests are expected failures on purpose.** Each states the
   correct behavior for a known defect and passes while the defect is
-  there: `tests/js/known-defects/` (`it.failing`),
+  there: `tests/js/known-defects/` (`it.failing`) and
   `tests/phpunit/wpIntentLogKnownDefects.php` (`assert_known_defect()`;
-  `RTC_KNOWN_DEFECTS_RAW=1` shows the real failures), and
-  `tests/e2e/specs/collaboration-known-defects.spec.ts` (`test.fail`).
+  `RTC_KNOWN_DEFECTS_RAW=1` shows the real failures). A defect that
+  only a browser can show gets a Playwright test marked `test.fail`.
   A fix turns its test red. Remove the marker then, not the test.
 - The WordPress Playwright helpers fall back to port 8889 and to this
   suite's saved login. A second Playwright setup in this repo must set

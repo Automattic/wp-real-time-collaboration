@@ -24,8 +24,8 @@ export const PASS = process.env.WP_PASSWORD ?? 'password';
 export const SETTINGS_PAGE =
 	'/wp-admin/options-general.php?page=gutenberg-sync-engines';
 
-// The Gutenberg experiment that turns real-time collaboration on.
-export const COLLABORATION_EXPERIMENT = 'gutenberg-real-time-collaboration';
+// The plugin's own setting that turns real-time collaboration on.
+export const COLLABORATION_SETTING = 'wp_rtc_enabled';
 
 /**
  * Parses bare `key=value` CLI tokens (the engine benchmark's convention).
@@ -318,11 +318,8 @@ export async function restoreSettings( page, previous ) {
 }
 
 /**
- * Ensures real-time collaboration is on, as the e2e fixtures do. Since
- * WordPress/gutenberg#80658 the framework gates RTC on the
- * `gutenberg-real-time-collaboration` experiment rather than a Settings →
- * Writing checkbox, so this flips that experiment through the REST
- * settings endpoint and leaves the other experiments alone.
+ * Ensures real-time collaboration is on, as the e2e fixtures do: through
+ * the plugin's own setting, over the REST settings endpoint.
  *
  * @param {import('@playwright/test').Page} page Logged-in admin page.
  */
@@ -330,28 +327,26 @@ export async function ensureCollaborationEnabled( page ) {
 	const rest = await makeRestClient( page );
 	if ( ! rest ) {
 		throw new Error(
-			'Could not obtain a REST nonce for the admin session, so the ' +
-				'collaboration experiment cannot be enabled.'
+			'Could not obtain a REST nonce for the admin session, so ' +
+				'collaboration cannot be switched on.'
 		);
 	}
 	const { status, data } = await rest.get( '/wp/v2/settings' );
 	if ( 200 !== status || ! data ) {
 		throw new Error(
-			`GET /wp/v2/settings returned ${ status }. Are the gutenberg and ` +
-				`wp-real-time-collaboration plugins active on ${ BASE }?`
+			`GET /wp/v2/settings returned ${ status }. Is the ` +
+				`wp-real-time-collaboration plugin active on ${ BASE }?`
 		);
 	}
-	const experiments = { ...( data[ 'gutenberg-experiments' ] || {} ) };
-	if ( experiments[ COLLABORATION_EXPERIMENT ] ) {
+	if ( data[ COLLABORATION_SETTING ] ) {
 		return;
 	}
-	experiments[ COLLABORATION_EXPERIMENT ] = true;
 	const updated = await rest.post( '/wp/v2/settings', {
-		body: { 'gutenberg-experiments': experiments },
+		body: { [ COLLABORATION_SETTING ]: true },
 	} );
 	if ( 200 !== updated.status ) {
 		throw new Error(
-			`Enabling the ${ COLLABORATION_EXPERIMENT } experiment failed ` +
+			`Switching ${ COLLABORATION_SETTING } on failed ` +
 				`(POST /wp/v2/settings returned ${ updated.status }).`
 		);
 	}

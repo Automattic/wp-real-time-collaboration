@@ -103,7 +103,7 @@ import { chromium } from '@playwright/test';
 
 import {
 	BASE,
-	COLLABORATION_EXPERIMENT,
+	COLLABORATION_SETTING,
 	attachCounters,
 	canvasOf,
 	configureHostCache,
@@ -1458,14 +1458,14 @@ async function main() {
 	let originalSettings = null;
 	let lastActive = null;
 	let deactivated = [];
-	let experimentWasOn = null;
+	let collaborationWasOn = null;
 	let originalPoll = 0;
 	let pollChanged = false;
 	let adminPage = null;
 	let rest = null;
 
 	// The run mutates real site state (plugin activation, the polling
-	// interval, engine/transport, the experiment). Restoring it must
+	// interval, engine/transport, the on/off switch). Restoring it must
 	// survive Ctrl+C, or an interrupted run leaves the site quietly
 	// misconfigured — a 25 s polling interval left behind, for example,
 	// makes every later measurement wrong while looking healthy.
@@ -1508,15 +1508,10 @@ async function main() {
 					)
 			);
 		}
-		if ( false === experimentWasOn && rest ) {
-			const current = await rest.get( '/wp/v2/settings' );
-			const experiments = {
-				...( current.data?.[ 'gutenberg-experiments' ] || {} ),
-			};
-			delete experiments[ COLLABORATION_EXPERIMENT ];
+		if ( false === collaborationWasOn && rest ) {
 			await rest
 				.post( '/wp/v2/settings', {
-					body: { 'gutenberg-experiments': experiments },
+					body: { [ COLLABORATION_SETTING ]: false },
 				} )
 				.catch( () => null );
 		}
@@ -1606,7 +1601,7 @@ async function main() {
 		}
 
 		// Choose the engine/transport up front (recording what to restore
-		// at the end), and whether the collaboration experiment was on.
+		// at the end), and whether collaboration was switched on.
 		originalSettings = await configureSettings(
 			adminPage,
 			ENGINE,
@@ -1615,10 +1610,8 @@ async function main() {
 		lastActive = originalSettings.active;
 		const engine = originalSettings.active.engine;
 		const settingsBefore = await rest.get( '/wp/v2/settings' );
-		experimentWasOn = Boolean(
-			settingsBefore.data?.[ 'gutenberg-experiments' ]?.[
-				COLLABORATION_EXPERIMENT
-			]
+		collaborationWasOn = Boolean(
+			settingsBefore.data?.[ COLLABORATION_SETTING ]
 		);
 		originalPoll = Number(
 			settingsBefore.data?.[ POLLING_INTERVAL_SETTING ] ?? 0

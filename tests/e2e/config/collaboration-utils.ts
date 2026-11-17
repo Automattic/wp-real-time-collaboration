@@ -57,7 +57,6 @@ export const SECOND_USER: UserCredentials = {
 };
 
 const BASE_URL = process.env.WP_BASE_URL || 'http://localhost:8889';
-const COLLABORATION_EXPERIMENT = 'gutenberg-real-time-collaboration';
 
 export default class CollaborationUtils {
 	private admin: Admin;
@@ -565,8 +564,9 @@ export default class CollaborationUtils {
 }
 
 /**
- * Set the real-time collaboration experiment without changing other
- * experiments.
+ * Switches real-time collaboration on or off through the plugin's own
+ * setting, the `wp_rtc_enabled` option. Gutenberg asks that setting
+ * through its `wp_is_collaboration_enabled` filter.
  *
  * @param requestUtils An instance of RequestUtils for making HTTP requests.
  * @param enabled      Whether to enable or disable collaboration.
@@ -575,25 +575,9 @@ export async function setCollaboration(
 	requestUtils: RequestUtils,
 	enabled: boolean
 ): Promise< void > {
-	const settings = await requestUtils.rest< {
-		'gutenberg-experiments'?: Record< string, boolean >;
-	} >( {
-		path: '/wp/v2/settings',
-		method: 'GET',
-	} );
-	const experiments = {
-		...( settings[ 'gutenberg-experiments' ] || {} ),
-	};
-
-	if ( enabled ) {
-		experiments[ COLLABORATION_EXPERIMENT ] = true;
-	} else {
-		delete experiments[ COLLABORATION_EXPERIMENT ];
-	}
-
 	await requestUtils.rest( {
 		path: '/wp/v2/settings',
 		method: 'POST',
-		data: { 'gutenberg-experiments': experiments },
+		data: { wp_rtc_enabled: enabled },
 	} );
 }
