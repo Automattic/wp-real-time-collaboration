@@ -6,6 +6,7 @@ import type { BlockSpec } from './intent-log/document.js';
 import { applyIntent } from './intent-log/reducer.js';
 import { mintSyncId } from './intent-log/sync-id.js';
 import { fieldToHtml, htmlToField } from './intent-log/rich-text.js';
+import { findTextChange } from '../editor/text-change';
 import type {
 	EngineBlock,
 	EngineDocument,
@@ -241,7 +242,7 @@ function isRichTextValue(
  * @param value Attribute value.
  * @return Serializable value.
  */
-function serializeAttribute( value: unknown ): unknown {
+export function serializeAttribute( value: unknown ): unknown {
 	if ( isRichTextValue( value ) ) {
 		return value.toHTMLString();
 	}
@@ -564,23 +565,16 @@ function textDelta(
 	before: string,
 	after: string
 ): { prefix: number; removed: string; inserted: string } {
-	let prefix = 0;
-	const maxPrefix = Math.min( before.length, after.length );
-	while ( prefix < maxPrefix && before[ prefix ] === after[ prefix ] ) {
-		prefix++;
-	}
-	let suffix = 0;
-	while (
-		suffix < Math.min( before.length, after.length ) - prefix &&
-		before[ before.length - 1 - suffix ] ===
-			after[ after.length - 1 - suffix ]
-	) {
-		suffix++;
+	// The shared comparison counts whole characters, so the middle never
+	// starts or ends inside a character that takes two units (an emoji).
+	const { change } = findTextChange( before, after );
+	if ( ! change ) {
+		return { prefix: before.length, removed: '', inserted: '' };
 	}
 	return {
-		prefix,
-		removed: before.slice( prefix, before.length - suffix ),
-		inserted: after.slice( prefix, after.length - suffix ),
+		prefix: change.start,
+		removed: change.removed,
+		inserted: change.inserted,
 	};
 }
 
@@ -646,7 +640,7 @@ function diffText(
  * @param field  Field name.
  * @return format_text intents.
  */
-function diffFormats(
+export function diffFormats(
 	before: EngineField,
 	after: EngineField,
 	syncId: string,

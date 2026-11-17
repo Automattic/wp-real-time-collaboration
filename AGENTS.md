@@ -40,8 +40,12 @@ shared editing session.
   `providers/{http-polling,websocket,advisory}/`,
   `awareness/`, `entity-sync/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`), `framework.ts`,
-  `editor/gutenberg-contract.ts` (every non-public thing the plugin
-  relies on from Gutenberg goes here), `debug/inspector.ts`.
+  `editor/` (`gutenberg-contract.ts`: every non-public thing the plugin
+  relies on from Gutenberg goes here; `capture.ts`, `identity.ts` and
+  `text-change.ts`: turn the edit batches of the newer Gutenberg sync
+  contract into engine edits, tested against
+  `tests/fixtures/edit-batches/` and not used by the editor yet),
+  `debug/inspector.ts`.
 - `gutenberg/` — a squashed Git subtree of Gutenberg, source only,
   pinned by `gutenberg-pin.json` (`commit`, `trunk`, and `tree`, which
   must equal `git rev-parse HEAD:gutenberg`). The plugin loads it when

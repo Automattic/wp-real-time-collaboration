@@ -28,6 +28,9 @@ a usage block in its header.
   sends for a fixed list of editor actions, into
   `tests/fixtures/edit-batches/`. It runs against its own scratch site.
   See `tests/tools/edit-batch-recorder/README.md`.
+- `print-edit-batches.mjs`: prints those recordings as one line per
+  batch, so a recording can be read without opening its JSON
+  (`node tests/tools/print-edit-batches.mjs typing emoji`).
 
 ## Typing by yourself in a second window
 

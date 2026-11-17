@@ -101,3 +101,119 @@ export interface PostEditorPresenceObject extends PresenceObject {
 	 * sent. Used in: src/awareness/channels/sync-channel.ts.
 	 */
 }
+
+/*
+ * Local edits. core-data hands the plugin every local edit as a batch of
+ * operations (`applyEditBatch`). The types below are copies of the ones in
+ * Gutenberg's `packages/blocks/src/types.ts` and
+ * `packages/core-data/src/entity-sync.ts`. Blocks are named by the editor's
+ * own `clientId`. A `null` parent is the top level, and a `null` `before`
+ * means "at the end".
+ */
+
+/** A block as the block editor holds it. */
+export interface EditorBlock {
+	clientId: string;
+	name: string;
+	attributes: Record< string, unknown >;
+	innerBlocks: EditorBlock[];
+	isValid?: boolean;
+	/** Markup pieces of a block whose content is not in an attribute. */
+	innerContent?: Array< string | null >;
+	originalContent?: string;
+}
+
+/** A new block, with its children, and where it goes. */
+export interface InsertOperation {
+	type: 'insert';
+	block: EditorBlock;
+	parent: string | null;
+	before: string | null;
+}
+
+/** A block that went away, with everything inside it. */
+export interface RemoveOperation {
+	type: 'remove';
+	clientId: string;
+}
+
+/** A block that changed place. */
+export interface MoveOperation {
+	type: 'move';
+	clientId: string;
+	parent: string | null;
+	before: string | null;
+}
+
+/** A change to something on the block other than an attribute. */
+export interface SetBlockPropertyOperation {
+	type: 'set-block-property';
+	clientId: string;
+	property: string;
+	previousValue: unknown;
+	value: unknown;
+}
+
+/**
+ * A change to one attribute. The values keep their in-memory types, so a
+ * text value can be a rich text object or a plain string of HTML.
+ */
+export interface SetAttributeOperation {
+	type: 'set-attribute';
+	clientId: string;
+	attribute: string;
+	previousValue: unknown;
+	value: unknown;
+}
+
+/** A change to a field of the record, such as the title. */
+export interface SetFieldOperation {
+	type: 'set-field';
+	field: string;
+	previousValue: unknown;
+	value: unknown;
+}
+
+/** A change to the blocks of a record. */
+export type BlockOperation =
+	| InsertOperation
+	| RemoveOperation
+	| MoveOperation
+	| SetBlockPropertyOperation
+	| SetAttributeOperation;
+
+/** Any change a batch can hold. */
+export type EditOperation = BlockOperation | SetFieldOperation;
+
+/**
+ * One end of the editor's selection. Any member can be missing: a
+ * selected block with no caret has only a `clientId`, and an empty object
+ * means no selection.
+ */
+export interface SelectionEnd {
+	clientId?: string;
+	attributeKey?: string;
+	offset?: number;
+}
+
+/**
+ * The editor's selection after a batch. core-data types it as `unknown`.
+ * This is the shape the block editor really sends.
+ */
+export interface EditorSelection {
+	selectionStart?: SelectionEnd;
+	selectionEnd?: SelectionEnd;
+	initialPosition?: number | null;
+}
+
+/** One local edit, as core-data hands it over before it stores it. */
+export interface EditBatch {
+	operations: EditOperation[];
+	options: {
+		/** True for the later keys of a typing run. */
+		isCached: boolean;
+		/** True when the batch must not become an undo step. */
+		undoIgnore: boolean;
+	};
+	selection?: EditorSelection;
+}
