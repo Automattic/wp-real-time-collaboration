@@ -7,10 +7,12 @@ import { describe, expect, it } from '@jest/globals';
  * Internal dependencies
  */
 import {
+	applyDerivedIntents,
 	blockToEngineSpec,
 	deriveIntents,
 	engineDocumentToBlocks,
 	type BridgeBlock,
+	type DerivedIntents,
 } from '../../../src/engines/intent-log-bridge';
 import {
 	createIntentLogSession,
@@ -41,6 +43,23 @@ const paragraph = (
 function docFromBlocks( blocks: BridgeBlock[] ): EngineDocument {
 	return createDocument(
 		blocks.map( ( block ) => blockToEngineSpec( block ) )
+	);
+}
+
+// The code editor's setting: a block without a known id may take over the
+// id of a document block with the same or similar text.
+const MATCH_BY_TEXT = { matchBlocksWithoutIds: true };
+
+/**
+ * The ids of the top-level blocks after the derived intents are applied.
+ *
+ * @param doc     The document the intents were derived against.
+ * @param derived The derived intents.
+ * @return The ids, in order.
+ */
+function resultIds( doc: EngineDocument, derived: DerivedIntents ): string[] {
+	return applyDerivedIntents( doc, derived.intents ).root.map(
+		( block ) => block.syncId
 	);
 }
 
@@ -286,8 +305,8 @@ describe( 'intent-log bridge', () => {
 				paragraph( 'p1', 'A' ),
 				paragraph( 'p1', 'A copy' ),
 			] )!;
-			expect( derived.specs[ 0 ].syncId ).toBe( 'p1' );
-			expect( derived.specs[ 1 ].syncId ).not.toBe( 'p1' );
+			expect( resultIds( doc, derived )[ 0 ] ).toBe( 'p1' );
+			expect( resultIds( doc, derived )[ 1 ] ).not.toBe( 'p1' );
 			expect( derived.intents ).toHaveLength( 1 );
 			expect( derived.intents[ 0 ].type ).toBe( 'insert_block' );
 			expect( derived.intents[ 0 ].payload.afterSiblingId ).toBe( 'p1' );
@@ -305,7 +324,7 @@ describe( 'intent-log bridge', () => {
 				paragraph( 'p1', 'World' ), // duplicate id from split
 				paragraph( 'p2', 'SecondBlock' ),
 			] )!;
-			const specIds = derived.specs.map( ( spec ) => spec.syncId );
+			const specIds = resultIds( doc, derived );
 			expect( specIds[ 0 ] ).toBe( 'p1' );
 			expect( specIds[ 2 ] ).toBe( 'p2' );
 			expect( specIds[ 1 ] ).not.toBe( 'p1' );
@@ -322,12 +341,16 @@ describe( 'intent-log bridge', () => {
 				paragraph( 'genesis-1', 'Alpha' ),
 				paragraph( 'genesis-2', 'Beta' ),
 			] );
-			const derived = deriveIntents( doc, [
-				paragraph( 'stamped-a', 'Alpha' ),
-				paragraph( 'stamped-b', 'Beta edited' ),
-			] )!;
-			expect( derived.specs[ 0 ].syncId ).toBe( 'genesis-1' );
-			expect( derived.specs[ 1 ].syncId ).toBe( 'genesis-2' );
+			const derived = deriveIntents(
+				doc,
+				[
+					paragraph( 'stamped-a', 'Alpha' ),
+					paragraph( 'stamped-b', 'Beta edited' ),
+				],
+				MATCH_BY_TEXT
+			)!;
+			expect( resultIds( doc, derived )[ 0 ] ).toBe( 'genesis-1' );
+			expect( resultIds( doc, derived )[ 1 ] ).toBe( 'genesis-2' );
 			expect( derived.intents.map( ( intent ) => intent.type ) ).toEqual(
 				[ 'insert_text' ]
 			);
@@ -415,14 +438,14 @@ describe( 'identity adoption under splits', () => {
 			attributes: { content },
 			innerBlocks: [],
 		} );
-		const derived = deriveIntents( doc, [
-			idless( 'Hello' ),
-			idless( 'World' ),
-			idless( 'SecondBlock' ),
-		] )!;
+		const derived = deriveIntents(
+			doc,
+			[ idless( 'Hello' ), idless( 'World' ), idless( 'SecondBlock' ) ],
+			MATCH_BY_TEXT
+		)!;
 
 		expect( derived.coarseBlockCount ).toBe( 0 );
-		const specIds = derived.specs.map( ( spec ) => spec.syncId );
+		const specIds = resultIds( doc, derived );
 		// Head keeps p1 (similar text), Second keeps p2 (exact text), the
 		// split's second half mints a NEW id.
 		expect( specIds[ 0 ] ).toBe( 'p1' );
@@ -443,14 +466,18 @@ describe( 'identity adoption under splits', () => {
 
 	it( 'a fully rewritten id-less block re-mints instead of adopting unrelated content', () => {
 		const doc = docFromBlocks( [ paragraph( 'p1', 'HelloWorld' ) ] );
-		const derived = deriveIntents( doc, [
-			{
-				name: 'core/paragraph',
-				attributes: { content: 'zzz' },
-				innerBlocks: [],
-			},
-		] )!;
-		expect( derived.specs[ 0 ].syncId ).not.toBe( 'p1' );
+		const derived = deriveIntents(
+			doc,
+			[
+				{
+					name: 'core/paragraph',
+					attributes: { content: 'zzz' },
+					innerBlocks: [],
+				},
+			],
+			MATCH_BY_TEXT
+		)!;
+		expect( resultIds( doc, derived )[ 0 ] ).not.toBe( 'p1' );
 		expect(
 			derived.intents.map( ( intent ) => intent.type ).sort()
 		).toEqual( [ 'insert_block', 'remove_block' ] );
@@ -470,9 +497,13 @@ describe( 'adoption edge cases', () => {
 		// identity; the second mints — and repeating the derivation is
 		// deterministic (no oscillation).
 		const doc = docFromBlocks( [ paragraph( 'p1', '' ) ] );
-		const derived = deriveIntents( doc, [ idless( '' ), idless( '' ) ] )!;
-		expect( derived.specs[ 0 ].syncId ).toBe( 'p1' );
-		expect( derived.specs[ 1 ].syncId ).not.toBe( 'p1' );
+		const derived = deriveIntents(
+			doc,
+			[ idless( '' ), idless( '' ) ],
+			MATCH_BY_TEXT
+		)!;
+		expect( resultIds( doc, derived )[ 0 ] ).toBe( 'p1' );
+		expect( resultIds( doc, derived )[ 1 ] ).not.toBe( 'p1' );
 		expect( derived.intents.map( ( intent ) => intent.type ) ).toEqual( [
 			'insert_block',
 		] );
@@ -483,12 +514,12 @@ describe( 'adoption edge cases', () => {
 			paragraph( 'p1', 'HelloWorld' ),
 			paragraph( 'p2', 'Second' ),
 		] );
-		const derived = deriveIntents( doc, [
-			idless( 'HelloWorld' ),
-			idless( '' ),
-			idless( 'Second' ),
-		] )!;
-		const ids = derived.specs.map( ( spec ) => spec.syncId );
+		const derived = deriveIntents(
+			doc,
+			[ idless( 'HelloWorld' ), idless( '' ), idless( 'Second' ) ],
+			MATCH_BY_TEXT
+		)!;
+		const ids = resultIds( doc, derived );
 		expect( ids[ 0 ] ).toBe( 'p1' );
 		expect( ids[ 2 ] ).toBe( 'p2' );
 		expect( ids[ 1 ] ).not.toBe( 'p1' );
@@ -504,12 +535,12 @@ describe( 'adoption edge cases', () => {
 			paragraph( 'p1', 'HelloWorld' ),
 			paragraph( 'p2', 'Second' ),
 		] );
-		const derived = deriveIntents( doc, [
-			idless( '' ),
-			idless( 'HelloWorld' ),
-			idless( 'Second' ),
-		] )!;
-		const ids = derived.specs.map( ( spec ) => spec.syncId );
+		const derived = deriveIntents(
+			doc,
+			[ idless( '' ), idless( 'HelloWorld' ), idless( 'Second' ) ],
+			MATCH_BY_TEXT
+		)!;
+		const ids = resultIds( doc, derived );
 		expect( ids[ 1 ] ).toBe( 'p1' );
 		expect( ids[ 2 ] ).toBe( 'p2' );
 		expect( ids[ 0 ] ).not.toBe( 'p1' );
@@ -524,34 +555,21 @@ describe( 'adoption edge cases', () => {
 			paragraph( 'p1', 'HelloWorld' ),
 			paragraph( 'p2', 'Second' ),
 		] );
-		const derived = deriveIntents( doc, [
-			idless( 'Hello' ),
-			idless( 'World' ),
-			idless( 'Second' ),
-		] )!;
-		const echo = derived.specs.map( ( spec ) => ( {
+		const derived = deriveIntents(
+			doc,
+			[ idless( 'Hello' ), idless( 'World' ), idless( 'Second' ) ],
+			MATCH_BY_TEXT
+		)!;
+		const applied = applyDerivedIntents( doc, derived.intents );
+		const echo = applied.root.map( ( block ) => ( {
 			name: 'core/paragraph',
 			attributes: {
-				content: ( spec.fields as Record< string, { text: string } > )
-					.content.text,
-				metadata: { syncId: spec.syncId as string },
+				content: block.fields.content.text,
+				metadata: { syncId: block.syncId },
 			},
 			innerBlocks: [],
 		} ) );
-		// Simulate the post-apply document: apply the derived intents.
-		const server = createServer( doc );
-		serverIngestBatch(
-			server,
-			derived.intents.map( ( intent, index ) => ( {
-				intentId: `i-${ index }`,
-				actorId: 'a',
-				baseSeq: 0,
-				txnId: null,
-				type: intent.type,
-				payload: intent.payload,
-			} ) )
-		);
-		const applied = serverDocAt( server, server.log.length );
+
 		expect( deriveIntents( applied, echo ) ).toBeNull();
 	} );
 } );
@@ -584,7 +602,9 @@ describe( 'rich-text coordinate capture', () => {
 		} );
 		// The tail's identity is the split's newSyncId — agreed before the
 		// server ever sees the block.
-		expect( split.payload.newSyncId ).toBe( derived.specs[ 1 ].syncId );
+		expect( split.payload.newSyncId ).toBe(
+			resultIds( doc, derived )[ 1 ]
+		);
 		expect( derived.coarseBlockCount ).toBe( 0 );
 	} );
 

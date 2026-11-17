@@ -565,7 +565,15 @@ export function createIntentLogProvider(
 			state.seedBlocks = null;
 		}
 
-		if ( ! state.seedBlocks && ( doc !== shown.doc || state.forcePush ) ) {
+		/*
+		 * Only a post has blocks. Handing a block list to another kind of
+		 * record (a category, say) would leave it with unsaved changes.
+		 */
+		if (
+			'postType' === state.kind &&
+			! state.seedBlocks &&
+			( doc !== shown.doc || state.forcePush )
+		) {
 			// Build the list the editor shows first, so that the next list
 			// shares every block that did not change with it.
 			const before =
@@ -770,12 +778,15 @@ export function createIntentLogProvider(
 			 * This is the one place where two whole documents are compared
 			 * to find a local edit: the text is parsed, and the result is
 			 * compared with the document block by block. A block that kept
-			 * its saved id is the same block.
+			 * its saved id is the same block. Text typed here has no id
+			 * and is parsed again on every keystroke, so a block without
+			 * one is matched by its type and text.
 			 */
 			const derived = deriveIntents(
 				doc,
 				toBridgeBlocks( parse( content ) ),
 				{
+					matchBlocksWithoutIds: true,
 					richTextFields,
 					rawContent,
 					saveMarkup,

@@ -345,6 +345,37 @@ describe( 'provider: loading a record', () => {
 		expect( links ).toHaveLength( 0 );
 	} );
 
+	it( 'writes nothing into a record that is not a post when it connects', async () => {
+		// A category has no blocks. Handing it an empty block list would
+		// leave it with unsaved changes, and the Publish button would
+		// read "Save".
+		wire = createWireServer( [] );
+
+		const pushes: EntitySyncRecord[] = [];
+		const provider = createIntentLogProvider( context );
+
+		await provider.load(
+			'taxonomy',
+			'category',
+			1,
+			{ name: 'Uncategorized' },
+			{
+				editRecord: ( edits ) => {
+					pushes.push( edits );
+				},
+				getEditedRecord: async () => ( {} ),
+				refetchRecord: async () => {},
+				onUndoLevelOpened: () => {},
+			}
+		);
+
+		links[ 0 ].link.poll();
+		jest.runOnlyPendingTimers();
+
+		expect( provider.isLoaded?.( 'taxonomy', 'category', 1 ) ).toBe( true );
+		expect( pushes ).toEqual( [] );
+	} );
+
 	it( 'ignores a batch for a record it has not loaded', async () => {
 		const tab = await openTab( [ paragraph( 'c-1', 'One' ) ] );
 
@@ -556,6 +587,50 @@ describe( 'provider: local edits', () => {
 
 		expect( serverOrder() ).toEqual( [ 'p1' ] );
 		expect( serverText( 'p1' ) ).toBe( 'One changed' );
+	} );
+
+	it( 'keeps one block for text typed in the code editor, keystroke after keystroke', async () => {
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+		const saved = ( syncId: string, content: string ) => ( {
+			name: 'core/paragraph',
+			attributes: { content, metadata: { syncId } },
+			innerBlocks: [],
+		} );
+		// Text typed in the code editor has no id.
+		const typed = ( content: string ) => ( {
+			name: 'core/paragraph',
+			attributes: { content },
+			innerBlocks: [],
+		} );
+		const typeInCodeEditor = ( content: string ) => {
+			tab.edit( [
+				{
+					type: 'set-field',
+					field: 'content',
+					previousValue: 'old text',
+					value: JSON.stringify( [
+						saved( 'p1', 'One' ),
+						saved( 'p2', 'Two' ),
+						typed( content ),
+					] ),
+				},
+			] );
+			tab.sync();
+		};
+
+		typeInCodeEditor( 'Thr' );
+
+		const [ , , newId ] = serverOrder();
+
+		typeInCodeEditor( 'Thre' );
+		typeInCodeEditor( 'Three' );
+
+		// The same block all along, not a new one for every keystroke.
+		expect( serverOrder() ).toEqual( [ 'p1', 'p2', newId ] );
+		expect( serverText( newId ) ).toBe( 'Three' );
 	} );
 
 	it( 'counts a batch that names a block it does not know, and puts the editor right', async () => {

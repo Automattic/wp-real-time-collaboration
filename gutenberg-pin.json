@@ -1,15 +1,12 @@
 {
   "repository": "https://github.com/WordPress/gutenberg",
   "branch": "try/sync-engines-intent",
-  "commit": "97bd424d9bcc6435c54d129d388559a9a4853e4f",
+  "commit": "45a70490a10bb851d3175113272a243973a1f465",
   "trunk": "86264c189101f8468036d2452aa092e91306f604",
   "tree": "155bdc6a8bd88397fab4084129271e22b09a586f",
   "source": {
     "repository": "https://github.com/WordPress/gutenberg-sync-engines",
     "commit": "9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5"
   },
-  "local_changes": [
-    "packages/block-editor/src/store/block-operations.ts",
-    "packages/block-editor/src/store/test/block-operations.jsdom.test.ts"
-  ]
+  "local_changes": []
 }

@@ -6,6 +6,7 @@ import type { BlockSpec } from './intent-log/document.js';
 import { applyIntent } from './intent-log/reducer.js';
 import { mintSyncId } from './intent-log/sync-id.js';
 import { fieldToHtml, htmlToField } from './intent-log/rich-text.js';
+import { longestRisingRun } from '../editor/rising-run';
 import { findTextChange } from '../editor/text-change';
 import type {
 	EngineBlock,
@@ -15,13 +16,17 @@ import type {
 } from './intent-log/engine-types';
 
 /*
- * The intent-log capture bridge: Gutenberg block trees in, intents out.
+ * The intent-log bridge: the conversions between editor blocks and engine
+ * blocks, and the comparison of two documents.
  *
- * The editor hands the sync layer FULL new state (a block tree), not deltas.
- * This module recovers deltas as typed intents by diffing the session's
- * engine document against the incoming tree, keyed by persistent block
- * identity (metadata.syncId) — never by position, so a moved block derives a
- * move_block instead of degenerating into remove+insert.
+ * Edits made in the block editor do not come through here: they are read
+ * from Gutenberg's edit batches (see src/editor/capture.ts). The
+ * comparison (deriveIntents) finds the intents that turn one document
+ * into another, keyed by persistent block identity (metadata.syncId) and
+ * never by position, so a moved block derives a move_block instead of
+ * degenerating into remove+insert. It is used where only two whole
+ * documents are known: an edit in the code editor, an accepted merge of a
+ * review, a room that started again, and recovery after refused edits.
  *
  * TEXT COORDINATES ARE RICH-TEXT COORDINATES: every rich-text attribute the
  * block registry declares becomes an engine FIELD via the rich-text codec
@@ -158,8 +163,7 @@ function fieldNamesFor(
 
 /**
  * A derived batch: the intents to author, in order, plus how many fields
- * required the coarse fallback (0 = clean capture) and which document
- * blocks were retained despite being absent from the editor tree.
+ * required the coarse fallback (0 = clean capture).
  */
 export interface DerivedIntents {
 	intents: Array< {
@@ -167,16 +171,6 @@ export interface DerivedIntents {
 		payload: Record< string, unknown >;
 	} >;
 	coarseBlockCount: number;
-	retainedIds: Set< string >;
-	/**
-	 * Editor clientIds for blocks whose identity this derivation ASSIGNED
-	 * (freshly minted, re-minted on a duplicate, or rewritten by
-	 * adoption), keyed by the final syncId. Callers seed their push-side
-	 * clientId map with these entries: a push that hands the editor a
-	 * fresh clientId for a block it already displays remounts that block,
-	 * destroying component-local UI state (an open modal, focus).
-	 */
-	editorClientIds: Map< string, string >;
 }
 
 /**
@@ -187,18 +181,20 @@ export interface DeriveOptions {
 	 * Ids the editor tree is allowed to DELETE: blocks the editor has
 	 * actually displayed. A document block absent from the tree but not in
 	 * this set was never seen by the user — its absence is staleness, not a
-	 * deletion, and it is retained (reported via retainedIds). Omit to allow
-	 * all removals (trusted-tree callers).
+	 * deletion, and it is retained. Omit to allow all removals
+	 * (trusted-tree callers).
 	 */
 	removableIds?: Set< string >;
 
 	/**
-	 * Ids the editor tree may still show but which were removed from the
-	 * document remotely. Tree blocks with these ids are dropped from the
-	 * capture (not re-inserted): a stale tree must not resurrect another
-	 * user's deletion.
+	 * Whether a block whose id the document does not know may take over
+	 * the id of a document block of the same type with the same or
+	 * similar text (see adoptExistingIds). Off unless asked for: blocks
+	 * built from a document always carry their ids, and a guess by text
+	 * can be wrong. The code editor asks for it, because raw text typed
+	 * there has no ids and is parsed again on every keystroke.
 	 */
-	excludeIds?: Set< string >;
+	matchBlocksWithoutIds?: boolean;
 
 	/** Rich-text attribute names per block type (default: content only). */
 	richTextFields?: RichTextFieldsResolver;
@@ -271,11 +267,7 @@ export function serializeAttribute( value: unknown ): unknown {
  * @param seenIds    Optional set of ids already used in this tree; later
  *                   duplicates re-mint (the first occurrence keeps identity).
  * @param raw        Raw-content block handling (core/html-style markup).
- * @param saveMarkup
- * @param sources    Optional map collecting spec → source bridge block, so
- *                   the caller can pair each spec's FINAL id (adoption
- *                   rewrites specs in place) with the editor block it came
- *                   from.
+ * @param saveMarkup Save-markup renderer (see SaveMarkupAdapter).
  * @return Engine block spec (makeBlock input shape).
  */
 export function blockToEngineSpec(
@@ -284,8 +276,7 @@ export function blockToEngineSpec(
 	minted?: Set< string >,
 	seenIds?: Set< string >,
 	raw?: RawContentAdapter,
-	saveMarkup?: SaveMarkupAdapter,
-	sources?: Map< Record< string, unknown >, BridgeBlock >
+	saveMarkup?: SaveMarkupAdapter
 ): BlockSpec {
 	const attributes = { ...block.attributes };
 	const metadata = {
@@ -343,8 +334,7 @@ export function blockToEngineSpec(
 				minted,
 				seenIds,
 				raw,
-				saveMarkup,
-				sources
+				saveMarkup
 			)
 		);
 	}
@@ -395,7 +385,7 @@ export function blockToEngineSpec(
 		fields,
 		children,
 	};
-	sources?.set( spec, block );
+
 	return spec;
 }
 
@@ -490,6 +480,14 @@ interface FlatEntry {
 	previousId: string | null;
 }
 
+interface FlatDocumentEntry {
+	block: EngineBlock;
+	parentId: string | null;
+	previousId: string | null;
+	/** The block's place among its parent's children. */
+	index: number;
+}
+
 /**
  * Flattens a spec tree into id → placement/spec entries.
  *
@@ -519,25 +517,74 @@ function flattenSpecs(
  * @param doc Engine document.
  * @return Flat map.
  */
-function flattenDocument( doc: EngineDocument ) {
-	const map = new Map<
-		string,
-		{
-			block: EngineBlock;
-			parentId: string | null;
-			previousId: string | null;
-		}
-	>();
+function flattenDocument(
+	doc: EngineDocument
+): Map< string, FlatDocumentEntry > {
+	const map = new Map< string, FlatDocumentEntry >();
 	const walk = ( blocks: EngineBlock[], parentId: string | null ) => {
 		let previousId: string | null = null;
-		for ( const block of blocks ) {
-			map.set( block.syncId, { block, parentId, previousId } );
+
+		blocks.forEach( ( block, index ) => {
+			map.set( block.syncId, { block, parentId, previousId, index } );
 			walk( block.children, block.syncId );
 			previousId = block.syncId;
-		}
+		} );
 	};
 	walk( doc.root, null );
 	return map;
+}
+
+/**
+ * Picks the blocks that keep their place.
+ *
+ * The engine records a block's place as "the block before me". A new
+ * block in front of block X changes the block before X, and X still did
+ * not move. Reporting "X moved" would tell everyone to put X right after
+ * the new block, in front of anything another person put there at the
+ * same moment.
+ *
+ * So for each parent, of the children that were under it before and are
+ * under it now, the largest group whose order did not change stays. Every
+ * other block is placed after the block before it, in the new order.
+ *
+ * @param oldFlat The document, flat.
+ * @param newFlat The target tree, flat, in tree order.
+ * @return The ids of the blocks that do not move.
+ */
+function pickUnmovedBlocks(
+	oldFlat: Map< string, FlatDocumentEntry >,
+	newFlat: Map< string, FlatEntry >
+): Set< string > {
+	const stayingByParent = new Map< string | null, string[] >();
+
+	for ( const [ syncId, entry ] of newFlat ) {
+		const old = oldFlat.get( syncId );
+
+		if ( ! old || old.parentId !== entry.parentId ) {
+			continue;
+		}
+
+		const staying = stayingByParent.get( entry.parentId ) ?? [];
+
+		staying.push( syncId );
+		stayingByParent.set( entry.parentId, staying );
+	}
+
+	const unmoved = new Set< string >();
+
+	for ( const staying of stayingByParent.values() ) {
+		const run = longestRisingRun(
+			staying.map( ( syncId ) => oldFlat.get( syncId )?.index ?? 0 )
+		);
+
+		staying.forEach( ( syncId, position ) => {
+			if ( run.has( position ) ) {
+				unmoved.add( syncId );
+			}
+		} );
+	}
+
+	return unmoved;
 }
 
 const specField = (
@@ -968,34 +1015,30 @@ function deriveSplitsAndMerges(
  * its session (which applies them optimistically).
  *
  * @param doc     The session's current engine document.
- * @param blocks  The editor's new block tree (bridge shape). Id-less blocks
- *                adopt the positionally corresponding document identity when
- *                one exists (see adoptExistingIds); otherwise they are
- *                treated as newly created with a minted id. Callers MUST
- *                write the resulting ids back to the editor via the returned
- *                specs, or the next capture cycle re-mints.
- * @param options Removability/exclusion/field scoping (see DeriveOptions).
- * @return Derived intents + the specs (with adopted/minted ids), or null.
+ * @param blocks  The target block tree (bridge shape). A block without an
+ *                id is treated as newly created with a minted id, unless
+ *                `matchBlocksWithoutIds` lets it take over a document
+ *                block's id (see adoptExistingIds).
+ * @param options Removability and field scoping (see DeriveOptions).
+ * @return Derived intents, or null when there is nothing to author.
  */
 export function deriveIntents(
 	doc: EngineDocument,
 	blocks: BridgeBlock[],
 	options: DeriveOptions = {}
-): ( DerivedIntents & { specs: BlockSpec[] } ) | null {
+): DerivedIntents | null {
 	const resolver = options.richTextFields ?? defaultRichTextFields;
 	const raw = options.rawContent;
 	const minted = new Set< string >();
 	const seenIds = new Set< string >();
-	const sources = new Map< Record< string, unknown >, BridgeBlock >();
-	let specs = blocks.map( ( block ) =>
+	const specs = blocks.map( ( block ) =>
 		blockToEngineSpec(
 			block,
 			resolver,
 			minted,
 			seenIds,
 			raw,
-			options.saveMarkup,
-			sources
+			options.saveMarkup
 		)
 	);
 	/*
@@ -1022,7 +1065,11 @@ export function deriveIntents(
 			eligible.add( id );
 		}
 	}
-	adoptExistingIds( specs, doc.root, claimed, eligible );
+
+	if ( options.matchBlocksWithoutIds ) {
+		adoptExistingIds( specs, doc.root, claimed, eligible );
+	}
+
 	/*
 	 * An explicitly-undefined attr value in the editor tree is a
 	 * normalization artifact (role:"local" attributes surface as undefined
@@ -1058,30 +1105,6 @@ export function deriveIntents(
 		}
 	};
 	fillUndefinedAttrs( specs );
-	if ( options.excludeIds && options.excludeIds.size > 0 ) {
-		specs = filterExcludedSpecs( specs, options.excludeIds );
-	}
-	/*
-	 * Pair each identity this derivation ASSIGNED with the editor block
-	 * that received it. A block whose incoming metadata.syncId survived
-	 * unchanged is skipped: its association is already settled. Read AFTER
-	 * adoption and exclusion, so the pairs carry final ids and dropped
-	 * specs contribute nothing.
-	 */
-	const editorClientIds = new Map< string, string >();
-	const collectAssignedClientIds = ( specList: BlockSpec[] ) => {
-		for ( const spec of specList ) {
-			const source = sources.get( spec );
-			const incomingId = (
-				source?.attributes?.metadata as { syncId?: string } | undefined
-			 )?.syncId;
-			if ( source?.clientId && spec.syncId !== incomingId ) {
-				editorClientIds.set( spec.syncId as string, source.clientId );
-			}
-			collectAssignedClientIds( ( spec.children as BlockSpec[] ) ?? [] );
-		}
-	};
-	collectAssignedClientIds( specs );
 	const target = specsToDocument( specs );
 	const targetIds = collectSpecIds( specs, new Set() );
 	const fieldNames: RichTextFieldsResolver = ( name ) =>
@@ -1128,23 +1151,14 @@ export function deriveIntents(
 		 * Equal up to blocks absent from the tree. Absent-but-REMOVABLE
 		 * blocks are deletions and need full derivation; when every absent
 		 * block is non-removable (never displayed), there is nothing to
-		 * author — only retention to report. (docIds collected above.)
+		 * author. (docIds collected above.)
 		 */
 		const missing = [ ...docIds ].filter( ( id ) => ! targetIds.has( id ) );
 		const hasRemovableMissing = missing.some(
 			( id ) => ! options.removableIds || options.removableIds.has( id )
 		);
 		if ( ! hasRemovableMissing ) {
-			if ( 0 === missing.length ) {
-				return null;
-			}
-			return {
-				intents: [],
-				coarseBlockCount: 0,
-				retainedIds: new Set( missing ),
-				editorClientIds,
-				specs,
-			};
+			return null;
 		}
 	}
 
@@ -1163,29 +1177,17 @@ export function deriveIntents(
 	const oldFlat = flattenDocument( workingDoc );
 	const newFlat = flattenSpecs( specs, null, new Map() );
 	const intents: DerivedIntents[ 'intents' ] = [ ...structural ];
-	const retainedIds = new Set< string >();
 
 	// Removals first (they cannot invalidate later anchors: anchors are
 	// computed against the new tree).
 	for ( const [ syncId ] of oldFlat ) {
 		if ( ! newFlat.has( syncId ) ) {
-			if ( options.excludeIds?.has( syncId ) ) {
-				/*
-				 * Removed remotely already: the tree may still show it (it
-				 * was filtered out of the specs above), and the baseline
-				 * document — the state that tree reflects — still carries
-				 * it. Authoring a removal would only earn an
-				 * already-removed void.
-				 */
-				continue;
-			}
 			if (
 				options.removableIds &&
 				! options.removableIds.has( syncId )
 			) {
 				// The editor never displayed this block: its absence is
 				// staleness, not a user deletion — retain it.
-				retainedIds.add( syncId );
 				continue;
 			}
 			intents.push( {
@@ -1194,6 +1196,8 @@ export function deriveIntents(
 			} );
 		}
 	}
+
+	const unmoved = pickUnmovedBlocks( oldFlat, newFlat );
 
 	// Walk the new tree in order: insert added blocks, move relocated ones,
 	// then diff type/attrs/fields for survivors.
@@ -1219,10 +1223,7 @@ export function deriveIntents(
 			continue;
 		}
 
-		if (
-			old.parentId !== entry.parentId ||
-			old.previousId !== entry.previousId
-		) {
+		if ( ! unmoved.has( syncId ) ) {
 			intents.push( {
 				type: 'move_block',
 				payload: {
@@ -1343,13 +1344,7 @@ export function deriveIntents(
 			authoredContentIds
 		)
 	) {
-		return {
-			intents,
-			coarseBlockCount: 0,
-			retainedIds,
-			editorClientIds,
-			specs,
-		};
+		return { intents, coarseBlockCount: 0 };
 	}
 
 	/*
@@ -1430,165 +1425,7 @@ export function deriveIntents(
 		);
 	}
 
-	return {
-		intents: coarse,
-		coarseBlockCount,
-		retainedIds,
-		editorClientIds,
-		specs,
-	};
-}
-
-/**
- * One block of an editor tree, reduced to the engine's projection.
- */
-interface SummaryBlock {
-	blockType: string;
-	fields: Record< string, EngineField >;
-	attrs: Record< string, unknown >;
-}
-
-/**
- * An editor tree indexed by block identity, in engine terms.
- */
-export interface EditorTreeSummary {
-	blocks: Map< string, SummaryBlock >;
-}
-
-/**
- * Reduces an editor tree to id → engine projection, for comparing it
- * against candidate documents (see documentDistance). Blocks without a
- * syncId land under a freshly minted one and are simply never looked up.
- *
- * @param blocks  Editor block tree.
- * @param options Field scoping (see DeriveOptions).
- * @return The summary.
- */
-export function summarizeEditorTree(
-	blocks: BridgeBlock[],
-	options: DeriveOptions = {}
-): EditorTreeSummary {
-	const resolver = options.richTextFields ?? defaultRichTextFields;
-	const seenIds = new Set< string >();
-	const summary: EditorTreeSummary = { blocks: new Map() };
-	const collect = ( specs: BlockSpec[] ) => {
-		for ( const spec of specs ) {
-			summary.blocks.set( spec.syncId as string, {
-				blockType: spec.blockType as string,
-				fields: ( spec.fields ?? {} ) as Record< string, EngineField >,
-				attrs: ( spec.attrs ?? {} ) as Record< string, unknown >,
-			} );
-			collect( ( spec.children as BlockSpec[] ) ?? [] );
-		}
-	};
-	collect(
-		blocks.map( ( block ) =>
-			blockToEngineSpec(
-				block,
-				resolver,
-				undefined,
-				seenIds,
-				options.rawContent
-			)
-		)
-	);
-	return summary;
-}
-
-/**
- * The block's own weight in a distance comparison: one for existing, plus
- * its text.
- *
- * @param fields Engine fields.
- * @param names  Field names to weigh.
- * @return Weight.
- */
-function fieldWeight(
-	fields: Record< string, EngineField >,
-	names: string[]
-): number {
-	let weight = 1;
-	for ( const name of names ) {
-		weight += fields[ name ]?.text.length ?? 0;
-	}
-	return weight;
-}
-
-/**
- * How far an editor tree is from a candidate document, in characters.
- *
- * The manager keeps several candidates for the state a tree was authored
- * against — the last confirmed one plus every push the editor may or may
- * not have rendered yet — and this picks between them: the tree is a
- * candidate plus the user's own edit, so the candidate it derives from is
- * the one it differs from LEAST. Ids the tree introduced on its own are
- * equally new to every candidate and are therefore ignored; the comparison
- * runs over `relevantIds`, the union of the candidates' block ids.
- *
- * @param summary     Editor tree summary (summarizeEditorTree).
- * @param doc         Candidate document.
- * @param relevantIds Block ids to compare over.
- * @param options     Field scoping (see DeriveOptions).
- * @return Distance (0 = the tree is exactly this document).
- */
-export function documentDistance(
-	summary: EditorTreeSummary,
-	doc: EngineDocument,
-	relevantIds: Set< string >,
-	options: DeriveOptions = {}
-): number {
-	const resolver = options.richTextFields ?? defaultRichTextFields;
-	const fieldNames: RichTextFieldsResolver = ( name ) =>
-		fieldNamesFor( name, resolver, options.rawContent );
-	const docFlat = flattenDocument( doc );
-	let distance = 0;
-	for ( const id of relevantIds ) {
-		const docEntry = docFlat.get( id );
-		const treeEntry = summary.blocks.get( id );
-		if ( docEntry && ! treeEntry ) {
-			distance += fieldWeight(
-				docEntry.block.fields,
-				fieldNames( docEntry.block.blockType )
-			);
-			continue;
-		}
-		if ( treeEntry && ! docEntry ) {
-			distance += fieldWeight(
-				treeEntry.fields,
-				fieldNames( treeEntry.blockType )
-			);
-			continue;
-		}
-		if ( ! docEntry || ! treeEntry ) {
-			continue;
-		}
-		if ( docEntry.block.blockType !== treeEntry.blockType ) {
-			distance += 1;
-		}
-		for ( const name of fieldNames( treeEntry.blockType ) ) {
-			const { removed, inserted } = textDelta(
-				blockField( docEntry.block, name ).text,
-				treeEntry.fields[ name ]?.text ?? ''
-			);
-			distance += removed.length + inserted.length;
-		}
-		const keys = new Set( [
-			...Object.keys( docEntry.block.attrs ).filter(
-				// Engine-internal attrs never appear in editor trees.
-				( key ) => ! key.startsWith( '_' )
-			),
-			...Object.keys( treeEntry.attrs ),
-		] );
-		for ( const key of keys ) {
-			if (
-				JSON.stringify( docEntry.block.attrs[ key ] ) !==
-				JSON.stringify( treeEntry.attrs[ key ] )
-			) {
-				distance += 1;
-			}
-		}
-	}
-	return distance;
+	return { intents: coarse, coarseBlockCount };
 }
 
 /**
@@ -1631,32 +1468,6 @@ function applyScratch(
 		type: intent.type,
 		payload: intent.payload,
 	} as IntentEnvelope ).doc;
-}
-
-/**
- * Drops specs (recursively) whose ids were removed from the document by
- * another actor: a stale tree must not resurrect them.
- *
- * @param specs      Engine block specs.
- * @param excludeIds Ids to drop.
- * @return Filtered specs.
- */
-function filterExcludedSpecs(
-	specs: BlockSpec[],
-	excludeIds: Set< string >
-): BlockSpec[] {
-	const kept: BlockSpec[] = [];
-	for ( const spec of specs ) {
-		if ( excludeIds.has( spec.syncId as string ) ) {
-			continue;
-		}
-		spec.children = filterExcludedSpecs(
-			( spec.children as BlockSpec[] ) ?? [],
-			excludeIds
-		);
-		kept.push( spec );
-	}
-	return kept;
 }
 
 /**

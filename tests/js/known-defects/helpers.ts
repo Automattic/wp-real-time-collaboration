@@ -55,12 +55,12 @@ export function documentFromBlocks( blocks: BridgeBlock[] ): EngineDocument {
 }
 
 /**
- * Captures the edits that turn a document into an editor tree, the way
- * the engine does on every editor change.
+ * Finds the edits that turn a document into a block tree, through the
+ * comparison of two documents (deriveIntents).
  *
- * @param doc    The document the editor started from.
- * @param blocks The editor's new block tree.
- * @return The captured edits, in order.
+ * @param doc    The document to start from.
+ * @param blocks The block tree to reach.
+ * @return The edits, in order.
  */
 export function captureEdits(
 	doc: EngineDocument,
