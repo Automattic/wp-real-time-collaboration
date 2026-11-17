@@ -13,8 +13,7 @@
 		"**/*.story.*"
 	],
 	"references": [
-		{ "path": "../hooks" },
-		{ "path": "../private-apis" },
-		{ "path": "../undo-manager" }
+		{ "path": "../api-fetch/tsconfig.build.json" },
+		{ "path": "../hooks/tsconfig.build.json" }
 	]
 }

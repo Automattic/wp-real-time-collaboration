@@ -164,13 +164,23 @@ wp.data.select( 'core' ).getStatus( recordId );
 
 The store offers a private extension point for real-time collaboration with an entity sync manager. When one is registered, the store tells it when a record is loaded, edited, saved, and deleted, and lets it take over undo. The store itself knows nothing about how the syncing works.
 
-The interface lives in `src/entity-sync.ts`. `registerEntitySyncManager( manager )` and `getEntitySyncManager()` are internal to the package for now and are not exposed. Only one manager can be registered at a time. The `EntitySyncManager` type documents the interface.
+The interface lives in `src/entity-sync.ts`, and the `EntitySyncManager` type documents it. The package registers no manager of its own: a sync engine plugin supplies one through the private `registerEntitySyncProvider( create )`, which calls `create` with the record operations the manager needs (`getSyncConfig`, `recordHandlers`, `collectionHandlers`). Only one manager can be registered at a time; the first registration wins. When the real-time collaboration flag is on but no manager is registered, the store turns collaboration off so the standard post lock applies.
+
+Every manager implements `applyEditBatch( kind, name, recordId, batch ): void` as its only local edit entry point. A batch contains ordered `operations`, undo grouping `options`, and optional `selection` metadata. Core-data delivers it before updating its store. Apply the whole batch atomically, or enqueue the whole batch in order. There is no acceptance return value and no `update` fallback. This is a breaking change to the private provider contract: update external providers together with this version of core-data. `recordId` can be undefined for keyless entities. Managers must ignore entities they do not sync.
+
+Block operations are `insert`, `remove`, `move`, `set-block-property`, and `set-attribute`. Insertions include a block and its subtree; moves identify a block, destination parent, and the block before which to place it. A `null` parent means the entity root; a `null` anchor means append. `set-block-property` changes a property such as `name` on an existing block. IDs are entity-facing `clientId` values; nested controllers restore these IDs before delivery. These IDs are not persisted in block HTML. The engine must restore or map its durable identities when it loads the entity.
+
+Block-editor captures accepted insertions, removals, moves, attribute updates, and leaf splits directly from actions. A leaf split that retains the head's identity produces its attribute updates and new block insertions in one batch. Other replacements, resets, cross-entity moves, direct block-array setters, and gaps in the retained action history are converted from the previous and next local trees into structural operations inside core-data. This conversion still compares trees at the producer; it does not send trees to the engine for diffing. Retained descendants move out before their old parents are removed. Footnote normalization appends attribute corrections to captured operations. No edit batch contains `set-field` for `blocks`. Setting `blocks` to undefined only invalidates the editor's parsed-block cache; a code-editor source change travels as a `content` field edit.
+
+An attribute operation has the form `{ type: 'set-attribute', clientId: 'abcdef', attribute: 'content', previousValue: 'Before', value: 'After' }`. Entity field edits use `{ type: 'set-field', field: 'title', previousValue: 'Before', value: 'After' }`. Engines can assign ordinary values directly. For text and rich text, compute semantic edits from the supplied previous/new values and reconcile them with the shared document. Attribute baselines come from the block editor before each accepted action; entity field baselines come from the edited record. Multiple text edits retain their order and individual baselines. An undefined attribute or block-property value removes that property. Derived functions such as the block-to-content serializer are omitted. Selection is batch metadata, not a document operation; a selection-only batch has an empty operation list.
+
+These batches are an in-memory API. Values retain their runtime types, including rich-text values. The engine owns serialization, replication, conflict resolution, and undo. Use `isCached` and `undoIgnore` for undo grouping. Incoming changes and undo return through `handlers.editRecord` without being reported as local operations. Corrections to the current local edit must call that handler from a later task, after core-data dispatches its store update. The Yjs adapter consumes the same batches inside its existing transaction queue. It applies structural operations by ID and uses its schema-aware value diffing for text and rich text. Its Y.Array moves clone the moved subtree while retaining clientIds; this does not add a new concurrent-move algorithm.
 
 ## Actions
 
 The following set of dispatching action creators are available on the object returned by `wp.data.dispatch( 'core' )`:
 
-<!-- START TOKEN(Autogenerated actions|src/actions.js) -->
+<!-- START TOKEN(Autogenerated actions|src/actions.ts) -->
 
 ### addEntities
 
@@ -178,11 +188,11 @@ Returns an action object used in adding new entities.
 
 _Parameters_
 
-- _entities_ `Array`: Entities received.
+- _entities_ `Array< EntityConfig >`: Entities received.
 
 _Returns_
 
-- `Object`: Action object.
+- `ActionOf< 'ADD_ENTITIES' >`: Action object.
 
 ### clearEntityRecordEdits
 
@@ -192,11 +202,11 @@ _Parameters_
 
 - _kind_ `string`: Kind of the entity.
 - _name_ `string`: Name of the entity.
-- _recordId_ `[number|string]`: Is omitted for keyless entities.
+- _recordId_ `number | string`: Is omitted for keyless entities.
 
 _Returns_
 
-- `Object`: Action object.
+- Action object.
 
 ### deleteEntityRecord
 
@@ -206,11 +216,11 @@ _Parameters_
 
 - _kind_ `string`: Kind of the deleted entity.
 - _name_ `string`: Name of the deleted entity.
-- _recordId_ `number|string`: Record ID of the deleted entity.
-- _query_ `?Object`: Special query parameters for the DELETE API call.
-- _options_ `[Object]`: Delete options.
-- _options.\_\_unstableFetch_ `[Function]`: Internal use only. Function to call instead of `apiFetch()`. Must return a promise.
-- _options.throwOnError_ `[boolean]`: If false, this action suppresses all the exceptions. Defaults to false.
+- _recordId_ `string | number`: Record ID of the deleted entity.
+- _query_ `Query | null`: Special query parameters for the DELETE API call.
+- _options_ `DeleteEntityRecordOptions`: Delete options.
+- _options.\_\_unstableFetch_ `DeleteEntityRecordOptions[ '__unstableFetch' ]`: Internal use only. Function to call instead of `apiFetch()`. Must return a promise.
+- _options.throwOnError_ `DeleteEntityRecordOptions[ 'throwOnError' ]`: If false, this action suppresses all the exceptions. Defaults to false.
 
 ### editEntityRecord
 
@@ -220,15 +230,16 @@ _Parameters_
 
 - _kind_ `string`: Kind of the edited entity record.
 - _name_ `string`: Name of the edited entity record.
-- _recordId_ `number|string|undefined`: Pass `undefined` for keyless entities.
-- _edits_ `Object`: The edits.
-- _options_ `Object`: Options for the edit.
-- _options.undoIgnore_ `[boolean]`: Whether to ignore the edit in undo history or not.
-- _options.isCached_ `[boolean]`: Whether the edit is transient (e.g. typing). Transient edits are staged and eventually merged into the preceding undo level instead of creating a new one.
+- _recordId_ `number | string | undefined`: Pass `undefined` for keyless entities.
+- _edits_ `object`: The edits.
+- _options_ `EditEntityRecordOptions`: Options for the edit.
+- _options.undoIgnore_ `EditEntityRecordOptions[ 'undoIgnore' ]`: Whether to ignore the edit in undo history or not.
+- _options.isCached_ `EditEntityRecordOptions[ 'isCached' ]`: Whether the edit is transient (e.g. typing). Transient edits are staged and eventually merged into the preceding undo level instead of creating a new one.
+- _options.blockOperations_ `EditEntityRecordOptions[ 'blockOperations' ]`: Internal block operations from the block editor.
 
 _Returns_
 
-- `Object`: Action object.
+- Action object.
 
 ### receiveDefaultTemplateId
 
@@ -236,12 +247,12 @@ Returns an action object used to set the template for a given query.
 
 _Parameters_
 
-- _query_ `Object`: The lookup query.
+- _query_ `Query`: The lookup query.
 - _templateId_ `string`: The resolved template id.
 
 _Returns_
 
-- `Object`: Action object.
+- `ActionOf< 'RECEIVE_DEFAULT_TEMPLATE' >`: Action object.
 
 ### receiveEntityRecords
 
@@ -251,15 +262,15 @@ _Parameters_
 
 - _kind_ `string`: Kind of the received entity record.
 - _name_ `string`: Name of the received entity record.
-- _records_ `Array|Object`: Records received.
-- _query_ `?Object`: Query Object.
-- _invalidateCache_ `?boolean`: Should invalidate query caches.
-- _edits_ `?Object`: Edits to reset.
-- _meta_ `?Object`: Meta information about pagination.
+- _records_ `object | Array< object >`: Records received.
+- _query_ `Query | null | undefined`: Query Object.
+- _invalidateCache_ `boolean | null`: Should invalidate query caches.
+- _edits_ `object | null | undefined`: Edits to reset.
+- _meta_ `QueriedMeta | null | undefined`: Meta information about pagination.
 
 _Returns_
 
-- `Object`: Action object.
+- Action object.
 
 ### receiveNavigationFallbackId
 
@@ -267,11 +278,11 @@ Returns an action object signalling that the fallback Navigation Menu id has bee
 
 _Parameters_
 
-- _fallbackId_ `integer`: the id of the fallback Navigation Menu
+- _fallbackId_ `number | null | undefined`: the id of the fallback Navigation Menu
 
 _Returns_
 
-- `Object`: Action object.
+- `ActionOf< 'RECEIVE_NAVIGATION_FALLBACK_ID' >`: Action object.
 
 ### receiveRevisions
 
@@ -281,11 +292,11 @@ _Parameters_
 
 - _kind_ `string`: Kind of the received entity record revisions.
 - _name_ `string`: Name of the received entity record revisions.
-- _recordKey_ `number|string`: The key of the entity record whose revisions you want to fetch.
-- _records_ `Array|Object`: Revisions received.
-- _query_ `?Object`: Query Object.
-- _invalidateCache_ `?boolean`: Should invalidate query caches.
-- _meta_ `?Object`: Meta information about pagination.
+- _recordKey_ `number | string`: The key of the entity record whose revisions you want to fetch.
+- _records_ `object | Array< object >`: Revisions received.
+- _query_ `Query | null`: Query Object.
+- _invalidateCache_ `boolean | null`: Should invalidate query caches.
+- _meta_ `QueriedMeta | null`: Meta information about pagination.
 
 ### receiveThemeSupports
 
@@ -295,7 +306,7 @@ Returns an action object used in signalling that the index has been received.
 
 _Returns_
 
-- `Object`: Action object.
+- `{ type: 'DO_NOTHING'; }`: Action object.
 
 ### receiveUploadPermissions
 
@@ -309,7 +320,7 @@ _Parameters_
 
 _Returns_
 
-- `Object`: Action object.
+- `ActionOf< 'RECEIVE_USER_PERMISSION' >`: Action object.
 
 ### redo
 
@@ -323,8 +334,8 @@ _Parameters_
 
 - _kind_ `string`: Kind of the entity.
 - _name_ `string`: Name of the entity.
-- _recordId_ `[number|string]`: Is omitted for keyless entities.
-- _options_ `[Object]`: Saving options.
+- _recordId_ `number | string`: Is omitted for keyless entities.
+- _options_ `SaveEntityRecordOptions`: Saving options.
 
 ### saveEntityRecord
 
@@ -334,17 +345,17 @@ _Parameters_
 
 - _kind_ `string`: Kind of the received entity.
 - _name_ `string`: Name of the received entity.
-- _record_ `Object`: Record to be saved.
-- _options_ `Object`: Saving options.
-- _options.isAutosave_ `[boolean]`: Whether this is an autosave.
-- _options.\_\_unstableFetch_ `[Function]`: Internal use only. Function to call instead of `apiFetch()`. Must return a promise.
-- _options.throwOnError_ `[boolean]`: If false, this action suppresses all the exceptions. Defaults to false.
+- _record_ `object`: Record to be saved.
+- _options_ `SaveEntityRecordOptions`: Saving options.
+- _options.isAutosave_ `SaveEntityRecordOptions[ 'isAutosave' ]`: Whether this is an autosave.
+- _options.\_\_unstableFetch_ `SaveEntityRecordOptions[ '__unstableFetch' ]`: Internal use only. Function to call instead of `apiFetch()`. Must return a promise.
+- _options.throwOnError_ `SaveEntityRecordOptions[ 'throwOnError' ]`: If false, this action suppresses all the exceptions. Defaults to false.
 
 ### undo
 
 Action triggered to undo the last edit to an entity record, if any.
 
-<!-- END TOKEN(Autogenerated actions|src/actions.js) -->
+<!-- END TOKEN(Autogenerated actions|src/actions.ts) -->
 
 ## Selectors
 
@@ -1048,12 +1059,12 @@ _Parameters_
 
 - _kind_ `string`: The entity kind.
 - _name_ `string`: The entity name.
-- _options_ `Object`:
-- _options.id_ `[string]`: An entity ID to use instead of the context-provided one.
+- _options_ `EntityBlockEditorOptions`:
+- _options.id_ `EntityBlockEditorOptions[ 'id' ]`: An entity ID to use instead of the context-provided one.
 
 _Returns_
 
-- `[unknown[], Function, Function]`: The block array and setters.
+- `EntityBlockEditorResult`: The block array and setters.
 
 ### useEntityId
 
@@ -1073,11 +1084,11 @@ _Parameters_
 - _kind_ `string`: The entity kind.
 - _name_ `string`: The entity name.
 - _prop_ `string`: The property name.
-- _\_id_ `[number|string]`: An entity ID to use instead of the context-provided one.
+- _\_id_ `number | string`: An entity ID to use instead of the context-provided one.
 
 _Returns_
 
-- `[*, Function, *]`: An array where the first item is the property value, the second is the setter and the third is the full value object from REST API containing more information like `raw`, `rendered` and `protected` props.
+- `EntityPropResult< Value, FullValue >`: An array where the first item is the property value, the second is the setter and the third is the full value object from REST API containing more information like `raw`, `rendered` and `protected` props.
 
 ### useEntityRecord
 
@@ -1296,7 +1307,7 @@ _Parameters_
 
 _Returns_
 
-- `ResourcePermissionsResolution< IdType >`: Entity records data.
+- `ResourcePermissionsResolution< IdType >`: Resource permissions and resolution details.
 
 _Changelog_
 

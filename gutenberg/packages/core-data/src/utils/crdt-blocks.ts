@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import fastDeepEqual from 'fast-deep-equal/es6/index.js';
-import { getBlockType, getBlockTypes, getSaveContent } from '@wordpress/blocks';
+import { getBlockTypes } from '@wordpress/blocks';
+import type { BlockOperation } from '@wordpress/blocks';
 import { RichTextData } from '@wordpress/rich-text';
 import { Y } from '@wordpress/sync';
 import {
@@ -30,14 +31,6 @@ interface BlockType {
 	name: string;
 }
 
-/**
- * The doc-side save-markup mirror's key (B1). Exported so the plugin
- * side and any future rename stay mechanical: every stringly-typed
- * access below goes through this constant; only the two interface
- * fields repeat the literal (TypeScript keeps those honest).
- */
-export const CRDT_BLOCK_SAVE_KEY = '_save';
-
 // A block as represented in Gutenberg's data store.
 export interface Block {
 	attributes: BlockAttributes;
@@ -48,8 +41,6 @@ export interface Block {
 	name: string;
 	originalContent?: string;
 	validationIssues?: string[]; // unserializable
-	/** Doc-side save-markup mirror (see YBlockRecord); stripped on read. */
-	_save?: string;
 }
 
 // A block as represented in the CRDT document (Y.Map).
@@ -60,16 +51,6 @@ export interface YBlockRecord extends YMapRecord {
 	isValid?: boolean;
 	originalContent?: string;
 	name: string;
-	/**
-	 * The block's save markup, regenerated from its registered save()
-	 * whenever its attributes change (empty inner blocks). Server engines
-	 * materialize post content from the shared doc; without the real save
-	 * output they can only guess wrappers from genesis (the Phase-2a
-	 * simplification). The engine treats this exactly like genesis
-	 * innerHTML — wrapper and sub-element tags — and swaps in the live
-	 * rich-text value, so the TEXT inside is never read.
-	 */
-	_save?: string;
 }
 
 export type YBlock = YMapWrap< YBlockRecord >;
@@ -226,8 +207,7 @@ function deserializeAttributeValue(
  */
 export function deserializeBlockAttributes( blocks: Block[] ): Block[] {
 	return blocks.map( ( block: Block ) => {
-		const { name, innerBlocks, attributes, _save, ...rest } = block;
-		void _save; // Doc-side bookkeeping; never reaches editor blocks.
+		const { name, innerBlocks, attributes, ...rest } = block;
 
 		const newAttributes = { ...attributes };
 
@@ -257,8 +237,6 @@ export function deserializeBlockAttributes( blocks: Block[] ): Block[] {
  */
 function areBlocksEqual( gblock: Block, yblock: YBlock ): boolean {
 	const yblockAsJson = yblock.toJSON();
-	// The save-markup mirror is doc-side bookkeeping, not editor state.
-	delete yblockAsJson[ CRDT_BLOCK_SAVE_KEY ];
 
 	// we must not sync clientId, as this can't be generated consistently and
 	// hence will lead to merge conflicts.
@@ -390,48 +368,10 @@ function createYMapFromQuery(
 	return new Y.Map( entries );
 }
 
-/**
- * The block's save markup with empty inner blocks — the wrapper (and any
- * attribute-derived sub-elements, e.g. an image's <img>) as the block's
- * registered save() renders them for the CURRENT attributes. Null when the
- * type is unregistered or save() throws (dynamic/raw blocks): engines then
- * fall back to their genesis wrapper records.
- *
- * @param name       Block name.
- * @param attributes Block attributes (serializable form).
- * @return Save markup, or null.
- */
-function computeSaveMarkup(
-	name: string,
-	attributes: BlockAttributes
-): string | null {
-	try {
-		const blockType = getBlockType( name );
-		if ( ! blockType ) {
-			return null;
-		}
-		const markup = getSaveContent( blockType, attributes, [] );
-		return typeof markup === 'string' && '' !== markup ? markup : null;
-	} catch {
-		return null;
-	}
-}
-
 function createNewYBlock( block: Block ): YBlock {
-	const saveMarkup = computeSaveMarkup( block.name, block.attributes );
 	return createYMap< YBlockRecord >(
 		Object.fromEntries(
-			[
-				...( null === saveMarkup
-					? []
-					: [
-							[ CRDT_BLOCK_SAVE_KEY, saveMarkup ] as [
-								string,
-								unknown,
-							],
-						] ),
-				...Object.entries( block ),
-			].map( ( [ key, value ] ) => {
+			Object.entries( block ).map( ( [ key, value ] ) => {
 				switch ( key ) {
 					case 'attributes': {
 						return [
@@ -464,6 +404,126 @@ function createNewYBlock( block: Block ): YBlock {
 			} )
 		)
 	);
+}
+
+/**
+ * Apply an explicit block operation without comparing block trees.
+ * Y.Array moves require a clone; the block's clientId is retained.
+ * Missing targets can result from a concurrent deletion and are ignored.
+ *
+ * @param yblocks        The shared root block list.
+ * @param operation      The accepted editor operation.
+ * @param cursorPosition Selection for rich-text diff cursor hints.
+ */
+export function applyCrdtBlockOperation(
+	yblocks: YBlocks,
+	operation: BlockOperation,
+	cursorPosition: MergeCursorPosition = null
+): void {
+	const find = (
+		blocks: YBlocks,
+		id: string
+	): { block: YBlock; siblings: YBlocks; index: number } | undefined => {
+		for ( let index = 0; index < blocks.length; index++ ) {
+			const block = blocks.get( index );
+			if ( block.get( 'clientId' ) === id ) {
+				return { block, siblings: blocks, index };
+			}
+			const children = block.get( 'innerBlocks' );
+			const match =
+				children instanceof Y.Array ? find( children, id ) : undefined;
+			if ( match ) {
+				return match;
+			}
+		}
+		return undefined;
+	};
+	if ( operation.type === 'insert' || operation.type === 'move' ) {
+		const destination =
+			operation.parent === null
+				? yblocks
+				: find( yblocks, operation.parent )?.block.get( 'innerBlocks' );
+		if ( ! destination ) {
+			return;
+		}
+		let block: YBlock;
+		if ( operation.type === 'insert' ) {
+			if ( find( yblocks, operation.block.clientId ) ) {
+				return;
+			}
+			block = createNewYBlock(
+				makeBlocksSerializable( [ operation.block as Block ] )[ 0 ]
+			);
+		} else {
+			const source = find( yblocks, operation.clientId );
+			if ( ! source ) {
+				return;
+			}
+			// A concurrent move can make the requested parent a descendant.
+			const children = source.block.get( 'innerBlocks' );
+			if (
+				operation.parent === operation.clientId ||
+				( operation.parent &&
+					children &&
+					find( children, operation.parent ) )
+			) {
+				return;
+			}
+			block = source.block.clone() as YBlock;
+			source.siblings.delete( source.index, 1 );
+		}
+		const anchor =
+			operation.before === null
+				? -1
+				: destination
+						.toArray()
+						.findIndex(
+							( item ) =>
+								item.get( 'clientId' ) === operation.before
+						);
+		destination.insert( anchor < 0 ? destination.length : anchor, [
+			block,
+		] );
+		return;
+	}
+	const target = find( yblocks, operation.clientId );
+	if ( ! target ) {
+		return;
+	}
+	if ( operation.type === 'remove' ) {
+		target.siblings.delete( target.index, 1 );
+	} else if ( operation.type === 'set-block-property' ) {
+		// Validation issues include logging functions and are editor-local.
+		if ( operation.property !== 'validationIssues' ) {
+			if ( operation.value === undefined ) {
+				target.block.delete( operation.property );
+			} else {
+				target.block.set( operation.property, operation.value );
+			}
+		}
+	} else {
+		const name = target.block.get( 'name' );
+		if ( ! name || isLocalAttribute( name, operation.attribute ) ) {
+			return;
+		}
+		let attributes = target.block.get( 'attributes' );
+		if ( ! attributes ) {
+			attributes = new Y.Map();
+			target.block.set( 'attributes', attributes );
+		}
+		if ( operation.value === undefined ) {
+			attributes.delete( operation.attribute );
+		} else {
+			updateYBlockAttribute(
+				name,
+				operation.clientId,
+				operation.attribute,
+				serializeAttributeValue( operation.value ),
+				attributes,
+				cursorPosition
+			);
+		}
+	}
 }
 
 /**
@@ -552,19 +612,6 @@ export function mergeCrdtBlocks(
 	for ( let i = 0; i < numOfUpdatesNeeded; i++, left++ ) {
 		const incomingYBlock = incomingBlocksToSync[ left ];
 		const localYBlock = yblocks.get( left );
-
-		// Keep the save markup current with the attributes being merged
-		// (wrapper classes, heading levels, image src all live in it).
-		const saveMarkup = computeSaveMarkup(
-			incomingYBlock.name,
-			incomingYBlock.attributes
-		);
-		if (
-			null !== saveMarkup &&
-			saveMarkup !== localYBlock.get( CRDT_BLOCK_SAVE_KEY )
-		) {
-			localYBlock.set( CRDT_BLOCK_SAVE_KEY, saveMarkup );
-		}
 
 		Object.entries( incomingYBlock ).forEach(
 			( [ incomingBlockProperty, incomingBlockPropertyValue ] ) => {
@@ -708,10 +755,7 @@ export function mergeCrdtBlocks(
 			}
 		);
 		localYBlock.forEach( ( _v, k ) => {
-			if (
-				k !== CRDT_BLOCK_SAVE_KEY &&
-				! incomingYBlock.hasOwnProperty( k )
-			) {
+			if ( ! incomingYBlock.hasOwnProperty( k ) ) {
 				localYBlock.delete( k );
 			}
 		} );

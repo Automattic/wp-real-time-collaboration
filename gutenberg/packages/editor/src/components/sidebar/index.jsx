@@ -8,11 +8,9 @@ import { drawerLeft, drawerRight } from '@wordpress/icons';
 import { store as keyboardShortcutsStore } from '@wordpress/keyboard-shortcuts';
 import { store as interfaceStore } from '@wordpress/interface';
 import { Tabs } from '@wordpress/ui';
-import CollaborationReviewPanel from '../collaboration-review-panel';
 import PatternOverridesPanel from '../pattern-overrides-panel';
 import PluginDocumentSettingPanel from '../plugin-document-setting-panel';
 import PluginSidebar from '../plugin-sidebar';
-import PostSummary from './post-summary';
 import DataFormPostSummary from './dataform-post-summary';
 import PostRevisionSummary from './post-revision-summary';
 import PostTaxonomiesPanel from '../post-taxonomies/panel';
@@ -72,21 +70,12 @@ function Sidebar( { extraPanels, onActionPerformed } ) {
 	if ( isRevisionsMode ) {
 		tabContent = <PostRevisionSummary />;
 	} else {
-		const isDataFormInspectorEnabled =
-			window?.__experimentalDataFormInspector;
 		tabContent = (
 			<>
-				{ isDataFormInspectorEnabled ? (
-					<DataFormPostSummary
-						onActionPerformed={ onActionPerformed }
-					/>
-				) : (
-					<PostSummary onActionPerformed={ onActionPerformed } />
-				) }
-				<CollaborationReviewPanel />
+				<DataFormPostSummary onActionPerformed={ onActionPerformed } />
 				<PluginDocumentSettingPanel.Slot />
 				<TemplateContentPanel />
-				{ isDataFormInspectorEnabled && <TemplateActionsPanel /> }
+				<TemplateActionsPanel />
 				<TemplatePartContentPanel />
 				<PostTransformPanel />
 				<PostTaxonomiesPanel />

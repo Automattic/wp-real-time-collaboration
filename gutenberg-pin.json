@@ -1,28 +1,12 @@
 {
   "repository": "https://github.com/WordPress/gutenberg",
-  "branch": "try/sync-engines",
-  "commit": "ee3554096494d12fe7ce1d1722f610250bbd237b",
-  "trunk": "0d3eefe596560204e99bb1047df65e2e666a9ad1",
-  "tree": "38416624dd200ed757aa156bd3e6b074b0750e76",
+  "branch": "try/sync-engines-intent",
+  "commit": "061056f94bda96ca20f3e36056737eb36010bda8",
+  "trunk": "86264c189101f8468036d2452aa092e91306f604",
+  "tree": "9f8d9b56108f0d7ab8fc9997d45fd938f53576b6",
   "source": {
     "repository": "https://github.com/WordPress/gutenberg-sync-engines",
     "commit": "9f5267b8914db5c8a72eff19aa9c75c7b8d63bf5"
   },
-  "local_changes": [
-    "packages/core-data/src/utils/crdt-blocks.ts",
-    "packages/core-data/src/utils/test/crdt-blocks.jsdom.test.ts",
-    "packages/editor/CHANGELOG.md",
-    "packages/editor/src/private-apis.js",
-    "packages/editor/src/components/post-revisions-preview/revisions-canvas.jsx",
-    "packages/editor/src/components/post-revisions-preview/block-diff-view.jsx",
-    "lib/experimental/collaboration/collaboration.php",
-    "lib/experimental/collaboration/class-wp-sync-config.php (deleted)",
-    "lib/experimental/collaboration/class-wp-sync-engine-registry.php (deleted)",
-    "lib/experimental/collaboration/class-wp-sync-post-meta-storage.php (deleted)",
-    "lib/experimental/collaboration/class-wp-sync-save-server.php (deleted)",
-    "lib/experimental/collaboration/interface-wp-sync-engine.php (deleted)",
-    "lib/experimental/collaboration/interface-wp-sync-storage.php (deleted)",
-    "lib/experimental/collaboration/transports/class-wp-sync-transport-registry.php (deleted)",
-    "lib/experimental/collaboration/transports/interface-wp-sync-transport.php (deleted)"
-  ]
+  "local_changes": []
 }

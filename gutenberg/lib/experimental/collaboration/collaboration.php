@@ -5,15 +5,6 @@
  * @package gutenberg
  */
 
-/*
- * The sync storage, the engine and transport registries, the REST routes
- * and the engine announcement used to live in this file. The WP Real-Time
- * Collaboration plugin that bundles this copy owns them now (see its
- * includes/server/ folder). The post meta for a stored CRDT document went
- * with them, because nothing registers a Yjs engine here. This matches the
- * Gutenberg branch that removed the same pieces.
- */
-
 if ( ! function_exists( 'wp_is_collaboration_enabled' ) ) {
 	/**
 	 * Determines whether real-time collaboration is enabled.
@@ -23,7 +14,22 @@ if ( ! function_exists( 'wp_is_collaboration_enabled' ) ) {
 	 * @return bool Whether real-time collaboration is enabled.
 	 */
 	function wp_is_collaboration_enabled() {
-		return gutenberg_is_experiment_enabled( 'gutenberg-real-time-collaboration' );
+		/**
+		 * Filters whether real-time collaboration is enabled.
+		 *
+		 * Gutenberg ships no sync engine of its own. A sync engine plugin
+		 * turns collaboration on here, which relaxes the exclusive post lock
+		 * and lets the editor hand record syncing to the plugin's registered
+		 * entity sync provider.
+		 *
+		 * @since 22.0.0
+		 *
+		 * @param bool $enabled Whether real-time collaboration is enabled.
+		 */
+		return (bool) apply_filters(
+			'wp_is_collaboration_enabled',
+			gutenberg_is_experiment_enabled( 'gutenberg-real-time-collaboration' )
+		);
 	}
 }
 

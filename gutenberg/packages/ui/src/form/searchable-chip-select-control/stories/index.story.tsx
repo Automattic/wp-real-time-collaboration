@@ -1,8 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useRef, useState } from '@wordpress/element';
 import { fn } from 'storybook/test';
-import { Spinner } from '../../../spinner';
-import { Stack } from '../../../stack';
 import { VisuallyHidden } from '../../../visually-hidden';
 import { SearchableChipSelectControl } from '../';
 import {
@@ -25,9 +23,13 @@ const meta: Meta< typeof SearchableChipSelectControl > = {
 	id: 'design-system-components-form-searchablechipselectcontrol',
 	component: SearchableChipSelectControl,
 	subcomponents: {
+		'SearchableChipSelectControl.LoadingIndicator':
+			SearchableChipSelectControl.LoadingIndicator,
 		'SearchableChipSelectControl.Group': SearchableChipSelectControl.Group,
 		'SearchableChipSelectControl.GroupLabel':
 			SearchableChipSelectControl.GroupLabel,
+		'SearchableChipSelectControl.Separator':
+			SearchableChipSelectControl.Separator,
 		'SearchableChipSelectControl.Item': SearchableChipSelectControl.Item,
 		'SearchableChipSelectControl.ItemLabel':
 			SearchableChipSelectControl.ItemLabel,
@@ -215,9 +217,10 @@ function HiddenResultCount() {
 }
 
 /**
- * Loads the item list asynchronously. `statusContent` shows loading, then
- * a visually hidden result count. Pass `emptyContent={ null }` while
- * loading so Empty does not claim there are no results.
+ * Pass `SearchableChipSelectControl.LoadingIndicator` as `statusContent` while fetching
+ * items. Pass `children` to customize its message. After loading, pass a
+ * visually hidden result count as `statusContent` to announce it. Pass
+ * `emptyContent={ null }` while loading.
  */
 export const AsyncItems: Story = {
 	args: {
@@ -227,7 +230,7 @@ export const AsyncItems: Story = {
 	render: function Template( args ) {
 		const [ loading, setLoading ] = useState( false );
 		const [ items, setItems ] = useState< typeof ITEMS >( [] );
-		const timeoutRef = useRef< ReturnType< typeof setTimeout > >();
+		const timeoutRef = useRef< ReturnType< typeof setTimeout > >( null );
 
 		return (
 			<SearchableChipSelectControl
@@ -235,27 +238,25 @@ export const AsyncItems: Story = {
 				items={ items }
 				statusContent={
 					loading ? (
-						<Stack direction="row" gap="sm" align="center">
-							<Spinner />
-							Loading…
-						</Stack>
+						<SearchableChipSelectControl.LoadingIndicator />
 					) : (
 						<HiddenResultCount />
 					)
 				}
 				emptyContent={ loading ? null : undefined }
 				onOpenChange={ ( open ) => {
-					if ( ! open ) {
+					if ( timeoutRef.current ) {
 						clearTimeout( timeoutRef.current );
+					}
+					if ( ! open ) {
 						return;
 					}
 					setLoading( true );
 					setItems( [] );
-					clearTimeout( timeoutRef.current );
 					timeoutRef.current = setTimeout( () => {
 						setItems( ITEMS );
 						setLoading( false );
-					}, 500 );
+					}, 2000 );
 				} }
 			/>
 		);
@@ -285,6 +286,18 @@ export const Grouped: Story = {
 			GROUPED_ITEMS[ 0 ].items[ 0 ],
 			GROUPED_ITEMS[ 1 ].items[ 0 ],
 		],
+		label: 'Fruit',
+		description: 'Choose your favorite fruits.',
+	},
+};
+
+/**
+ * Use `SearchableChipSelectControl.Separator` to set choices apart from each other.
+ */
+export const WithSeparator: Story = {
+	...SearchableChipSelectStories.WithSeparator,
+	args: {
+		...SearchableChipSelectStories.WithSeparator.args,
 		label: 'Fruit',
 		description: 'Choose your favorite fruits.',
 	},

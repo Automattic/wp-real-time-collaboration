@@ -1,7 +1,14 @@
 import fastDeepEqual from 'fast-deep-equal/es6/index.js';
 import { dispatch, resolveSelect, select } from '@wordpress/data';
 import {
-	privateApis as syncPrivateApis,
+	ConnectionErrorCode,
+	createSyncManager,
+	Delta,
+	CRDT_DOC_META_PERSISTENCE_KEY,
+	CRDT_RECORD_MAP_KEY,
+	LOCAL_EDITOR_ORIGIN,
+	LOCAL_UNDO_IGNORED_ORIGIN,
+	retrySyncConnection as retryDefaultSyncConnection,
 	type ConnectionStatus,
 	type ObjectID,
 	type SyncConfig,
@@ -9,9 +16,14 @@ import {
 	type Y,
 } from '@wordpress/sync';
 import {
+	registerEntitySyncManager,
+	getEntitySyncManager,
+	type EntitySyncServices,
+	type EntitySyncContext,
 	type EntitySyncBeforeSaveContext,
 	type EntitySyncCollectionHandlers,
 	type EntitySyncEditOptions,
+	type EntitySyncEditBatch,
 	type EntitySyncManager,
 	type EntitySyncRecord,
 	type EntitySyncRecordHandlers,
@@ -19,7 +31,6 @@ import {
 } from './entity-sync';
 import { DEFAULT_ENTITY_KEY } from './entities';
 import { unlock } from './lock-unlock';
-import { createSyncReviewHandlers } from './sync-review';
 import { STORE_NAME } from './name';
 import type { AnyFunction } from './types';
 import {
@@ -28,16 +39,11 @@ import {
 } from './utils/crdt';
 import { restoreSelection, getSelectionHistory } from './utils/crdt-selection';
 import { saveCRDTDoc } from './utils/save-crdt-doc';
+import { applyEditBatchToCRDTDoc } from './utils/crdt-edit-batch';
 
-const {
-	ConnectionErrorCode,
-	Delta,
-	CRDT_DOC_META_PERSISTENCE_KEY,
-	CRDT_RECORD_MAP_KEY,
-	LOCAL_EDITOR_ORIGIN,
-	LOCAL_UNDO_IGNORED_ORIGIN,
-	resolveEngineAdapter,
-} = unlock( syncPrivateApis );
+// Only the Yjs adapter uses this envelope. It is consumed inside the queued
+// transaction, never written to the document or sent to another provider.
+const EDIT_BATCH = Symbol( 'entity edit batch' );
 
 export {
 	ConnectionErrorCode,
@@ -59,8 +65,6 @@ export {
 export const CRDT_AUTOSAVE_SNAPSHOT_KEY = 'crdt_snapshot';
 
 let syncManager: SyncManager;
-let engineMismatchWarned = false;
-let engineUnavailable = false;
 
 export function getSyncManager(): SyncManager | undefined {
 	if ( syncManager ) {
@@ -71,41 +75,9 @@ export function getSyncManager(): SyncManager | undefined {
 		return undefined;
 	}
 
-	/*
-	 * Engine handshake: the server announces the sync engine it speaks
-	 * (window._wpCollaborationSync) and enforces it per-request with a 409.
-	 * When this client cannot provide the announced engine at the announced
-	 * protocol version, do not create a sync manager at all — entity syncing
-	 * stays off. Callers observe this via isSyncEngineUnavailable() and must
-	 * flip collaborationSupported so WordPress's regular post locking
-	 * re-engages (without that flip the degraded state would be no sync AND
-	 * no lock: concurrent editors silently overwrite each other on save).
-	 */
-	const adapter = resolveEngineAdapter();
-	if ( ! adapter ) {
-		engineUnavailable = true;
-		if ( ! engineMismatchWarned ) {
-			engineMismatchWarned = true;
-			// eslint-disable-next-line no-console
-			console.warn(
-				'Real-time collaboration is unavailable: this client does not support the sync engine announced by the server. Falling back to exclusive post locking.'
-			);
-		}
-		return undefined;
-	}
-
-	syncManager = adapter.createManager();
+	syncManager = createSyncManager();
 
 	return syncManager;
-}
-
-/**
- * Whether sync is unavailable because the server announced an engine this
- * client cannot provide (as opposed to collaboration simply being disabled).
- * Only meaningful after a getSyncManager() call attempted resolution.
- */
-export function isSyncEngineUnavailable(): boolean {
-	return engineUnavailable;
 }
 
 /**
@@ -115,20 +87,6 @@ export function isSyncEngineUnavailable(): boolean {
  */
 export function hasSyncManager(): boolean {
 	return Boolean( syncManager );
-}
-
-/**
- * Retry the active sync connection after a connection error (wired to the
- * editor's connection-error modal). Transport-agnostic: it delegates to the
- * active manager, which asks its live providers to retry — no reaching into a
- * specific transport. A no-op when no manager exists (collaboration disabled or
- * the announced engine is unavailable).
- */
-export function retrySyncConnection(): void {
-	if ( ! hasSyncManager() ) {
-		return;
-	}
-	getSyncManager()?.retry?.();
 }
 
 /**
@@ -145,11 +103,11 @@ export function getEntitySnapshot(
 	name: string,
 	recordId: string | number
 ): string | undefined {
-	if ( ! hasSyncManager() ) {
+	if ( ! getSyncServices() ) {
 		return undefined;
 	}
 
-	return getSyncManager()?.getEntitySnapshot(
+	return getSyncServices()?.getEntitySnapshot(
 		`${ kind }/${ name }`,
 		`${ recordId }`
 	);
@@ -172,12 +130,12 @@ export function entityContainsSnapshot(
 	recordId: string | number,
 	encodedSnapshot: string
 ): boolean {
-	if ( ! hasSyncManager() ) {
+	if ( ! getSyncServices() ) {
 		return false;
 	}
 
 	return (
-		getSyncManager()?.entityContainsSnapshot(
+		getSyncServices()?.entityContainsSnapshot(
 			`${ kind }/${ name }`,
 			`${ recordId }`,
 			encodedSnapshot
@@ -275,9 +233,8 @@ function toObjectId( recordId: EntitySyncRecordId ): ObjectID {
 
 /**
  * The entity sync manager that adapts core-data's entity sync interface
- * (`entity-sync.ts`) to the `@wordpress/sync` manager, so the real-time
- * collaboration experiment keeps working exactly as before through the
- * interface. Registered at load time when the experiment is on.
+ * (`entity-sync.ts`) to the `@wordpress/sync` manager, using its transaction queue and persistence support. This adapter is
+ * available for providers; it is not registered automatically.
  *
  * @param data How to reach the core-data store; defaults to the default
  *             registry.
@@ -293,8 +250,35 @@ export function createDefaultEntitySyncManager(
 		data.select( STORE_NAME ).getEntityConfig( kind, name )?.syncConfig;
 
 	return {
+		services: {
+			getAwareness: ( ...args ) =>
+				getSyncManager()?.getAwareness( ...args ),
+			getEntitySnapshot: ( ...args ) =>
+				syncManager?.getEntitySnapshot( ...args ),
+			entityContainsSnapshot: ( ...args ) =>
+				syncManager?.entityContainsSnapshot( ...args ) ?? false,
+			createPersistedCRDTDoc: async ( ...args ) =>
+				( await syncManager?.createPersistedCRDTDoc( ...args ) ) ??
+				null,
+			retry: retryDefaultSyncConnection,
+		},
 		shouldSync( kind, name ) {
 			return Boolean( getSyncManager() && getSyncConfig( kind, name ) );
+		},
+
+		isLoaded( kind, name, recordId ) {
+			// Nothing is loaded before a sync manager exists, so do not
+			// create one just to answer.
+			if ( ! hasSyncManager() ) {
+				return false;
+			}
+
+			return Boolean(
+				getSyncManager()?.isLoaded(
+					`${ kind }/${ name }`,
+					toObjectId( recordId )
+				)
+			);
 		},
 
 		load( kind, name, recordId, record, handlers ) {
@@ -306,7 +290,20 @@ export function createDefaultEntitySyncManager(
 			}
 
 			return manager.load(
-				syncConfig,
+				{
+					...syncConfig,
+					applyChangesToCRDTDoc( doc, changes ) {
+						if ( EDIT_BATCH in changes ) {
+							applyEditBatchToCRDTDoc(
+								doc,
+								changes[ EDIT_BATCH ] as EntitySyncEditBatch,
+								syncConfig
+							);
+						} else {
+							syncConfig.applyChangesToCRDTDoc( doc, changes );
+						}
+					},
+				},
 				`${ kind }/${ name }`,
 				toObjectId( recordId ),
 				record,
@@ -336,17 +333,17 @@ export function createDefaultEntitySyncManager(
 			);
 		},
 
-		update( kind, name, recordId, edits, options ) {
-			if ( ! getSyncConfig( kind, name ) ) {
+		applyEditBatch( kind, name, recordId, batch ) {
+			if ( recordId === undefined || ! getSyncConfig( kind, name ) ) {
 				return;
 			}
 
 			getSyncManager()?.update(
 				`${ kind }/${ name }`,
 				toObjectId( recordId ),
-				edits,
-				getEditOrigin( options ),
-				{ isNewUndoLevel: isNewUndoLevel( options ) }
+				{ [ EDIT_BATCH ]: batch },
+				getEditOrigin( batch.options ),
+				{ isNewUndoLevel: isNewUndoLevel( batch.options ) }
 			);
 		},
 
@@ -396,10 +393,33 @@ export function createDefaultEntitySyncManager(
 			}
 		},
 
-		// A getter, so the value is read when core-data asks: the undo
-		// manager only exists once a synced entity is loaded.
-		get undoManager() {
-			return getSyncManager()?.undoManager;
+		// A getter, so the value is read when core-data asks. There is no
+		// history before a sync manager exists, and asking must not create
+		// one.
+		get undoHistory() {
+			if ( ! hasSyncManager() ) {
+				return undefined;
+			}
+
+			const undoManager = getSyncManager()?.undoManager;
+			if ( ! undoManager ) {
+				return undefined;
+			}
+
+			return {
+				undo: ( kind, name, recordId ) =>
+					undoManager.undo(
+						`${ kind }/${ name }`,
+						toObjectId( recordId )
+					),
+				redo: ( kind, name, recordId ) =>
+					undoManager.redo(
+						`${ kind }/${ name }`,
+						toObjectId( recordId )
+					),
+				stopCapturing: () => undoManager.stopCapturing(),
+				clearRedo: () => undoManager.clearRedo(),
+			};
 		},
 	};
 }
@@ -490,11 +510,10 @@ function createRecordHandlers(
 	handlers: EntitySyncRecordHandlers
 ) {
 	return {
-		...createSyncReviewHandlers( data, kind, name, recordId ),
 		editRecord: handlers.editRecord,
 		getEditedRecord: handlers.getEditedRecord,
 		refetchRecord: handlers.refetchRecord,
-		onUndoStackChange: handlers.onUndoStackChange,
+		onUndoLevelOpened: handlers.onUndoLevelOpened,
 
 		// Handle sync connection status changes.
 		onStatusChange: ( status: ConnectionStatus | null ) => {
@@ -586,5 +605,63 @@ function createCollectionHandlers(
 	};
 }
 
-// This vendored framework has no built-in engines. The plugin registers its
-// entity adapter after registering engines and transports, before editor startup.
+/** Services of the selected provider; never starts the default behind a plugin. */
+export function getSyncServices(): EntitySyncServices | undefined {
+	return getEntitySyncManager()?.services;
+}
+
+export function retrySyncConnection(): void {
+	getSyncServices()?.retry?.();
+}
+
+export function isSyncEngineUnavailable(): boolean {
+	return getSyncServices()?.isAvailable?.() === false;
+}
+
+/**
+ * Registers the entity sync provider a sync engine plugin supplies. Gutenberg
+ * registers none of its own: with the collaboration flag on and no provider
+ * registered, core-data turns collaboration off and the classic post lock
+ * stays in effect (see `getEntityRecord` in `resolvers.ts`).
+ *
+ * The first registration wins. The provider is constructed right away, with
+ * the record handlers it needs to write remote changes into the store, so it
+ * must be registered before the editor loads its first record.
+ *
+ * @param create Creates the provider using the editor's record operations.
+ * @return Unregisters the provider. Does nothing when the registration was
+ *         ignored because collaboration is off or a provider is already
+ *         registered.
+ */
+export function registerEntitySyncProvider(
+	create: ( context: EntitySyncContext ) => EntitySyncManager
+): () => void {
+	if (
+		! globalThis.window?.__experimentalEnableRealTimeCollaboration ||
+		getEntitySyncManager() !== undefined
+	) {
+		return () => {};
+	}
+	const data = defaultDataAccess;
+	const getSyncConfig = (
+		kind: string,
+		entityName: string
+	): SyncConfig | undefined =>
+		data.select( STORE_NAME ).getEntityConfig( kind, entityName )
+			?.syncConfig;
+	const manager = create( {
+		getSyncConfig,
+		recordHandlers: ( kind, entityName, id, handlers ) =>
+			createRecordHandlers(
+				data,
+				kind,
+				entityName,
+				id,
+				getSyncConfig( kind, entityName )!,
+				handlers
+			),
+		collectionHandlers: ( kind, entityName, handlers ) =>
+			createCollectionHandlers( data, kind, entityName, handlers ),
+	} );
+	return registerEntitySyncManager( manager );
+}
