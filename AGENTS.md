@@ -41,11 +41,14 @@ shared editing session.
   `awareness/`, `entity-sync/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`), `framework.ts`,
   `editor/` (`gutenberg-contract.ts`: every non-public thing the plugin
-  relies on from Gutenberg goes here; `capture.ts`, `identity.ts` and
-  `text-change.ts`: turn the edit batches of the newer Gutenberg sync
-  contract into engine edits, tested against
-  `tests/fixtures/edit-batches/` and not used by the editor yet),
-  `debug/inspector.ts`.
+  relies on from Gutenberg goes here; the other files are the pieces
+  for the newer Gutenberg sync contract, tested against
+  `tests/fixtures/edit-batches/` and not used by the editor yet:
+  `capture.ts`, `identity.ts` and `text-change.ts` turn edit batches
+  into engine edits, `apply.ts` builds editor blocks from the document,
+  `load.ts` matches blocks when a post opens, `post-fields.ts` syncs
+  the title, terms and meta, `block-types.ts` reads block type
+  definitions), `debug/inspector.ts`.
 - `gutenberg/` — a squashed Git subtree of Gutenberg, source only,
   pinned by `gutenberg-pin.json` (`commit`, `trunk`, and `tree`, which
   must equal `git rev-parse HEAD:gutenberg`). The plugin loads it when

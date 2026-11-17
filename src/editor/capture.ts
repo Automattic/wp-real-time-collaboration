@@ -167,6 +167,14 @@ export interface CaptureResult {
 	 * `metadata.syncId`, in a later task.
 	 */
 	identityNeedsWrite: boolean;
+	/**
+	 * Raw markup blocks whose markup changed in a way the operations do
+	 * not spell out: a block inside one was added, removed or edited. The
+	 * document keeps such a block's whole markup as one text, so the
+	 * caller has to read the block from the editor in a later task and
+	 * send its markup.
+	 */
+	rawContentToRefresh: string[];
 }
 
 /** A block that arrived whole with an insert operation. */
@@ -175,6 +183,11 @@ interface PendingBlock {
 	name: string;
 	attributes: Record< string, unknown >;
 	innerContent?: Array< string | null >;
+	/**
+	 * The blocks inside a raw markup block. The document keeps them as
+	 * part of that block's markup, not as blocks of their own.
+	 */
+	rawInnerBlocks?: EditorBlock[];
 }
 
 /** A change to one block the document already holds. */
@@ -268,6 +281,27 @@ function withoutSyncId( value: unknown ): unknown {
 	}
 
 	return rest;
+}
+
+/**
+ * An editor block in the shape the bridge reads, with everything inside
+ * it.
+ *
+ * @param block The editor block.
+ * @return The block.
+ */
+function toBridgeBlock( block: EditorBlock ): BridgeBlock {
+	const bridge: BridgeBlock = {
+		name: block.name,
+		attributes: block.attributes,
+		innerBlocks: block.innerBlocks.map( toBridgeBlock ),
+	};
+
+	if ( block.innerContent ) {
+		bridge.innerContent = block.innerContent;
+	}
+
+	return bridge;
 }
 
 /**
@@ -635,6 +669,41 @@ export function captureBlockOperations(
 	const claimed = new Set< string >();
 	// Document blocks an operation of this batch placed somewhere.
 	const relocated = new Set< string >();
+	// Raw markup blocks whose markup the caller has to read again.
+	const rawContentToRefresh = new Set< string >();
+
+	/**
+	 * Handles an operation that places a block inside a raw markup block.
+	 * The document does not keep such blocks as blocks of their own.
+	 *
+	 * @param parentId The parent's document id.
+	 * @param inserted The block, when the operation is an insert.
+	 * @return Whether the parent is a raw markup block.
+	 */
+	const placedInRawContent = (
+		parentId: string,
+		inserted?: EditorBlock
+	): boolean => {
+		const pending = newBlocks.get( parentId ) ?? replaced.get( parentId );
+		const blockType = pending
+			? pending.name
+			: getBlock( doc, parentId )?.blockType;
+
+		if ( undefined === blockType || ! rawContent?.is( blockType ) ) {
+			return false;
+		}
+
+		if ( pending && inserted ) {
+			pending.rawInnerBlocks = [
+				...( pending.rawInnerBlocks ?? [] ),
+				inserted,
+			];
+		} else {
+			rawContentToRefresh.add( parentId );
+		}
+
+		return true;
+	};
 
 	const resolve = ( clientId: string ): string | undefined => {
 		const known = ids.getSyncId( clientId );
@@ -807,6 +876,13 @@ export function captureBlockOperations(
 		detach( structure, syncId );
 		structure.children.set( syncId, [] );
 
+		if ( rawContent?.is( block.name ) ) {
+			// What is inside a raw markup block is part of its markup.
+			pending.rawInnerBlocks = block.innerBlocks;
+
+			return syncId;
+		}
+
 		for ( const child of block.innerBlocks ) {
 			const childId = adopt( structure, child );
 
@@ -846,6 +922,13 @@ export function captureBlockOperations(
 				}
 
 				parentId = resolvedParent;
+			}
+
+			if (
+				null !== parentId &&
+				placedInRawContent( parentId, operation.block )
+			) {
+				continue;
 			}
 
 			const beforeId =
@@ -896,6 +979,16 @@ export function captureBlockOperations(
 				}
 
 				parentId = resolvedParent;
+			}
+
+			if ( null !== parentId && placedInRawContent( parentId ) ) {
+				// The block leaves the document's blocks and becomes part
+				// of the parent's markup.
+				if ( undefined !== syncId ) {
+					detach( final, syncId );
+				}
+
+				continue;
 			}
 
 			if ( undefined === syncId ) {
@@ -967,12 +1060,20 @@ export function captureBlockOperations(
 			'innerContent' === operation.property &&
 			Array.isArray( operation.value )
 		) {
-			const pieces = operation.value.filter(
-				( piece ): piece is string => 'string' === typeof piece
-			);
+			// A piece that is not text marks the place of a block inside
+			// the markup.
+			const pieces = operation.value.map( ( piece ) => {
+				if ( 'string' === typeof piece ) {
+					return piece;
+				}
+
+				return null;
+			} );
 
 			if ( pending ) {
 				pending.innerContent = pieces;
+			} else if ( pieces.includes( null ) ) {
+				rawContentToRefresh.add( syncId );
 			} else {
 				changes.push( {
 					kind: 'innerContent',
@@ -1000,7 +1101,9 @@ export function captureBlockOperations(
 		const metadata = isRecord( pending.attributes.metadata )
 			? pending.attributes.metadata
 			: {};
-		const innerBlocks: BridgeBlock[] = [];
+		const innerBlocks: BridgeBlock[] = ( pending.rawInnerBlocks ?? [] ).map(
+			toBridgeBlock
+		);
 
 		if ( withNewChildren && final ) {
 			for ( const childId of final.children.get( syncId ) ?? [] ) {
@@ -1697,5 +1800,13 @@ export function captureBlockOperations(
 		}
 	}
 
-	return { intents, doc: working, counters, identityNeedsWrite };
+	return {
+		intents,
+		doc: working,
+		counters,
+		identityNeedsWrite,
+		rawContentToRefresh: [ ...rawContentToRefresh ].filter( ( syncId ) =>
+			getBlock( working, syncId )
+		),
+	};
 }

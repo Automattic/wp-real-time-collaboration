@@ -1202,3 +1202,96 @@ describe( 'capture: saved markup', () => {
 		} );
 	} );
 } );
+
+describe( 'capture: blocks inside a raw markup block', () => {
+	const rawContent = {
+		is: ( name: string ) => 'core/html' === name,
+		// A stand-in for the editor's serializer: the markup pieces, with
+		// each inner block written as its name.
+		serialize: ( html: {
+			innerContent?: Array< string | null >;
+			innerBlocks: Array< { name: string } >;
+		} ) => {
+			let next = 0;
+
+			return ( html.innerContent ?? [] )
+				.map(
+					( piece ) =>
+						piece ?? `[${ html.innerBlocks[ next++ ]?.name }]`
+				)
+				.join( '' );
+		},
+	};
+	const context = { richTextFields: () => [], rawContent };
+
+	it( 'keeps the blocks inside a new raw markup block as part of its markup', () => {
+		const { capture } = setup( [ paragraph( 'c-1', 'One' ) ] );
+		const html: EditorBlock = {
+			...block( 'c-html', 'core/html', {}, [
+				paragraph( 'c-inner', 'In' ),
+			] ),
+			innerContent: [ 'before ', null, ' after' ],
+		};
+
+		const result = capture(
+			[ { type: 'insert', block: html, parent: null, before: null } ],
+			context
+		);
+
+		expect( summarize( result.intents ) ).toBe( 'insert_block' );
+		expect( result.intents[ 0 ].payload.block ).toMatchObject( {
+			blockType: 'core/html',
+			children: [],
+			fields: { content: { text: 'before [core/paragraph] after' } },
+		} );
+		expect( result.rawContentToRefresh ).toEqual( [] );
+	} );
+
+	it( 'asks for the markup again when a block is placed inside an existing raw markup block', () => {
+		const { capture } = setup( [ block( 'c-html', 'core/html' ) ] );
+
+		const result = capture(
+			[
+				{
+					type: 'set-block-property',
+					clientId: 'c-html',
+					property: 'innerContent',
+					previousValue: [ 'old' ],
+					value: [ 'before ', null ],
+				},
+				{
+					type: 'insert',
+					block: paragraph( 'c-inner', 'In' ),
+					parent: 'c-html',
+					before: null,
+				},
+			],
+			context
+		);
+
+		// The operations do not hold the whole markup. Nothing is sent
+		// from them, and no block is added inside the raw markup block.
+		expect( result.intents ).toEqual( [] );
+		expect( result.rawContentToRefresh ).toEqual( [ 'b1' ] );
+	} );
+
+	it( 'captures markup with no blocks inside straight from the operation', () => {
+		const { capture } = setup( [ block( 'c-html', 'core/html' ) ] );
+
+		const result = capture(
+			[
+				{
+					type: 'set-block-property',
+					clientId: 'c-html',
+					property: 'innerContent',
+					previousValue: [],
+					value: [ 'plain words' ],
+				},
+			],
+			context
+		);
+
+		expect( summarize( result.intents ) ).toBe( 'insert_text' );
+		expect( result.rawContentToRefresh ).toEqual( [] );
+	} );
+} );
