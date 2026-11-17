@@ -302,6 +302,100 @@ export function createPostFieldsState(
 }
 
 /**
+ * Adds the taxonomies of the record's post type to the fields it syncs.
+ * They are looked up over REST, so they arrive after the state was made.
+ *
+ * @param state      The record's state. Changed in place.
+ * @param record     The record the editor loaded.
+ * @param taxonomies The REST names of the post type's taxonomies.
+ */
+export function addPostFieldTaxonomies(
+	state: PostFieldsState,
+	record: Record< string, unknown >,
+	taxonomies: string[]
+): void {
+	for ( const name of taxonomies ) {
+		if ( state.syncedFields.includes( name ) ) {
+			continue;
+		}
+
+		state.syncedFields.push( name );
+
+		const value = readPostField( record, name );
+
+		if ( undefined !== value && ! ( name in state.lastSeen ) ) {
+			state.lastSeen[ name ] = canonicalValue( value );
+		}
+	}
+}
+
+/**
+ * The fields of a save response that the server changed by itself: the
+ * ones that differ from what the browser sent, or from what the record
+ * held before when the browser did not send them. The shared document has
+ * to learn about them.
+ *
+ * Meta is compared one key at a time.
+ *
+ * @param savedRecord     The server's answer to the save.
+ * @param persistedRecord The record before the save.
+ * @param edits           The edits that were sent.
+ * @return The changed fields. `meta` holds only the changed keys.
+ */
+export function serverChangedFields(
+	savedRecord: Record< string, unknown >,
+	persistedRecord: Record< string, unknown >,
+	edits: Record< string, unknown >
+): Record< string, unknown > {
+	const changed: Record< string, unknown > = {};
+	// The server answers with `{ raw, rendered }` where the browser holds
+	// plain text. Compare the plain text.
+	const plain = ( value: unknown ): unknown => {
+		if ( isRecord( value ) && 'string' === typeof value.raw ) {
+			return value.raw;
+		}
+
+		return value;
+	};
+
+	for ( const [ name, value ] of Object.entries( savedRecord ) ) {
+		if ( 'meta' === name ) {
+			const baseline = {
+				...readMeta( persistedRecord ),
+				...readMeta( edits ),
+			};
+			const changedMeta: Record< string, unknown > = {};
+
+			for ( const [ key, metaValue ] of Object.entries(
+				readMeta( savedRecord ) ?? {}
+			) ) {
+				if (
+					! DISALLOWED_META_KEYS.has( key ) &&
+					! sameJson( metaValue, baseline[ key ] )
+				) {
+					changedMeta[ key ] = metaValue;
+				}
+			}
+
+			if ( Object.keys( changedMeta ).length > 0 ) {
+				changed.meta = changedMeta;
+			}
+
+			continue;
+		}
+
+		const baseline =
+			name in edits ? edits[ name ] : persistedRecord[ name ];
+
+		if ( ! sameJson( plain( value ), plain( baseline ) ) ) {
+			changed[ name ] = value;
+		}
+	}
+
+	return changed;
+}
+
+/**
  * Forgets which values the editor has seen. After the room starts again
  * from a newer copy, every property of that copy is compared afresh.
  *

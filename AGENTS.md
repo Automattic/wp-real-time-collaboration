@@ -35,20 +35,22 @@ shared editing session.
   (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds `build/sync-engines.js`
   with `@wordpress/sync` and `yjs` external: `engines/`, `shared/`,
-  `registry/` (the plugin's own transport registry, connection errors,
-  and the types an engine and a transport share),
+  `registry/` (the plugin's own transport and engine registries,
+  connection errors, and the types an engine and a transport share),
   `providers/{http-polling,websocket,advisory}/`,
   `awareness/`, `entity-sync/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`), `framework.ts`,
   `editor/` (`gutenberg-contract.ts`: every non-public thing the plugin
-  relies on from Gutenberg goes here; the other files are the pieces
-  for the newer Gutenberg sync contract, tested against
-  `tests/fixtures/edit-batches/` and not used by the editor yet:
-  `capture.ts`, `identity.ts` and `text-change.ts` turn edit batches
-  into engine edits, `apply.ts` builds editor blocks from the document,
-  `load.ts` matches blocks when a post opens, `post-fields.ts` syncs
-  the title, terms and meta, `block-types.ts` reads block type
-  definitions), `debug/inspector.ts`.
+  relies on from Gutenberg goes here; the other files are the engine's
+  side of the newer Gutenberg sync contract, tested in
+  `tests/js/editor/` and not used by the editor yet: `provider.ts` is
+  the object core-data will call, `capture.ts`, `identity.ts` and
+  `text-change.ts` turn edit batches into engine edits, `apply.ts`
+  builds editor blocks from the document, `load.ts` matches blocks
+  when a post opens, `post-fields.ts` syncs the title, terms and meta,
+  `block-types.ts` reads block type definitions, `undo-history.ts`,
+  `review-decisions.ts` and `collections.ts` hold undo, review
+  decisions and the list rooms), `debug/inspector.ts`.
 - `gutenberg/` — a squashed Git subtree of Gutenberg, source only,
   pinned by `gutenberg-pin.json` (`commit`, `trunk`, and `tree`, which
   must equal `git rev-parse HEAD:gutenberg`). The plugin loads it when

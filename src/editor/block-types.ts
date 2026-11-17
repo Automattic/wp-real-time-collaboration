@@ -32,16 +32,25 @@ import type {
 /**
  * A block in the shape the editor's serializer reads.
  *
- * @param block The engine's form of an editor block.
+ * @param block        The engine's form of an editor block.
+ * @param fillDefaults Whether to add the block type's default attribute
+ *                     values that are missing.
  * @return The block.
  */
-function toEditorBlock( block: BridgeBlock ): Block {
+export function toEditorBlock(
+	block: BridgeBlock,
+	fillDefaults = false
+): Block {
 	const editorBlock: Block = {
 		clientId: block.clientId ?? '',
 		isValid: true,
 		name: block.name,
-		attributes: block.attributes,
-		innerBlocks: block.innerBlocks.map( toEditorBlock ),
+		attributes: fillDefaults
+			? withAttributeDefaults( block.name, block.attributes )
+			: block.attributes,
+		innerBlocks: block.innerBlocks.map( ( child ) =>
+			toEditorBlock( child, fillDefaults )
+		),
 	};
 
 	if ( block.innerContent ) {

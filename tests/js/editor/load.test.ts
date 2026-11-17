@@ -9,7 +9,7 @@ import { describe, expect, it } from '@jest/globals';
 import { createDocument } from '../../../src/engines/intent-log/document.js';
 import type { EditorBlock } from '../../../src/editor/gutenberg-contract';
 import { createBlockIdentityTable } from '../../../src/editor/identity';
-import { linkLoadedBlocks } from '../../../src/editor/load';
+import { linkLoadedBlocks, linkSavedIds } from '../../../src/editor/load';
 
 /**
  * An editor block.
@@ -194,5 +194,38 @@ describe( 'matching the editor’s blocks to the document when a post opens', ()
 
 		expect( ids.size() ).toBe( 0 );
 		expect( match.unmatched ).toBe( 2 );
+	} );
+} );
+
+describe( 'linking saved ids before the document is there', () => {
+	it( 'links every block that carries a saved id, at any depth', () => {
+		const ids = createBlockIdentityTable();
+
+		const saved = linkSavedIds( ids, [
+			block( 'c-1', 'core/paragraph', 'p1' ),
+			block( 'c-group', 'core/group', undefined, [
+				block( 'c-inner', 'core/paragraph', 'p2' ),
+			] ),
+		] );
+
+		expect( ids.getSyncId( 'c-1' ) ).toBe( 'p1' );
+		expect( ids.getSyncId( 'c-inner' ) ).toBe( 'p2' );
+		expect( ids.getSyncId( 'c-group' ) ).toBeUndefined();
+		expect( [ ...saved ] ).toEqual( [
+			[ 'c-1', 'p1' ],
+			[ 'c-inner', 'p2' ],
+		] );
+	} );
+
+	it( 'gives a saved id that two blocks carry to the first one', () => {
+		const ids = createBlockIdentityTable();
+
+		linkSavedIds( ids, [
+			block( 'c-first', 'core/paragraph', 'p1' ),
+			block( 'c-copy', 'core/paragraph', 'p1' ),
+		] );
+
+		expect( ids.getClientId( 'p1' ) ).toBe( 'c-first' );
+		expect( ids.getSyncId( 'c-copy' ) ).toBeUndefined();
 	} );
 } );

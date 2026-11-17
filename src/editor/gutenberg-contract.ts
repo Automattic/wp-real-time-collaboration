@@ -7,6 +7,11 @@
  */
 
 /**
+ * Internal dependencies
+ */
+import type { ConnectionStatus } from '../registry/types';
+
+/**
  * One change to who is present: the client ids that appeared, changed, and
  * left.
  */
@@ -43,6 +48,9 @@ export interface PresenceObject {
 	 * the object keeps, not a copy.
 	 */
 	getStates: () => Map< number, object >;
+
+	/** Stops the object and tells its listeners. */
+	destroy?: () => void;
 
 	/*
 	 * Internal uses. Each one reaches past what the Awareness class means
@@ -216,4 +224,269 @@ export interface EditBatch {
 		undoIgnore: boolean;
 	};
 	selection?: EditorSelection;
+}
+
+/*
+ * The sync provider. core-data has one registration point
+ * (`registerEntitySyncProvider`, a private API). The plugin hands it a
+ * function that receives the context below and returns the manager below.
+ * The types are copies of the ones in Gutenberg's
+ * `packages/core-data/src/entity-sync.ts`. Five of them are not exported
+ * there.
+ */
+
+/** A record as core-data holds it. */
+export type EntitySyncRecord = Record< string, unknown >;
+
+/** A record's id. Posts have numbers, template parts have text. */
+export type EntitySyncRecordId = string | number;
+
+/**
+ * The connection state the editor shows. Gutenberg's type has the same
+ * shape as the plugin's own.
+ */
+export type EntitySyncConnectionStatus = ConnectionStatus;
+
+/** What the plugin can ask core-data to do for one loaded record. */
+export interface EntitySyncRecordHandlers {
+	/**
+	 * Writes edits that did not come from the person into the record,
+	 * without an undo step. This does not come back as an edit batch.
+	 */
+	editRecord: (
+		edits: EntitySyncRecord,
+		options?: { undoIgnore?: boolean }
+	) => void;
+
+	/**
+	 * The record with its unsaved edits. Do not use it to recover a lost
+	 * edit: it returns nothing for some block shapes.
+	 */
+	getEditedRecord: () => Promise< EntitySyncRecord >;
+
+	/** Fetches the record from the server again. */
+	refetchRecord: () => Promise< void >;
+
+	/**
+	 * Tells core-data that a local change opened a new undo step in the
+	 * plugin's history. core-data notes a placeholder for it and asks the
+	 * plugin back when the step is undone or redone.
+	 */
+	onUndoLevelOpened: () => void;
+}
+
+/** What the plugin can ask core-data to do for a loaded collection. */
+export interface EntitySyncCollectionHandlers {
+	/** Fetches the whole collection from the server again. */
+	refetchRecords: () => Promise< void >;
+}
+
+/** What core-data knows about a save that is about to go out. */
+export interface EntitySyncBeforeSaveContext {
+	/** The record as the server last sent it. */
+	persistedRecord?: EntitySyncRecord;
+	isAutosave: boolean;
+}
+
+/** What core-data knows about a save that succeeded. */
+export interface EntitySyncAfterSaveContext {
+	/** The server's answer. */
+	savedRecord: EntitySyncRecord;
+	/** The record before the save. Missing for a new record. */
+	persistedRecord?: EntitySyncRecord;
+	/** The edits that were sent. */
+	edits: EntitySyncRecord;
+}
+
+/**
+ * The plugin's undo history, as core-data calls it. core-data keeps the
+ * order of the steps. Each call is for the record whose placeholder is
+ * the step to move.
+ */
+export interface EntitySyncUndoHistory {
+	/** Undoes the latest step of a record. False when there was none. */
+	undo: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId
+	) => boolean;
+
+	/** Redoes the step of a record that was undone last. */
+	redo: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId
+	) => boolean;
+
+	/**
+	 * Closes the current step of every record. core-data calls it right
+	 * before an undo or redo, and when it records an edit of its own. A
+	 * local change that waits to be applied must be applied first.
+	 */
+	stopCapturing: () => void;
+
+	/** Drops the redo steps of every record. */
+	clearRedo: () => void;
+}
+
+/**
+ * Reads and connection controls the editor asks the provider for. The
+ * three members about snapshots and stored documents are leftovers of
+ * the Yjs design. An engine with no such document answers "none".
+ */
+export interface EntitySyncServices {
+	/** The presence object of a record, for the editor's presence display. */
+	getAwareness: (
+		objectType: string,
+		objectId: string | null
+	) => PresenceObject | undefined;
+	getEntitySnapshot: (
+		objectType: string,
+		objectId: string
+	) => string | undefined;
+	entityContainsSnapshot: (
+		objectType: string,
+		objectId: string,
+		encodedSnapshot: string
+	) => boolean;
+	createPersistedCRDTDoc: (
+		objectType: string,
+		objectId: string
+	) => Promise< string | null >;
+	/** False makes the editor fall back to the post lock. */
+	isAvailable?: () => boolean;
+	/** Connects again after a connection error. */
+	retry?: () => void;
+}
+
+/**
+ * What core-data knows about how a kind of record syncs. The plugin uses
+ * two members.
+ */
+export interface EntitySyncConfig {
+	/**
+	 * Builds the presence object for a record, over a stand-in for the
+	 * Yjs document (see src/shared/awareness-sync.ts).
+	 */
+	createAwareness?: (
+		doc: { clientID: number; on: () => void; off: () => void },
+		objectId?: string
+	) => PresenceObject | undefined;
+
+	/** False for a post type that has collaboration switched off. */
+	shouldSync?: ( objectType: string, objectId: string | null ) => boolean;
+}
+
+/** What core-data hands the provider when it is created. */
+export interface EntitySyncContext {
+	getSyncConfig: (
+		kind: string,
+		name: string
+	) => EntitySyncConfig | undefined;
+
+	/**
+	 * The handlers for one record, with the one more that reports the
+	 * connection state to the editor.
+	 */
+	recordHandlers: (
+		kind: string,
+		name: string,
+		id: EntitySyncRecordId,
+		handlers: EntitySyncRecordHandlers
+	) => {
+		onStatusChange: ( status: EntitySyncConnectionStatus | null ) => void;
+	};
+
+	/** The same for a collection. */
+	collectionHandlers: (
+		kind: string,
+		name: string,
+		handlers: EntitySyncCollectionHandlers
+	) => {
+		onStatusChange: ( status: EntitySyncConnectionStatus | null ) => void;
+	};
+}
+
+/**
+ * The manager the plugin returns. Only `load` is held back by
+ * `shouldSync`. core-data calls every other member for every record, so
+ * each one must ignore a record the plugin does not sync.
+ */
+export interface EntitySyncManager {
+	readonly services?: EntitySyncServices;
+
+	shouldSync?: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId
+	) => boolean;
+
+	/**
+	 * Called once when a single record arrives from the server, before
+	 * core-data stores it. The record holds its parsed `blocks`.
+	 */
+	load: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId,
+		record: EntitySyncRecord,
+		handlers: EntitySyncRecordHandlers
+	) => void | Promise< void >;
+
+	/** Called when a whole collection is fetched. */
+	loadCollection?: (
+		kind: string,
+		name: string,
+		handlers: EntitySyncCollectionHandlers
+	) => void | Promise< void >;
+
+	/**
+	 * Every local edit, before core-data stores it. A change the plugin
+	 * makes in answer must be written in a later task.
+	 */
+	applyEditBatch: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId | undefined,
+		batch: EditBatch
+	) => void;
+
+	/** Called right before a save request goes out. */
+	beforeSave?: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId,
+		edits: EntitySyncRecord,
+		context: EntitySyncBeforeSaveContext
+	) => EntitySyncRecord | void | Promise< EntitySyncRecord | void >;
+
+	/** Called after a regular save succeeded. */
+	afterSave?: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId | undefined,
+		context: EntitySyncAfterSaveContext
+	) => void;
+
+	/** Called after a record was deleted. */
+	unload: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId
+	) => void;
+
+	/** Called when collaboration is switched off. */
+	unloadAll: () => void;
+
+	/**
+	 * Whether the plugin holds the record. core-data then leaves the
+	 * record's undo history to the plugin.
+	 */
+	isLoaded?: (
+		kind: string,
+		name: string,
+		recordId: EntitySyncRecordId
+	) => boolean;
+
+	readonly undoHistory?: EntitySyncUndoHistory;
 }

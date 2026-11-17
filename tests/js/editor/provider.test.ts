@@ -1,0 +1,901 @@
+/**
+ * External dependencies
+ */
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	jest,
+} from '@jest/globals';
+
+/**
+ * WordPress dependencies
+ */
+import { addFilter, removeFilter } from '@wordpress/hooks';
+
+/**
+ * Internal dependencies
+ */
+import { getBlock } from '../../../src/engines/intent-log/document.js';
+import type { BlockSpec } from '../../../src/engines/intent-log/document.js';
+import { INTENT_LOG_UPDATE_TYPES } from '../../../src/engines/intent-log-session';
+import type {
+	EditBatch,
+	EditOperation,
+	EditorBlock,
+	EditorSelection,
+	EntitySyncContext,
+	EntitySyncRecord,
+	EntitySyncRecordHandlers,
+} from '../../../src/editor/gutenberg-contract';
+import {
+	createIntentLogProvider,
+	type IntentLogProviderOptions,
+} from '../../../src/editor/provider';
+import { resetProviderCreatorsForTesting } from '../../../src/registry/transports';
+import type {
+	EngineSessionCodec,
+	ProviderCreator,
+} from '../../../src/registry/types';
+import {
+	connectToWire,
+	createWireServer,
+	type WireLink,
+	type WireServer,
+} from './wire';
+
+/*
+ * The provider, driven the way core-data drives it: a record is loaded,
+ * edit batches arrive, and the provider writes back through `editRecord`.
+ * The server and the transport are the stand-ins in wire.ts, so a test
+ * decides when the server's answers arrive (`poll()`).
+ *
+ * Block registration is the editor's own state. The stand-in below knows
+ * no block type, so every block has one text attribute, `content`, and no
+ * saved markup.
+ */
+jest.mock( '@wordpress/blocks', () => {
+	const strip = ( block: {
+		name: string;
+		attributes: unknown;
+		innerBlocks?: unknown[];
+	} ): unknown => ( {
+		name: block.name,
+		attributes: block.attributes,
+		innerBlocks: ( block.innerBlocks ?? [] ).map( ( child ) =>
+			strip( child as Parameters< typeof strip >[ 0 ] )
+		),
+	} );
+
+	return {
+		getBlockType: () => undefined,
+		getBlockContent: () => '',
+		getSaveContent: () => '',
+		serialize: ( blocks: Array< Parameters< typeof strip >[ 0 ] > ) =>
+			JSON.stringify( blocks.map( strip ) ),
+		serializeRawBlock: () => '',
+		parse: ( content: string ) => ( content ? JSON.parse( content ) : [] ),
+	};
+} );
+
+const FILTER = 'sync.providers';
+const NAMESPACE = 'wp-real-time-collaboration/provider-test';
+
+/** The server every tab of the current test connects to. */
+let wire: WireServer;
+/** The connection of every session the provider made, in order. */
+let links: Array< { session: EngineSessionCodec; link: WireLink } > = [];
+
+const transport: ProviderCreator = async ( { session } ) => {
+	// The session is the intent-log session the provider made.
+	links.push( {
+		session,
+		link: connectToWire(
+			wire,
+			session as Parameters< typeof connectToWire >[ 1 ]
+		),
+	} );
+
+	return { destroy: () => {}, on: () => {} };
+};
+
+const context: EntitySyncContext = {
+	getSyncConfig: ( kind ) => {
+		if ( 'postType' === kind || 'taxonomy' === kind ) {
+			return {};
+		}
+
+		return undefined;
+	},
+	recordHandlers: () => ( { onStatusChange: () => {} } ),
+	collectionHandlers: () => ( { onStatusChange: () => {} } ),
+};
+
+/**
+ * An editor paragraph.
+ *
+ * @param clientId The editor's id for the block.
+ * @param content  The text.
+ * @param syncId   The lasting id saved in the block, if any.
+ * @return The block.
+ */
+function paragraph(
+	clientId: string,
+	content: string,
+	syncId?: string
+): EditorBlock {
+	const attributes: Record< string, unknown > = { content, dropCap: false };
+
+	if ( syncId ) {
+		attributes.metadata = { syncId };
+	}
+
+	return { clientId, name: 'core/paragraph', attributes, innerBlocks: [] };
+}
+
+/**
+ * A paragraph in the room's first document. Like the server's first copy
+ * of a post, it leaves out default attribute values.
+ *
+ * @param syncId The lasting id.
+ * @param text   The text.
+ * @return The block.
+ */
+function roomParagraph( syncId: string, text: string ): BlockSpec {
+	return { syncId, blockType: 'core/paragraph', text };
+}
+
+/** One editor tab, with the provider behind it. */
+interface Tab {
+	provider: ReturnType< typeof createIntentLogProvider >;
+	link: WireLink;
+	/** Every `editRecord` call, oldest first. */
+	pushes: EntitySyncRecord[];
+	/** The blocks the editor holds: the loaded ones, then each push. */
+	blocks: () => EditorBlock[];
+	undoLevels: jest.Mock;
+	/** Sends a batch of operations as core-data would. */
+	edit: (
+		operations: EditOperation[],
+		batchOptions?: Partial< EditBatch[ 'options' ] >,
+		selection?: EditorSelection
+	) => void;
+	/** Types text at the end of a paragraph's content. */
+	type: ( clientId: string, before: string, after: string ) => void;
+	/** One exchange with the server, then the tasks that were scheduled. */
+	sync: () => void;
+}
+
+/**
+ * Opens a post in a new tab.
+ *
+ * @param blocks  The blocks the editor parsed from the saved post.
+ * @param record  More fields of the record.
+ * @param options Provider options.
+ * @return The tab.
+ */
+async function openTab(
+	blocks: EditorBlock[],
+	record: EntitySyncRecord = {},
+	options: IntentLogProviderOptions = {}
+): Promise< Tab > {
+	const pushes: EntitySyncRecord[] = [];
+	let editorBlocks = blocks;
+	const undoLevels = jest.fn();
+	const handlers: EntitySyncRecordHandlers = {
+		editRecord: ( edits ) => {
+			pushes.push( edits );
+
+			if ( Array.isArray( edits.blocks ) ) {
+				editorBlocks = edits.blocks;
+			}
+		},
+		getEditedRecord: async () => ( {} ),
+		refetchRecord: async () => {},
+		onUndoLevelOpened: undoLevels,
+	};
+	const provider = createIntentLogProvider( context, {
+		fetchTaxonomies: async () => [],
+		flushBeforeSave: async () => {},
+		...options,
+	} );
+	const before = links.length;
+
+	await provider.load(
+		'postType',
+		'post',
+		1,
+		{
+			title: { raw: 'Title' },
+			status: 'draft',
+			meta: {},
+			...record,
+			blocks,
+		},
+		handlers
+	);
+
+	const { link } = links[ before ];
+	const sync = () => {
+		link.poll();
+		jest.runOnlyPendingTimers();
+	};
+
+	sync();
+
+	return {
+		provider,
+		link,
+		pushes,
+		blocks: () => editorBlocks,
+		undoLevels,
+		edit: ( operations, batchOptions = {}, selection ) =>
+			provider.applyEditBatch( 'postType', 'post', 1, {
+				operations,
+				options: {
+					isCached: false,
+					undoIgnore: false,
+					...batchOptions,
+				},
+				selection,
+			} ),
+		type: ( clientId, previousValue, value ) =>
+			provider.applyEditBatch( 'postType', 'post', 1, {
+				operations: [
+					{
+						type: 'set-attribute',
+						clientId,
+						attribute: 'content',
+						previousValue,
+						value,
+					},
+				],
+				options: { isCached: false, undoIgnore: false },
+			} ),
+		sync,
+	};
+}
+
+const serverText = ( syncId: string ) =>
+	getBlock( wire.doc(), syncId )?.fields.content.text;
+
+const serverOrder = () => wire.doc().root.map( ( block ) => block.syncId );
+
+beforeEach( () => {
+	jest.useFakeTimers();
+	(
+		window as { __experimentalEnableRealTimeCollaboration?: boolean }
+	 ).__experimentalEnableRealTimeCollaboration = true;
+	(
+		window as { _wpCollaborationUserId?: number }
+	 )._wpCollaborationUserId = 7;
+	resetProviderCreatorsForTesting();
+	addFilter( FILTER, NAMESPACE, () => [ transport ] );
+	links = [];
+	wire = createWireServer( [
+		roomParagraph( 'p1', 'One' ),
+		roomParagraph( 'p2', 'Two' ),
+	] );
+} );
+
+afterEach( () => {
+	removeFilter( FILTER, NAMESPACE );
+	resetProviderCreatorsForTesting();
+	jest.useRealTimers();
+} );
+
+describe( 'provider: loading a record', () => {
+	it( 'writes the lasting ids into the editor’s blocks and keeps their clientIds', async () => {
+		// A post nobody has edited together: the saved blocks carry no id.
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One' ),
+			paragraph( 'c-2', 'Two' ),
+		] );
+
+		expect( tab.pushes ).toHaveLength( 1 );
+		expect(
+			tab
+				.blocks()
+				.map( ( block ) => [
+					block.clientId,
+					block.attributes.metadata,
+				] )
+		).toEqual( [
+			[ 'c-1', { syncId: 'p1' } ],
+			[ 'c-2', { syncId: 'p2' } ],
+		] );
+		expect(
+			tab.blocks().every( ( block ) => true === block.isValid )
+		).toBe( true );
+	} );
+
+	it( 'matches blocks by their saved id, not by their place', async () => {
+		const tab = await openTab( [
+			paragraph( 'c-b', 'Two', 'p2' ),
+			paragraph( 'c-a', 'One', 'p1' ),
+		] );
+
+		// The document's order wins, and each block keeps its clientId.
+		expect( tab.blocks().map( ( block ) => block.clientId ) ).toEqual( [
+			'c-a',
+			'c-b',
+		] );
+	} );
+
+	it( 'does not load a record of a kind core-data does not sync', async () => {
+		const provider = createIntentLogProvider( context );
+
+		await provider.load(
+			'root',
+			'site',
+			1,
+			{},
+			{
+				editRecord: () => {},
+				getEditedRecord: async () => ( {} ),
+				refetchRecord: async () => {},
+				onUndoLevelOpened: () => {},
+			}
+		);
+
+		expect( provider.isLoaded?.( 'root', 'site', 1 ) ).toBe( false );
+		expect( provider.shouldSync?.( 'root', 'site', 1 ) ).toBe( false );
+		expect( links ).toHaveLength( 0 );
+	} );
+
+	it( 'ignores a batch for a record it has not loaded', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One' ) ] );
+
+		expect( () =>
+			tab.provider.applyEditBatch( 'postType', 'wp_template_part', 'x', {
+				operations: [],
+				options: { isCached: false, undoIgnore: false },
+			} )
+		).not.toThrow();
+		expect( () =>
+			tab.provider.applyEditBatch( 'postType', 'post', undefined, {
+				operations: [],
+				options: { isCached: false, undoIgnore: false },
+			} )
+		).not.toThrow();
+	} );
+
+	it( 'forgets a record when it is unloaded', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One' ) ] );
+
+		expect( tab.provider.isLoaded?.( 'postType', 'post', 1 ) ).toBe( true );
+
+		tab.provider.unload( 'postType', 'post', 1 );
+
+		expect( tab.provider.isLoaded?.( 'postType', 'post', 1 ) ).toBe(
+			false
+		);
+	} );
+} );
+
+describe( 'provider: local edits', () => {
+	it( 'sends typed text to the server and does not push it back', async () => {
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+		const pushesBefore = tab.pushes.length;
+
+		tab.type( 'c-1', 'One', 'One!' );
+		tab.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'One!' );
+		// The editor already shows the text. The server's answer changes
+		// nothing for it.
+		expect( tab.pushes ).toHaveLength( pushesBefore );
+	} );
+
+	it( 'never writes to the editor during applyEditBatch', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+		const pushesBefore = tab.pushes.length;
+
+		// Enter in the middle: the new block has no lasting id yet.
+		tab.edit( [
+			{
+				type: 'set-attribute',
+				clientId: 'c-1',
+				attribute: 'content',
+				previousValue: 'One',
+				value: 'O',
+			},
+			{
+				type: 'insert',
+				block: paragraph( 'c-new', 'ne' ),
+				parent: null,
+				before: null,
+			},
+		] );
+
+		expect( tab.pushes ).toHaveLength( pushesBefore );
+
+		// The id is written in a later task.
+		jest.runOnlyPendingTimers();
+
+		expect( tab.pushes ).toHaveLength( pushesBefore + 1 );
+
+		const added = tab
+			.blocks()
+			.find( ( block ) => 'ne' === block.attributes.content );
+
+		expect( added?.clientId ).toBe( 'c-new' );
+		expect( added?.attributes.metadata ).toEqual( {
+			syncId: expect.any( String ),
+		} );
+	} );
+
+	it( 'does not send default attribute values with the first edit', async () => {
+		/*
+		 * The room's first document leaves out a paragraph's
+		 * `dropCap: false`. The editor's blocks carry it. Two people who
+		 * each type in their own paragraph must not get a review card.
+		 */
+		const alice = await openTab( [
+			paragraph( 'a-1', 'One' ),
+			paragraph( 'a-2', 'Two' ),
+		] );
+		const bob = await openTab( [
+			paragraph( 'b-1', 'One' ),
+			paragraph( 'b-2', 'Two' ),
+		] );
+
+		alice.type( 'a-1', 'One', 'One from Alice' );
+		bob.type( 'b-2', 'Two', 'Two from Bob' );
+		alice.sync();
+		bob.sync();
+		alice.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'One from Alice' );
+		expect( serverText( 'p2' ) ).toBe( 'Two from Bob' );
+		expect(
+			alice.provider.conflicts.getOpenConflicts( 'postType/post', '1' )
+		).toEqual( [] );
+		expect(
+			bob.provider.conflicts.getOpenConflicts( 'postType/post', '1' )
+		).toEqual( [] );
+	} );
+
+	it( 'keeps a batch that arrives before the room’s first document', async () => {
+		const provider = createIntentLogProvider( context, {
+			fetchTaxonomies: async () => [],
+		} );
+		const pushes: EntitySyncRecord[] = [];
+
+		await provider.load(
+			'postType',
+			'post',
+			1,
+			{ blocks: [ paragraph( 'c-1', 'One', 'p1' ) ] },
+			{
+				editRecord: ( edits ) => pushes.push( edits ),
+				getEditedRecord: async () => ( {} ),
+				refetchRecord: async () => {},
+				onUndoLevelOpened: () => {},
+			}
+		);
+
+		// The person types before the server has answered at all.
+		provider.applyEditBatch( 'postType', 'post', 1, {
+			operations: [
+				{
+					type: 'set-attribute',
+					clientId: 'c-1',
+					attribute: 'content',
+					previousValue: 'One',
+					value: 'One early',
+				},
+			],
+			options: { isCached: false, undoIgnore: false },
+		} );
+
+		const { link } = links[ 0 ];
+
+		link.poll();
+		jest.runOnlyPendingTimers();
+		link.poll();
+
+		expect( serverText( 'p1' ) ).toBe( 'One early' );
+		// The first push holds the early text, not the text without it.
+		expect( pushes.at( -1 )?.blocks ).toMatchObject( [
+			{ attributes: { content: 'One early' } },
+			{ attributes: { content: 'Two' } },
+		] );
+	} );
+
+	it( 'sends the editor’s blocks along with the first edit when the room started empty', async () => {
+		wire = createWireServer( [] );
+
+		// A new post whose editor starts with blocks from a template.
+		const tab = await openTab( [
+			paragraph( 'c-1', 'From the template' ),
+			paragraph( 'c-2', '' ),
+		] );
+
+		// The empty room is not pushed over the editor's blocks.
+		expect( tab.pushes ).toEqual( [] );
+
+		tab.type( 'c-2', '', 'Hello' );
+		tab.sync();
+
+		expect(
+			wire.doc().root.map( ( block ) => block.fields.content.text )
+		).toEqual( [ 'From the template', 'Hello' ] );
+	} );
+
+	it( 'captures an edit made in the code editor from the raw text', async () => {
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+
+		// The stand-in parser reads the text as JSON.
+		tab.edit( [
+			{
+				type: 'set-field',
+				field: 'content',
+				previousValue: 'old text',
+				value: JSON.stringify( [
+					{
+						name: 'core/paragraph',
+						attributes: {
+							content: 'One changed',
+							metadata: { syncId: 'p1' },
+						},
+						innerBlocks: [],
+					},
+				] ),
+			},
+		] );
+		tab.sync();
+
+		expect( serverOrder() ).toEqual( [ 'p1' ] );
+		expect( serverText( 'p1' ) ).toBe( 'One changed' );
+	} );
+
+	it( 'counts a batch that names a block it does not know, and puts the editor right', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+		const pushesBefore = tab.pushes.length;
+
+		tab.type( 'c-unknown', 'One', 'One!' );
+		jest.runOnlyPendingTimers();
+
+		expect(
+			tab.provider.getCounters( 'postType', 'post', 1 )?.unknownClientId
+		).toBe( 1 );
+		// The editor is handed the engine's blocks again.
+		expect( tab.pushes ).toHaveLength( pushesBefore + 1 );
+		expect( serverText( 'p1' ) ).toBe( 'One' );
+	} );
+} );
+
+describe( 'provider: someone else’s edits', () => {
+	it( 'pushes the other person’s text, and only that block is a new object', async () => {
+		const alice = await openTab( [
+			paragraph( 'a-1', 'One', 'p1' ),
+			paragraph( 'a-2', 'Two', 'p2' ),
+		] );
+		const bob = await openTab( [
+			paragraph( 'b-1', 'One', 'p1' ),
+			paragraph( 'b-2', 'Two', 'p2' ),
+		] );
+		const [ firstBefore, secondBefore ] = alice.blocks();
+
+		bob.type( 'b-2', 'Two', 'Two from Bob' );
+		bob.sync();
+		alice.sync();
+
+		const [ firstAfter, secondAfter ] = alice.blocks();
+
+		expect( secondAfter.attributes.content ).toBe( 'Two from Bob' );
+		expect( secondAfter.clientId ).toBe( 'a-2' );
+		expect( secondAfter ).not.toBe( secondBefore );
+		expect( firstAfter ).toBe( firstBefore );
+	} );
+
+	it( 'moves the caret along when text is added in front of it', async () => {
+		const alice = await openTab( [ paragraph( 'a-1', 'One', 'p1' ) ] );
+		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
+		const caret = { clientId: 'a-1', attributeKey: 'content', offset: 3 };
+
+		// Alice's caret is at the end of "One".
+		alice.edit(
+			[],
+			{ undoIgnore: true },
+			{
+				selectionStart: caret,
+				selectionEnd: caret,
+			}
+		);
+
+		bob.edit(
+			[
+				{
+					type: 'set-attribute',
+					clientId: 'b-1',
+					attribute: 'content',
+					previousValue: 'One',
+					value: 'Oh, One',
+				},
+			],
+			{},
+			{
+				selectionStart: {
+					clientId: 'b-1',
+					attributeKey: 'content',
+					offset: 4,
+				},
+				selectionEnd: {
+					clientId: 'b-1',
+					attributeKey: 'content',
+					offset: 4,
+				},
+			}
+		);
+		bob.sync();
+		alice.sync();
+
+		expect( alice.pushes.at( -1 )?.selection ).toMatchObject( {
+			selectionStart: { clientId: 'a-1', offset: 7 },
+			selectionEnd: { clientId: 'a-1', offset: 7 },
+		} );
+	} );
+
+	it( 'gives a block the other person added a clientId and keeps it', async () => {
+		const alice = await openTab( [ paragraph( 'a-1', 'One', 'p1' ) ] );
+		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
+
+		bob.edit( [
+			{
+				type: 'insert',
+				block: paragraph( 'b-new', 'From Bob' ),
+				parent: null,
+				before: null,
+			},
+		] );
+		bob.sync();
+		alice.sync();
+
+		const added = alice.blocks().at( -1 );
+
+		expect( added?.attributes.content ).toBe( 'From Bob' );
+
+		// Alice types in the new block: the provider knows it.
+		alice.type( added?.clientId ?? '', 'From Bob', 'From Bob!' );
+		alice.sync();
+
+		const syncId = wire.doc().root.at( -1 )?.syncId ?? '';
+
+		expect( serverText( syncId ) ).toBe( 'From Bob!' );
+	} );
+
+	it( 'combines a local edit made while pushes are held with what arrived meanwhile', async () => {
+		let held = false;
+		const alice = await openTab(
+			[ paragraph( 'a-1', 'One', 'p1' ) ],
+			{},
+			{ shouldHoldPushes: () => held }
+		);
+		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
+		const pushesBefore = alice.pushes.length;
+
+		// Alice is composing text. Nothing may be written to her editor.
+		held = true;
+		bob.type( 'b-1', 'One', 'Oh, One' );
+		bob.sync();
+		alice.sync();
+
+		expect( alice.pushes ).toHaveLength( pushesBefore );
+
+		// Her editor still shows "One". She adds "!" at the end of that.
+		alice.type( 'a-1', 'One', 'One!' );
+		alice.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'Oh, One!' );
+		expect(
+			alice.provider.getCounters( 'postType', 'post', 1 )
+				?.stalePreviousValue
+		).toBe( 0 );
+
+		// The hold ends, and her editor catches up.
+		held = false;
+		jest.advanceTimersByTime( 300 );
+
+		expect( alice.blocks()[ 0 ].attributes.content ).toBe( 'Oh, One!' );
+	} );
+} );
+
+describe( 'provider: post fields', () => {
+	it( 'sends a changed title and pushes someone else’s title', async () => {
+		wire = createWireServer( [ roomParagraph( 'p1', 'One' ) ], {
+			title: 'Title',
+		} );
+
+		const alice = await openTab( [ paragraph( 'a-1', 'One', 'p1' ) ] );
+		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
+
+		alice.edit( [
+			{
+				type: 'set-field',
+				field: 'title',
+				previousValue: 'Title',
+				value: 'A better title',
+			},
+		] );
+		alice.sync();
+		bob.sync();
+
+		expect( wire.doc().props?.title ).toBe( 'A better title' );
+		expect( bob.pushes.at( -1 ) ).toEqual( { title: 'A better title' } );
+		// Alice's own title is not pushed back at her.
+		expect( alice.pushes.some( ( edits ) => 'title' in edits ) ).toBe(
+			false
+		);
+	} );
+
+	it( 'sends a field the server changed on save, without an undo step', async () => {
+		wire = createWireServer( [ roomParagraph( 'p1', 'One' ) ], {
+			slug: 'title',
+		} );
+
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+
+		tab.provider.afterSave?.( 'postType', 'post', 1, {
+			savedRecord: { slug: 'title-2', title: { raw: 'Title' } },
+			persistedRecord: { slug: 'title', title: { raw: 'Title' } },
+			edits: {},
+		} );
+		tab.sync();
+
+		expect( wire.doc().props?.slug ).toBe( 'title-2' );
+		expect( tab.undoLevels ).not.toHaveBeenCalled();
+	} );
+} );
+
+describe( 'provider: undo', () => {
+	it( 'reports one undo step for a typing run and undoes it as one', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+		const key = (
+			previousValue: string,
+			value: string,
+			isCached: boolean
+		) =>
+			tab.edit(
+				[
+					{
+						type: 'set-attribute',
+						clientId: 'c-1',
+						attribute: 'content',
+						previousValue,
+						value,
+					},
+				],
+				{ isCached }
+			);
+
+		key( 'One', 'Onea', false );
+		key( 'Onea', 'Oneab', true );
+		key( 'Oneab', 'Oneabc', true );
+		tab.sync();
+
+		expect( tab.undoLevels ).toHaveBeenCalledTimes( 1 );
+		expect( serverText( 'p1' ) ).toBe( 'Oneabc' );
+
+		expect( tab.provider.undoHistory?.undo( 'postType', 'post', 1 ) ).toBe(
+			true
+		);
+		tab.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'One' );
+		// The undo reaches the editor as a push.
+		expect( tab.blocks()[ 0 ].attributes.content ).toBe( 'One' );
+
+		expect( tab.provider.undoHistory?.redo( 'postType', 'post', 1 ) ).toBe(
+			true
+		);
+		tab.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'Oneabc' );
+	} );
+
+	it( 'does not make an undo step for a batch core-data marks as ignored', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+
+		tab.edit(
+			[
+				{
+					type: 'set-attribute',
+					clientId: 'c-1',
+					attribute: 'content',
+					previousValue: 'One',
+					value: 'One!',
+				},
+			],
+			{ undoIgnore: true }
+		);
+		tab.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'One!' );
+		expect( tab.undoLevels ).not.toHaveBeenCalled();
+		expect( tab.provider.undoHistory?.undo( 'postType', 'post', 1 ) ).toBe(
+			false
+		);
+	} );
+
+	it( 'has nothing to undo for a record it has not loaded', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+
+		expect( tab.provider.undoHistory?.undo( 'postType', 'page', 9 ) ).toBe(
+			false
+		);
+	} );
+} );
+
+describe( 'provider: review', () => {
+	it( 'lists an edit the server set aside and applies the reviewer’s decision', async () => {
+		const alice = await openTab( [ paragraph( 'a-1', 'One', 'p1' ) ] );
+		const bob = await openTab( [ paragraph( 'b-1', 'One', 'p1' ) ] );
+
+		// Both replace the whole text before seeing the other's edit.
+		alice.type( 'a-1', 'One', 'Alice' );
+		bob.type( 'b-1', 'One', 'Bob' );
+		alice.sync();
+		bob.sync();
+		alice.sync();
+
+		expect( serverText( 'p1' ) ).toBe( 'Alice' );
+
+		const [ conflict ] = bob.provider.conflicts.getOpenConflicts(
+			'postType/post',
+			'1'
+		);
+
+		expect( conflict ).toMatchObject( { kind: 'merge', authorId: 7 } );
+		// Bob's editor shows the document, not his set-aside text.
+		expect( bob.blocks()[ 0 ].attributes.content ).toBe( 'Alice' );
+
+		bob.provider.conflicts.resolveConflict(
+			'postType/post',
+			'1',
+			conflict.id,
+			{ action: 'dismiss' }
+		);
+		bob.sync();
+
+		expect(
+			bob.provider.conflicts.getOpenConflicts( 'postType/post', '1' )
+		).toEqual( [] );
+		expect( serverText( 'p1' ) ).toBe( 'Alice' );
+	} );
+} );
+
+describe( 'provider: a room the server starts again', () => {
+	it( 'sends the work the editor shows and the new room lacks', async () => {
+		const tab = await openTab( [ paragraph( 'c-1', 'One', 'p1' ) ] );
+
+		tab.type( 'c-1', 'One', 'One and more' );
+		tab.sync();
+
+		// The server throws the room away and builds it again from the
+		// saved post, which does not hold the new text.
+		const { session } = links[ 0 ];
+		const restarted = createWireServer( [ roomParagraph( 'p1', 'One' ) ] );
+
+		wire = restarted;
+		( session as { onRoomRestart?: () => void } ).onRoomRestart?.();
+		session.receiveUpdate( {
+			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+			data: JSON.stringify( { doc: restarted.doc() } ),
+		} );
+		jest.runOnlyPendingTimers();
+
+		// The edit is on its way to the new room.
+		expect( tab.link.queued() ).toBeGreaterThan( 0 );
+		expect( tab.blocks()[ 0 ].attributes.content ).toBe( 'One and more' );
+	} );
+} );

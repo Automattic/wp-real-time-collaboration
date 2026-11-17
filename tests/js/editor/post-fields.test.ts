@@ -9,11 +9,13 @@ import { describe, expect, it } from '@jest/globals';
 import { createDocument } from '../../../src/engines/intent-log/document.js';
 import type { EngineDocument } from '../../../src/engines/intent-log/engine-types';
 import {
+	addPostFieldTaxonomies,
 	capturePostFields,
 	createPostFieldsState,
 	fieldChangesFrom,
 	forgetSeenPostFields,
 	postFieldEditsToPush,
+	serverChangedFields,
 } from '../../../src/editor/post-fields';
 
 /**
@@ -319,5 +321,82 @@ describe( 'post fields: document to editor', () => {
 		expect( postFieldEditsToPush( doc, state ) ).toEqual( {
 			title: 'Hello',
 		} );
+	} );
+} );
+
+describe( 'post fields: taxonomies that are looked up after the record loads', () => {
+	it( 'syncs a taxonomy once it is added, and does not push the record’s own terms', () => {
+		const state = createPostFieldsState( record );
+
+		addPostFieldTaxonomies( state, record, [ 'categories' ] );
+
+		// The room holds the terms the editor loaded: nothing to push.
+		expect(
+			postFieldEditsToPush(
+				documentWith( { categories: [ 1, 3 ] } ),
+				state
+			)
+		).toBeNull();
+		// A change is captured.
+		expect(
+			capturePostFields(
+				documentWith( { categories: [ 1, 3 ] } ),
+				{ categories: [ 1 ] },
+				state
+			)
+		).toHaveLength( 1 );
+	} );
+
+	it( 'adds a taxonomy once', () => {
+		const state = createPostFieldsState( record );
+
+		addPostFieldTaxonomies( state, record, [ 'categories' ] );
+		addPostFieldTaxonomies( state, record, [ 'categories' ] );
+
+		expect(
+			state.syncedFields.filter( ( name ) => 'categories' === name )
+		).toHaveLength( 1 );
+	} );
+} );
+
+describe( 'post fields: what the server changed on save', () => {
+	it( 'finds a field the server changed by itself', () => {
+		expect(
+			serverChangedFields(
+				{ slug: 'hello-2', status: 'publish' },
+				{ slug: 'hello', status: 'draft' },
+				{ status: 'publish' }
+			)
+		).toEqual( { slug: 'hello-2' } );
+	} );
+
+	it( 'compares raw text with the plain text the browser sent', () => {
+		expect(
+			serverChangedFields(
+				{ title: { raw: 'Hello', rendered: 'Hello' } },
+				{ title: { raw: 'Old', rendered: 'Old' } },
+				{ title: 'Hello' }
+			)
+		).toEqual( {} );
+	} );
+
+	it( 'compares meta one key at a time', () => {
+		expect(
+			serverChangedFields(
+				{ meta: { views: 2, subtitle: 'Sent', footnotes: '' } },
+				{ meta: { views: 1, subtitle: 'Old', footnotes: '' } },
+				{ meta: { subtitle: 'Sent' } }
+			)
+		).toEqual( { meta: { views: 2 } } );
+	} );
+
+	it( 'leaves out meta when no key changed', () => {
+		expect(
+			serverChangedFields(
+				{ meta: { footnotes: '' } },
+				{ meta: { footnotes: '' } },
+				{}
+			)
+		).toEqual( {} );
 	} );
 } );

@@ -54,6 +54,44 @@ function savedSyncId( block: EditorBlock ): string | undefined {
 }
 
 /**
+ * Links every editor block that carries a saved id to that id, before
+ * the document is there.
+ *
+ * A saved id needs no document to be trusted. Linking it at once means a
+ * block that reaches the document a moment later, with the room's
+ * history, is known by then.
+ *
+ * @param ids    The id table. Links are added to it.
+ * @param blocks The editor's blocks, as core-data passed them to `load`.
+ * @return The saved id of each block that has one, by clientId.
+ */
+export function linkSavedIds(
+	ids: BlockIdentityTable,
+	blocks: EditorBlock[]
+): Map< string, string > {
+	const saved = new Map< string, string >();
+	const taken = new Set< string >();
+	const walk = ( siblings: EditorBlock[] ) => {
+		for ( const block of siblings ) {
+			const syncId = savedSyncId( block );
+
+			// Two blocks with one saved id: the first one is the block.
+			if ( undefined !== syncId && ! taken.has( syncId ) ) {
+				taken.add( syncId );
+				saved.set( block.clientId, syncId );
+				ids.link( block.clientId, syncId );
+			}
+
+			walk( block.innerBlocks );
+		}
+	};
+
+	walk( blocks );
+
+	return saved;
+}
+
+/**
  * Links the editor's blocks to the document's blocks.
  *
  * A block that carries a saved id (`metadata.syncId`) is linked to the
