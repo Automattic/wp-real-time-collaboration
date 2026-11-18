@@ -151,7 +151,11 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		private WP_RTC_Storage $storage;
 
 		/**
-		 * Per-request cache of room state, keyed by room.
+		 * Loaded room state, keyed by room. Each entry remembers the id of
+		 * the room's newest stored row at the time it was loaded (its
+		 * `cursor`), and load_room() uses the entry only while that row is
+		 * still the newest. Row ids only grow and are never used twice, so
+		 * a write or a reset by another process always shows.
 		 *
 		 * @since 7.2.0
 		 * @var array<string, array>
@@ -794,7 +798,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			$this->room_state[ $room ] = null; // Invalidate: rows changed.
+			unset( $this->room_state[ $room ] ); // Rows changed.
 
 			$dispositions = array();
 			foreach ( $submitted_ids as $intent_id ) {
@@ -1229,17 +1233,6 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 */
 		public function get_updates_since( string $room, int $client_id, int $cursor, array $context ): array {
 			/*
-			 * Ensure genesis exists so first pollers receive the snapshot —
-			 * WITHOUT reconstructing full engine state: a pure read only
-			 * needs the stored rows. Reconstruction (load_room) is an
-			 * ingest-path concern; running it here made every poll
-			 * O(session length).
-			 */
-			if ( 0 === $this->storage->get_cursor( $room ) ) {
-				$this->load_room( $room );
-			}
-
-			/*
 			 * Compaction floor: a cursor below the trimmed history cannot be
 			 * caught up row-by-row (its missing rows are gone). Serve from
 			 * the retained checkpoint row instead — the client receives it
@@ -1252,7 +1245,22 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			$rows          = $this->storage->get_updates_after_cursor( $room, $cursor );
+			$rows = $this->storage->get_updates_after_cursor( $room, $cursor );
+
+			/*
+			 * A room that holds no row at all has no first document yet.
+			 * Build it, so the first tab receives the snapshot. The check
+			 * comes after the read on purpose: the storage only knows the
+			 * room's newest row once it has read, and a long-lived process
+			 * may hold a position from before another process reset the
+			 * room. A room that holds rows needs nothing more than the
+			 * rows, so an ordinary poll never rebuilds the room's state.
+			 */
+			if ( 0 === $this->storage->get_cursor( $room ) ) {
+				$this->load_room( $room );
+				$rows = $this->storage->get_updates_after_cursor( $room, $cursor );
+			}
+
 			$typed_updates = array();
 			foreach ( $rows as $row ) {
 				$typed_updates[] = array(
@@ -1364,11 +1372,23 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @return array|WP_Error array( 'genesis', 'log', 'settled' ).
 		 */
 		private function load_room( string $room ) {
-			if ( isset( $this->room_state[ $room ] ) && null !== $this->room_state[ $room ] ) {
-				return $this->room_state[ $room ];
+			$kept = $this->room_state[ $room ] ?? null;
+			if ( null !== $kept ) {
+				/*
+				 * Use the kept copy only while the row it was loaded at is
+				 * still the room's newest. Another process may have written
+				 * or reset the room since: a polling request beside the
+				 * WebSocket daemon, a script save, or a tab that left.
+				 */
+				$newer = $this->storage->get_updates_after_cursor( $room, $kept['cursor'] );
+				if ( array() === $newer && $this->storage->get_cursor( $room ) === $kept['cursor'] ) {
+					return $kept;
+				}
+				unset( $this->room_state[ $room ] );
 			}
 
 			$rows           = $this->storage->get_updates_after_cursor( $room, 0 );
+			$cursor         = $this->storage->get_cursor( $room );
 			$genesis        = null;
 			$log            = array();
 			$settled        = array();
@@ -1443,11 +1463,13 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
+			$created = false;
 			if ( null === $genesis ) {
 				$genesis = $this->initialize_room( $room );
 				if ( is_wp_error( $genesis ) ) {
 					return $genesis;
 				}
+				$created = true;
 			}
 
 			// A park settled below the retained window is dropped from the
@@ -1464,7 +1486,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				);
 			}
 
-			$state                     = array(
+			$state = array(
 				'genesis'        => $genesis,
 				'log'            => $log,
 				'settled'        => $settled,
@@ -1478,8 +1500,15 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				// Engine seq of the reconstructed genesis (0, or the
 				// checkpoint's seq): log[i] is engine seq base_seq + i.
 				'base_seq'       => $base_seq,
+				// The id of the room's newest row when this was loaded.
+				'cursor'         => $cursor,
 			);
-			$this->room_state[ $room ] = $state;
+
+			// A first document that was only just stored is not kept: its
+			// row id is not known here, so the next use loads the room.
+			if ( ! $created ) {
+				$this->room_state[ $room ] = $state;
+			}
 
 			return $state;
 		}

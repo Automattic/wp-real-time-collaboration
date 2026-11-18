@@ -440,7 +440,8 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/*
-	 * Item 9: a commit planned against an old copy of the room.
+	 * The engine never uses a copy of a room that another process has
+	 * changed since.
 	 */
 
 	/**
@@ -480,13 +481,11 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Defect: the daemon keeps one engine object for its whole life, and
-	 * that object keeps the copy of the room its first read loaded. After
-	 * another process writes, the daemon's next commit is combined against
-	 * that old copy, so a clash with the other process's edit is missed
-	 * and the edit is applied over it with nobody told.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * The daemon keeps one engine object for its whole life. After another
+	 * process writes to a room, the daemon's next commit must be combined
+	 * with that write. Once it was combined against the copy the daemon's
+	 * first read had loaded, so a clash with the other process's edit was
+	 * missed and the edit was applied over it with nobody told.
 	 */
 	public function test_daemon_combines_an_edit_with_what_another_process_wrote_since_its_first_read() {
 		list( $daemon, $tab, $room, $block ) = $this->daemon_room_another_process_wrote_to();
@@ -503,28 +502,20 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer ) {
-				$this->assertSame(
-					array(
-						'status' => 'escalated',
-						'reason' => 'attr-conflict',
-					),
-					self::verdict( $answer, 'ws-1' ),
-					'Two edits to one attribute from the same position are a conflict for a person to decide.'
-				);
-			}
+		$this->assertSame(
+			array(
+				'status' => 'escalated',
+				'reason' => 'attr-conflict',
+			),
+			self::verdict( $answer, 'ws-1' ),
+			'Two edits to one attribute from the same position are a conflict for a person to decide.'
 		);
 	}
 
 	/**
-	 * Defect: the same old copy also has an old length. An edit the
-	 * WebSocket tab made after it received the other process's edit names
-	 * a position past the end of the old copy, so it is refused as
-	 * `invalid-payload` although it is a normal edit.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * An edit the WebSocket tab made after it received the other process's
+	 * edit is a normal edit. Against an old copy of the room it named a
+	 * position past the end and was refused as `invalid-payload`.
 	 */
 	public function test_daemon_accepts_an_edit_based_on_what_another_process_wrote_since_its_first_read() {
 		list( $daemon, $tab, $room, $block ) = $this->daemon_room_another_process_wrote_to();
@@ -541,21 +532,14 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer ) {
-				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'ws-1' ) );
-			}
-		);
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'ws-1' ) );
 	}
 
 	/**
-	 * Defect: a commit that fails midway leaves the engine object holding
-	 * the copy of the room it loaded. The next commit on the same object
-	 * (the daemon's, for example, when the tab tries again) is combined
-	 * against that copy and misses what another process wrote meanwhile.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * A commit that fails midway leaves the engine object holding the copy
+	 * of the room it loaded. The next commit on the same object (the
+	 * daemon's, for example, when the tab tries again) must still see what
+	 * another process wrote meanwhile.
 	 */
 	public function test_commit_after_a_failed_commit_sees_what_another_process_wrote() {
 		list( , $room, $block ) = $this->make_room();
@@ -577,28 +561,21 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		// The long-lived engine commits again. The storage works now.
 		$answer = self::commit( $long_lived, $room, 101, array( self::align_edit( 'a-1', $block, 'full' ) ) );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer ) {
-				$this->assertSame(
-					array(
-						'status' => 'escalated',
-						'reason' => 'attr-conflict',
-					),
-					self::verdict( $answer, 'a-1' ),
-					'Two edits to one attribute from the same position are a conflict for a person to decide.'
-				);
-			}
+		$this->assertSame(
+			array(
+				'status' => 'escalated',
+				'reason' => 'attr-conflict',
+			),
+			self::verdict( $answer, 'a-1' ),
+			'Two edits to one attribute from the same position are a conflict for a person to decide.'
 		);
 	}
 
 	/**
-	 * Defect: a script save reads the room with no lock, which fills the
-	 * engine's copy, then commits under the lock using that copy. An edit
-	 * that another request stores between the two steps is not seen, so
-	 * the script's change replaces it with nobody told.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * A script save reads the room with no lock, then commits under the
+	 * lock. An edit that another request stores between the two steps
+	 * must be seen by the commit, so a clash goes to review and the
+	 * script's change does not replace the other edit with nobody told.
 	 */
 	public function test_script_save_sees_an_edit_that_arrives_between_its_read_and_its_commit() {
 		list( $post_id, $room, $block ) = $this->make_room();
@@ -644,28 +621,21 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$this->assertTrue( $arrived, 'The other edit arrived between the read and the commit.' );
 		$this->assertSame( array( 'session-1' ), array_slice( self::stored_edit_ids( $room ), 0, 1 ), 'The other edit was stored first.' );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $post_id ) {
-				$statuses = array_column( (array) WP_Intent_Log_Base_Seq_Preflight::last_dispositions(), 'status' );
-				$this->assertContains( 'escalated', $statuses, 'The clash is set aside for a person to decide.' );
-				$this->assertStringContainsString(
-					'"align":"wide"',
-					get_post( $post_id )->post_content,
-					'The saved post keeps the edit that was stored first.'
-				);
-			}
+		$statuses = array_column( (array) WP_Intent_Log_Base_Seq_Preflight::last_dispositions(), 'status' );
+		$this->assertContains( 'escalated', $statuses, 'The clash is set aside for a person to decide.' );
+		$this->assertStringContainsString(
+			'"align":"wide"',
+			get_post( $post_id )->post_content,
+			'The saved post keeps the edit that was stored first.'
 		);
 	}
 
 	/**
-	 * Defect: when the last WebSocket tab leaves, the daemon resets the
-	 * room but its engine object keeps the old copy. If that tab never
-	 * typed, the next tab to open the post over WebSocket gets an empty
-	 * answer: no first document is built, because the engine thinks the
-	 * room is already loaded.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * When the last WebSocket tab leaves, the daemon resets the room. The
+	 * next tab to open the post over WebSocket must get a first document,
+	 * also when the tab that left never typed. Once the engine object kept
+	 * its copy of the room across the reset, took the room for loaded, and
+	 * answered with nothing.
 	 */
 	public function test_daemon_gives_a_first_document_to_the_tab_that_opens_a_post_after_the_last_tab_left() {
 		list( , $room ) = $this->make_post();
@@ -702,26 +672,17 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $second ) {
-				$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
-				$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
-			}
-		);
+		$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
+		$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
 	}
 
 	/**
-	 * Defect: a second way to the same empty answer, found while writing
-	 * the test above. The daemon's storage object remembers the position
-	 * of the room's newest row and the engine trusts it. When another
+	 * A second way to the same empty answer. The daemon's storage object
+	 * remembers the position of the room's newest row. When another
 	 * process resets the room (a closing tab's leave beacon goes to the
-	 * web server, not to the daemon), the daemon still holds the old
-	 * position, builds no first document, and answers the next tab with
-	 * nothing. This happens even when the tab that left had typed, which
-	 * emptied the engine's own copy.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * web server, not to the daemon), that position is out of date. The
+	 * engine must not decide from it before a new read, or it builds no
+	 * first document and answers the next tab with nothing.
 	 */
 	public function test_daemon_gives_a_first_document_after_another_process_reset_the_room() {
 		list( , $room, $block ) = $this->make_post();
@@ -770,17 +731,89 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $second ) {
-				$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
-				$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
-			}
+		$this->assertNotEmpty( $second['updates'], 'The new tab gets the first document.' );
+		$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $second['updates'][0]['type'] );
+	}
+
+	/**
+	 * The storages a long-lived engine can sit on.
+	 *
+	 * @return array[] Data sets: the storage class name.
+	 */
+	public function data_storages(): array {
+		return array(
+			'the table storage'    => array( WP_Sync_Table_Storage::class ),
+			'the fallback storage' => array( WP_RTC_Post_Meta_Storage::class ),
 		);
 	}
 
+	/**
+	 * A room that was reset and written again can look the same as before
+	 * by its number of rows and edits. The engine tells its kept copy
+	 * apart by the id of the room's newest row, which never repeats.
+	 *
+	 * @dataProvider data_storages
+	 *
+	 * @param string $storage_class Storage class name.
+	 */
+	public function test_long_lived_engine_sees_a_room_that_was_reset_and_written_again( string $storage_class ) {
+		list( , $room, $block ) = $this->make_post();
+		$other_process          = static function () use ( $storage_class ) {
+			return new WP_Intent_Log_Engine( new $storage_class() );
+		};
+
+		// The room holds its first document and one edit to the text.
+		$first = self::commit( $other_process(), $room, 202, array( self::text_edit( 'old-1', $block, 0, 'x', 0 ) ) );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $first, 'old-1' ) );
+
+		// A long-lived engine loads the room and keeps its copy.
+		$long_lived = $other_process();
+		$this->assertSame( 1, $long_lived->head_seq( $room ) );
+
+		// Another process resets the room and writes one edit again, this
+		// time to the `align` attribute.
+		$this->assertTrue( ( new $storage_class() )->reset_room( $room ) );
+		$second = self::commit( $other_process(), $room, 202, array( self::align_edit( 'new-1', $block, 'wide' ) ) );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $second, 'new-1' ) );
+
+		// The long-lived engine changes the same attribute. Against its old
+		// copy there is no clash, because that copy holds the text edit.
+		$answer = self::commit( $long_lived, $room, 101, array( self::align_edit( 'a-1', $block, 'full' ) ) );
+
+		$this->assertSame(
+			array(
+				'status' => 'escalated',
+				'reason' => 'attr-conflict',
+			),
+			self::verdict( $answer, 'a-1' )
+		);
+	}
+
+	/**
+	 * A poll of a room that holds rows reads only the rows after the
+	 * tab's position. It never reads the room from its start, however
+	 * long the stored history is.
+	 */
+	public function test_poll_of_a_room_with_history_reads_only_the_new_rows() {
+		list( , $room, $block ) = $this->make_room();
+		for ( $i = 0; $i < 3; $i++ ) {
+			$answer = self::commit( self::engine(), $room, 101, array( self::text_edit( "typed-$i", $block, 0, 'x', $i ) ) );
+			$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, "typed-$i" ) );
+		}
+		$caught_up = self::engine()->get_updates_since( $room, 101, 0, array() );
+		$this->assertCount( 4, $caught_up['updates'] );
+
+		// A new request, as every poll is.
+		$storage = new Commit_Path_Recording_Storage();
+		$poll    = ( new WP_Intent_Log_Engine( $storage ) )->get_updates_since( $room, 101, $caught_up['end_cursor'], array() );
+
+		$this->assertSame( array(), $poll['updates'] );
+		$this->assertSame( $caught_up['end_cursor'], $poll['end_cursor'] );
+		$this->assertSame( array( $caught_up['end_cursor'] ), $storage->read_after, 'One read, from the position of the tab.' );
+	}
+
 	/*
-	 * Item 10: a snapshot throws away the recent history.
+	 * A snapshot does not throw away the recent history.
 	 */
 
 	/**
@@ -1230,6 +1263,24 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 				$this->assertNotSame( 'resolved', $verdict['status'] ?? null, 'The sender is told the decision was refused.' );
 			}
 		);
+	}
+}
+
+/**
+ * A table storage that records where each read of a room's rows starts.
+ */
+class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
+	/**
+	 * The position each read started after, in call order.
+	 *
+	 * @var int[]
+	 */
+	public $read_after = array();
+
+	public function get_updates_after_cursor( string $room, int $cursor ): array {
+		$this->read_after[] = $cursor;
+
+		return parent::get_updates_after_cursor( $room, $cursor );
 	}
 }
 

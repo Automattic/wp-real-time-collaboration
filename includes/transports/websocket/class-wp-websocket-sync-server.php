@@ -1547,6 +1547,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 * advances the room. Called before every message-driven
 		 * process_room_request and every broadcast read.
 		 *
+		 * An engine opts in by offering `flush_room_state_cache()`. The
+		 * intent-log engine does not need it: it checks its kept copy of
+		 * a room against the storage before every use.
+		 *
 		 * @since 0.3.0
 		 *
 		 * @param string $room Room identifier.
