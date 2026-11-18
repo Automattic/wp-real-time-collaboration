@@ -903,7 +903,16 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				// Payloads reach typed planner/document code: validate the
 				// full vocabulary schema up front so a malformed intent
 				// voids cleanly instead of fataling mid-plan.
-				if ( ! $envelope_ok || ! WP_Intent_Log_Planner::is_valid_payload( $intent['type'], $intent['payload'] ) ) {
+				$usable = $envelope_ok;
+				// The planner checks the id and the type of an inserted
+				// block and of each child. The rest of the body is checked
+				// here, and first: the planner's check walks the children
+				// and expects them to be a list.
+				if ( $usable && 'insert_block' === $intent['type'] ) {
+					$usable = self::is_usable_block_body( $intent['payload']['block'] ?? null );
+				}
+				$usable = $usable && WP_Intent_Log_Planner::is_valid_payload( $intent['type'], $intent['payload'] );
+				if ( ! $usable ) {
 					$verdict = array(
 						'status' => 'voided',
 						'reason' => 'invalid-payload',
@@ -946,6 +955,93 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				'refusals'    => $refusals,
 				'refused'     => $refused,
 			);
+		}
+
+		/**
+		 * Whether the body of an inserted block has the types the document
+		 * code expects: text that is a string, formats that are a list of
+		 * ranges, attributes that are a map, and children built the same
+		 * way. A body of another shape would be stored as sent and then
+		 * raise a PHP error whenever the room is read.
+		 *
+		 * The planner checks the id and the block type, of the block and
+		 * of each child (see `is_valid_payload()`). This check runs before
+		 * it, so it makes no assumption about either.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param mixed $block The block as sent.
+		 * @return bool Whether the body can be stored.
+		 */
+		private static function is_usable_block_body( $block ): bool {
+			if ( ! is_array( $block ) ) {
+				return false;
+			}
+			foreach ( array( 'attrs', 'attrVersions', 'fields', 'children' ) as $key ) {
+				if ( array_key_exists( $key, $block ) && ! is_array( $block[ $key ] ) ) {
+					return false;
+				}
+			}
+			foreach ( $block['attrVersions'] ?? array() as $version ) {
+				if ( ! is_int( $version ) || $version < 0 ) {
+					return false;
+				}
+			}
+			if ( null !== ( $block['syncParent'] ?? null ) && ! is_string( $block['syncParent'] ) ) {
+				return false;
+			}
+
+			// Text and formats may sit on the block itself, as a short form
+			// of the `content` field.
+			if ( ! self::is_usable_field( $block ) ) {
+				return false;
+			}
+			foreach ( $block['fields'] ?? array() as $name => $field ) {
+				if ( ! is_string( $name ) || '' === $name || ! is_array( $field ) || ! self::is_usable_field( $field ) ) {
+					return false;
+				}
+			}
+			foreach ( $block['children'] ?? array() as $child ) {
+				if ( ! self::is_usable_block_body( $child ) ) {
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		/**
+		 * Whether `text` and `formats`, where present, are a string and a
+		 * list of `{ start, end, format }` ranges.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array $field A field of an inserted block, or the block
+		 *                     itself for the short form.
+		 * @return bool Whether both have the expected types.
+		 */
+		private static function is_usable_field( array $field ): bool {
+			if ( array_key_exists( 'text', $field ) && ! is_string( $field['text'] ) ) {
+				return false;
+			}
+			if ( ! array_key_exists( 'formats', $field ) ) {
+				return true;
+			}
+			if ( ! is_array( $field['formats'] ) ) {
+				return false;
+			}
+			foreach ( $field['formats'] as $range ) {
+				if (
+					! is_array( $range ) ||
+					! is_int( $range['start'] ?? null ) || $range['start'] < 0 ||
+					! is_int( $range['end'] ?? null ) || $range['end'] < $range['start'] ||
+					! is_string( $range['format'] ?? null ) || '' === $range['format']
+				) {
+					return false;
+				}
+			}
+
+			return true;
 		}
 
 		/**

@@ -1194,15 +1194,13 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/*
-	 * "The server", inserted blocks are not checked fully.
+	 * The body of an inserted block is checked fully.
 	 */
 
 	/**
-	 * Defect: only the id, type and children of an inserted block are
-	 * checked. Here the block's text is a number, and the edit is applied
-	 * and stored as sent.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * An inserted block whose text is not a string is refused. Once only
+	 * the id, type and children of an inserted block were checked, and
+	 * such an edit was applied and stored as sent.
 	 */
 	public function test_inserted_block_with_text_of_the_wrong_type_is_refused() {
 		list( , $room, $block ) = $this->make_room();
@@ -1220,72 +1218,57 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer, $room ) {
-				$this->assertSame(
-					array(
-						'status' => 'voided',
-						'reason' => 'invalid-payload',
-					),
-					self::verdict( $answer, 'bad-text' )
-				);
-				$this->assertSame( array(), self::stored_edit_ids( $room ) );
-			}
+		$this->assertSame(
+			array(
+				'status' => 'voided',
+				'reason' => 'invalid-payload',
+			),
+			self::verdict( $answer, 'bad-text' )
 		);
+		$this->assertSame( array(), self::stored_edit_ids( $room ) );
 	}
 
 	/**
-	 * Defect: an inserted block whose list of formats is not a list makes
-	 * the engine raise a TypeError while it combines the edit. Nothing in
-	 * the daemon catches it.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * An inserted block whose formats are not a list is refused. Once it
+	 * made the engine raise a TypeError while it combined the edit, which
+	 * nothing in the daemon catches.
 	 */
 	public function test_inserted_block_with_formats_of_the_wrong_type_is_refused_without_an_error() {
 		list( , $room, $block ) = $this->make_room();
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $room, $block ) {
-				$answer = self::commit(
-					self::engine(),
-					$room,
-					101,
+		$answer = self::commit(
+			self::engine(),
+			$room,
+			101,
+			array(
+				self::insert_edit(
+					'bad-formats',
+					$block,
 					array(
-						self::insert_edit(
-							'bad-formats',
-							$block,
-							array(
-								'fields' => array(
-									'content' => array(
-										'text'    => 'x',
-										'formats' => 'bold',
-									),
-								),
-							)
+						'fields' => array(
+							'content' => array(
+								'text'    => 'x',
+								'formats' => 'bold',
+							),
 						),
 					)
-				);
-				$this->assertSame(
-					array(
-						'status' => 'voided',
-						'reason' => 'invalid-payload',
-					),
-					self::verdict( $answer, 'bad-formats' )
-				);
-			},
-			TypeError::class
+				),
+			)
+		);
+		$this->assertSame(
+			array(
+				'status' => 'voided',
+				'reason' => 'invalid-payload',
+			),
+			self::verdict( $answer, 'bad-formats' )
 		);
 	}
 
 	/**
-	 * Defect: an inserted block whose attributes are not a map is applied
-	 * and stored. From then on the room cannot be turned into post
-	 * content: materialize() raises an Error on every call, which breaks
-	 * every later script save of that post.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * An inserted block whose attributes are not a map is refused. Once
+	 * it was applied and stored, and from then on the room could not be
+	 * turned into post content: materialize() raised an Error on every
+	 * call, which broke every later script save of that post.
 	 */
 	public function test_inserted_block_with_attributes_of_the_wrong_type_does_not_break_the_room() {
 		list( , $room, $block ) = $this->make_room();
@@ -1296,15 +1279,131 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			101,
 			array( self::insert_edit( 'bad-attrs', $block, array( 'attrs' => 'not a map' ) ) )
 		);
-		$this->assertNotWPError( $answer );
-
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $room ) {
-				$this->assertStringContainsString( 'Hello world', (string) self::engine()->materialize( $room ) );
-			},
-			Error::class
+		$this->assertSame(
+			array(
+				'status' => 'voided',
+				'reason' => 'invalid-payload',
+			),
+			self::verdict( $answer, 'bad-attrs' )
 		);
+
+		$this->assertStringContainsString( 'Hello world', (string) self::engine()->materialize( $room ) );
+	}
+
+	/**
+	 * More block bodies that cannot be stored.
+	 *
+	 * @return array[] Data sets: the parts of the block beside its id and type.
+	 */
+	public function data_unusable_block_bodies(): array {
+		$bold = array(
+			'start'  => 0,
+			'end'    => 1,
+			'format' => 'strong',
+		);
+
+		return array(
+			'a field that is not a map'                   => array( array( 'fields' => array( 'content' => 'text' ) ) ),
+			'fields that are a list'                      => array( array( 'fields' => array( array( 'text' => 'x' ) ) ) ),
+			'a format that is not a range'                => array( array( 'fields' => array( 'content' => array( 'formats' => array( 'strong' ) ) ) ) ),
+			'a range that ends before it starts'          => array( array( 'fields' => array( 'content' => array( 'formats' => array( array_merge( $bold, array( 'start' => 2 ) ) ) ) ) ) ),
+			'a range with a format of a wrong type'       => array( array( 'fields' => array( 'content' => array( 'formats' => array( array_merge( $bold, array( 'format' => 7 ) ) ) ) ) ) ),
+			'the short form with text of a wrong type'    => array( array( 'text' => array( 'x' ) ) ),
+			'the short form with formats of a wrong type' => array( array( 'formats' => 'strong' ) ),
+			'attribute versions that are not numbers'     => array( array( 'attrVersions' => array( 'align' => 'one' ) ) ),
+			'children that are not a list'                => array( array( 'children' => 'none' ) ),
+			'a child with a bad body'                     => array(
+				array(
+					'children' => array(
+						array(
+							'syncId'    => 'child-1',
+							'blockType' => 'core/paragraph',
+							'attrs'     => 'not a map',
+						),
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * @dataProvider data_unusable_block_bodies
+	 *
+	 * @param array $body The parts of the block beside its id and type.
+	 */
+	public function test_inserted_block_with_an_unusable_body_is_refused( array $body ) {
+		list( , $room, $block ) = $this->make_room();
+
+		$answer = self::commit( self::engine(), $room, 101, array( self::insert_edit( 'bad-body', $block, $body ) ) );
+
+		$this->assertSame(
+			array(
+				'status' => 'voided',
+				'reason' => 'invalid-payload',
+			),
+			self::verdict( $answer, 'bad-body' )
+		);
+		$this->assertSame( array(), self::stored_edit_ids( $room ) );
+	}
+
+	/**
+	 * The check does not get in the way of a block as an editor sends it:
+	 * fields with formats, attributes of any shape, and children.
+	 */
+	public function test_inserted_block_with_a_full_body_is_applied() {
+		list( , $room, $block ) = $this->make_room();
+
+		$answer = self::commit(
+			self::engine(),
+			$room,
+			101,
+			array(
+				self::insert_edit(
+					'full-1',
+					$block,
+					array(
+						'blockType' => 'core/quote',
+						'attrs'     => array(
+							'align' => 'wide',
+							'style' => array( 'color' => array( 'text' => '#000' ) ),
+							'list'  => array( 'a', 'b' ),
+						),
+						'fields'    => array(
+							'content'  => array(
+								'text'    => 'Quoted',
+								'formats' => array(
+									array(
+										'start'  => 0,
+										'end'    => 6,
+										'format' => 'strong',
+									),
+								),
+							),
+							'citation' => array( 'text' => 'Someone' ),
+						),
+						'children'  => array(
+							array(
+								'syncId'    => 'full-1-child',
+								'blockType' => 'core/paragraph',
+								'attrs'     => array(),
+								'fields'    => array(
+									'content' => array(
+										'text'    => 'Inner',
+										'formats' => array(),
+									),
+								),
+								'children'  => array(),
+							),
+						),
+					)
+				),
+			)
+		);
+
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'full-1' ) );
+		$content = (string) self::engine()->materialize( $room );
+		$this->assertStringContainsString( '<strong>Quoted</strong>', $content );
+		$this->assertStringContainsString( 'Inner', $content );
 	}
 
 	/*
