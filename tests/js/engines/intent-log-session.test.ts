@@ -536,6 +536,28 @@ describe( 'intent-log session codec', () => {
 		);
 	} );
 
+	it( 'takes no notice of an answer that names a row by its place and not by an id', () => {
+		const wire = makeWireServer();
+		const alice = makeSession( 1, 11 );
+		const aliceLink = connect( wire, alice );
+		aliceLink.poll();
+		const settled = jest.fn();
+		alice.onDisposition( settled );
+
+		alice.author( 'insert_text', { syncId: 'p1', offset: 0, text: 'x' } );
+		const before = canonicalJson( alice.getDocument()! );
+
+		// The server answers an update it could read no id from like this.
+		// This session never sends one, so the answer settles nothing.
+		alice.receiveDispositions!( [
+			{ row: 0, status: 'voided', reason: 'invalid-payload' },
+		] );
+
+		expect( settled ).not.toHaveBeenCalled();
+		expect( alice.getPendingCount() ).toBe( 1 );
+		expect( canonicalJson( alice.getDocument()! ) ).toBe( before );
+	} );
+
 	it( 'settles a voided intent through its marker row', () => {
 		const wire = makeWireServer();
 		const alice = makeSession( 1, 11 );

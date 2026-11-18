@@ -466,7 +466,18 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				),
 			)
 		);
-		$this->assertErrorResponse( 'rest_invalid_update_type', $bad_type, 400 );
+		// A row of a type only the server writes is refused by itself, by
+		// its place in the request. The request is still answered.
+		$this->assertSame(
+			array(
+				array(
+					'row'    => 0,
+					'status' => 'voided',
+					'reason' => 'invalid-type',
+				),
+			),
+			$bad_type['dispositions']
+		);
 
 		// A malformed envelope voids PER-INTENT (a request-level 400 would
 		// let one bad row starve every valid edit in the batch and wedge

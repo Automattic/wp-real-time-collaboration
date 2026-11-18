@@ -58,8 +58,16 @@ export type EngineLocalUpdateListener = (
  * The server's answer for one update this tab sent.
  */
 export interface EngineDisposition {
-	/** The id the engine gave the update. */
-	intentId: string;
+	/**
+	 * The id the engine gave the update. Missing when the server could
+	 * not read an id from the update. `row` then names the update.
+	 */
+	intentId?: string;
+	/**
+	 * The update's place in the request, counted from 0. Set only when
+	 * the update has no id the server could read.
+	 */
+	row?: number;
 	/** The outcome, a value the engine defines, for example `applied`. */
 	status: string;
 	/** Why, for an outcome other than applied. */

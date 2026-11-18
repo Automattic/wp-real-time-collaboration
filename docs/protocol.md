@@ -53,8 +53,10 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | | Shared rooms not tied to one post (a taxonomy's list) are reset instead when a tab speaking the newly chosen engine arrives. |
 | `awareness` | This tab's presence state in; every live tab's state out. Entries expire 30 seconds after their last write. |
 | `updates` | Engine-owned rows in; stored rows after the cursor out. |
-| `dispositions` | The result of each sent update, `{ intentId, status, reason? }`: `applied`, `escalated` (held for review), `voided` (thrown away) or `unknown`. |
-| | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `requires-unfiltered-html`, `resync-required`. |
+| `dispositions` | The result of each sent update, `{ intentId, status, reason? }`, one per update in the order sent: `applied`, `escalated` (held for review), `voided` (thrown away) or `unknown`. |
+| | An update the server could read no id from is named by its place in the request, counted from 0: `{ row, status, reason }`. |
+| | An update the engine cannot use is refused by itself (`voided`). The other updates in the request are still handled, and the request gets a 200. |
+| | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `invalid-payload` (a malformed update), `invalid-type` (a row type only the server writes). |
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |
 | `advisory` | The advisory channel's discovery probe, answered beside the rooms. |

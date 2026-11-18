@@ -935,14 +935,12 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/*
-	 * "What is good and stays", the three gaps in one verdict per edit.
+	 * Every row gets one answer, and a bad row is refused by itself.
 	 */
 
 	/**
-	 * Defect: a row whose edit id cannot be read is dropped without any
-	 * answer, so the sender never learns it was refused.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * A row whose edit id cannot be read is refused by its place in the
+	 * request, counted from 0, so the sender learns which row it was.
 	 */
 	public function test_row_with_no_usable_edit_id_gets_an_answer() {
 		list( , $room, $block ) = $this->make_room();
@@ -971,18 +969,33 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		$this->assertNotWPError( $answer );
 		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'good-1' ) );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer, $updates ) {
-				$this->assertCount( count( $updates ), $answer['dispositions'], 'Every row sent gets a verdict.' );
-			}
+		$this->assertCount( count( $updates ), $answer['dispositions'], 'Every row sent gets a verdict.' );
+		$this->assertSame(
+			array(
+				array(
+					'row'    => 0,
+					'status' => 'voided',
+					'reason' => 'invalid-payload',
+				),
+				array(
+					'row'    => 1,
+					'status' => 'voided',
+					'reason' => 'invalid-payload',
+				),
+				array(
+					'intentId' => 'good-1',
+					'status'   => 'applied',
+				),
+			),
+			$answer['dispositions'],
+			'The answers come in the order the rows were sent.'
 		);
 	}
 
 	/**
 	 * Rows the engine cannot accept, each sent together with a good edit.
 	 *
-	 * @return array[] Data sets: the bad row.
+	 * @return array[] Data sets: the bad row, and the answer it gets.
 	 */
 	public function data_bad_rows_beside_a_good_edit(): array {
 		return array(
@@ -996,11 +1009,21 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 						)
 					),
 				),
+				array(
+					'intentId' => 'p-1',
+					'status'   => 'voided',
+					'reason'   => 'invalid-payload',
+				),
 			),
 			'a bad `cancel` row'        => array(
 				array(
 					'type' => WP_Intent_Log_Engine::UPDATE_TYPE_CANCEL,
 					'data' => wp_json_encode( array( 'cancelId' => 'c-1' ) ),
+				),
+				array(
+					'intentId' => 'c-1',
+					'status'   => 'voided',
+					'reason'   => 'invalid-payload',
 				),
 			),
 			'a row of a type not taken' => array(
@@ -1008,22 +1031,27 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 					'type' => WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT,
 					'data' => wp_json_encode( array( 'doc' => array( 'root' => array() ) ) ),
 				),
+				array(
+					'row'    => 0,
+					'status' => 'voided',
+					'reason' => 'invalid-type',
+				),
 			),
 		);
 	}
 
 	/**
-	 * Defect: one bad `resolved` or `cancel` row, or a row of a type a
-	 * tab may not send, fails the whole request with a 400. A good edit
-	 * sent in the same request is not stored.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * One bad `resolved` or `cancel` row, or a row of a type a tab may
+	 * not send, is refused by itself. A good edit sent in the same
+	 * request is stored. Once such a row failed the whole request with
+	 * a 400.
 	 *
 	 * @dataProvider data_bad_rows_beside_a_good_edit
 	 *
 	 * @param array $bad_row The row the engine cannot accept.
+	 * @param array $refusal The answer the bad row gets.
 	 */
-	public function test_bad_row_does_not_stop_a_good_edit_in_the_same_request( array $bad_row ) {
+	public function test_bad_row_does_not_stop_a_good_edit_in_the_same_request( array $bad_row, array $refusal ) {
 		list( , $room, $block ) = $this->make_room();
 
 		$answer = self::commit(
@@ -1033,14 +1061,39 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			array( $bad_row, self::text_edit( 'good-1', $block, 0, 'x', 0 ) )
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer, $room ) {
-				$this->assertNotWPError( $answer, 'The request as a whole is answered.' );
-				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'good-1' ) );
-				$this->assertSame( array( 'good-1' ), self::stored_edit_ids( $room ) );
-			}
+		$this->assertNotWPError( $answer, 'The request as a whole is answered.' );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'good-1' ) );
+		$this->assertSame( array( 'good-1' ), self::stored_edit_ids( $room ) );
+		$this->assertSame( $refusal, $answer['dispositions'][0] );
+	}
+
+	/**
+	 * A request that holds only rows the engine cannot accept is answered
+	 * like any other, with one refusal per row. Nothing is stored.
+	 *
+	 * @dataProvider data_bad_rows_beside_a_good_edit
+	 *
+	 * @param array $bad_row The row the engine cannot accept.
+	 * @param array $refusal The answer the bad row gets.
+	 */
+	public function test_request_of_only_bad_rows_is_answered_row_by_row( array $bad_row, array $refusal ) {
+		list( , $room ) = $this->make_room();
+
+		$answer = self::polling_request(
+			array(
+				'room'      => $room,
+				'client_id' => 101,
+				'updates'   => array( $bad_row, $bad_row ),
+			)
 		);
+
+		$this->assertNotWPError( $answer );
+		$second = $refusal;
+		if ( isset( $second['row'] ) ) {
+			$second['row'] = 1;
+		}
+		$this->assertSame( array( $refusal, $second ), $answer['dispositions'] );
+		$this->assertCount( 1, ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ), 'Only the first document is stored.' );
 	}
 
 	/**

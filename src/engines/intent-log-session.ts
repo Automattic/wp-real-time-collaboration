@@ -108,10 +108,31 @@ export interface IntentLogResolution {
 }
 
 /**
+ * The server's answer for an update it could read an id from. Every
+ * update this session sends has one.
+ */
+interface IdentifiedDisposition extends EngineDisposition {
+	intentId: string;
+}
+
+/**
+ * Whether an answer names its update by id. The server answers an update
+ * with no readable id by its place in the request, and this session
+ * never sends such an update.
+ *
+ * @param disposition The server's answer for one update.
+ */
+function hasIntentId(
+	disposition: EngineDisposition
+): disposition is IdentifiedDisposition {
+	return typeof disposition.intentId === 'string';
+}
+
+/**
  * A settled outcome surfaced to disposition listeners, joined with the
  * planner's local prediction when one existed.
  */
-export interface SettledDisposition extends EngineDisposition {
+export interface SettledDisposition extends IdentifiedDisposition {
 	predicted?: IntentDisposition | null;
 }
 
@@ -849,7 +870,8 @@ export function createIntentLogSession(
 			}
 		},
 
-		receiveDispositions: ( dispositions: EngineDisposition[] ) => {
+		receiveDispositions: ( answers: EngineDisposition[] ) => {
+			const dispositions = answers.filter( hasIntentId );
 			let recoveryTarget: EngineDocument | null = null;
 			const recoveryProposals: IntentLogProposal[] = [];
 			if ( replica ) {
