@@ -56,6 +56,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | `dispositions` | The result of each sent update, `{ intentId, status, reason? }`, one per update in the order sent: `applied`, `escalated` (held for review), `voided` (thrown away) or `unknown`. |
 | | An update the server could read no id from is named by its place in the request, counted from 0: `{ row, status, reason }`. |
 | | An update the engine cannot use is refused by itself (`voided`). The other updates in the request are still handled, and the request gets a 200. |
+| | An update sent again gets the answer it got the first time. The engine stores each verdict, also the refusal of a malformed update that has an id. |
 | | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `invalid-payload` (a malformed update), `invalid-type` (a row type only the server writes). |
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |

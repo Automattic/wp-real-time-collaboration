@@ -376,6 +376,42 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			}
 
 			/*
+			 * The refusal of a malformed edit is stored like any other
+			 * verdict, so the same row sent again gets the same answer.
+			 * Without the marker the answer could change: an edit refused
+			 * because its base was past the end of the history would be
+			 * applied once the history had grown.
+			 *
+			 * An edit refused as `stale-base` (further down) needs no
+			 * marker. The start of the stored history only moves forward,
+			 * so a repeat is refused again. A marker would also reach the
+			 * author's tab before the answer does, and settle the edit
+			 * there before the tab has recovered its text.
+			 */
+			foreach ( $decoded['refusals'] as $intent_id => $verdict ) {
+				if ( isset( $state['settled'][ $intent_id ] ) ) {
+					continue;
+				}
+				$stored = $this->add_row(
+					$room,
+					$client_id,
+					self::UPDATE_TYPE_VOIDED,
+					array(
+						'intentId' => $intent_id,
+						'reason'   => $verdict['reason'],
+					)
+				);
+				if ( ! $stored ) {
+					return new WP_Error(
+						'rest_sync_storage_error',
+						__( 'Failed to store sync update.', 'gutenberg' ),
+						array( 'status' => 500 )
+					);
+				}
+				$state['settled'][ $intent_id ] = $verdict;
+			}
+
+			/*
 			 * Intent cancellations (the pre-settle undo lane).
 			 * All-or-nothing per cancel row: if ANY target already settled
 			 * (other than as canceled), nothing cancels and the cancel acks
@@ -767,6 +803,9 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * - `intent`: an edit. Its verdict is known after the commit. A
 		 *   malformed edit with a readable id carries its refusal as
 		 *   `verdict`, used unless the id already has a stored verdict.
+		 *   The first row with an id decides for that id: `refusals`
+		 *   lists the ids whose first row was malformed, for the commit
+		 *   to store, and a later good row with such an id is not used.
 		 * - `resolution` or `cancel`: a usable review decision or
 		 *   cancellation, answered by the commit.
 		 * - `refused`: a complete refusal. A row with no readable id is
@@ -777,13 +816,15 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @param array  $updates  Typed updates as sent.
 		 * @param string $actor_id The sender, stamped on every edit.
 		 * @param int    $head_seq The newest position in the room.
-		 * @return array{intents: array[], resolutions: array[], cancels: array[], answers: array[], refused: int}
+		 * @return array{intents: array[], resolutions: array[], cancels: array[], answers: array[], refusals: array<string, array>, refused: int}
 		 */
 		private static function decode_updates( array $updates, string $actor_id, int $head_seq ): array {
 			$intents     = array();
 			$resolutions = array();
 			$cancels     = array();
 			$answers     = array();
+			$refusals    = array();
+			$seen        = array();
 			$refused     = 0;
 
 			$refuse = static function ( int $row, ?string $id, string $reason ) use ( &$answers, &$refused ): void {
@@ -863,15 +904,31 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				// full vocabulary schema up front so a malformed intent
 				// voids cleanly instead of fataling mid-plan.
 				if ( ! $envelope_ok || ! WP_Intent_Log_Planner::is_valid_payload( $intent['type'], $intent['payload'] ) ) {
-					$answers[] = array(
+					$verdict = array(
+						'status' => 'voided',
+						'reason' => 'invalid-payload',
+					);
+					if ( ! isset( $seen[ $intent_id ] ) ) {
+						$refusals[ $intent_id ] = $verdict;
+					}
+					$seen[ $intent_id ] = true;
+					$answers[]          = array(
 						'kind'    => 'intent',
 						'id'      => $intent_id,
-						'verdict' => array(
-							'status' => 'voided',
-							'reason' => 'invalid-payload',
-						),
+						'verdict' => $verdict,
 					);
 					++$refused;
+					continue;
+				}
+
+				$seen[ $intent_id ] = true;
+				$answers[]          = array(
+					'kind'    => 'intent',
+					'id'      => $intent_id,
+					'verdict' => $refusals[ $intent_id ] ?? null,
+				);
+				if ( isset( $refusals[ $intent_id ] ) ) {
+					// An earlier row of this request already refused the id.
 					continue;
 				}
 
@@ -879,11 +936,6 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$intent['actorId'] = $actor_id;
 				$intent['txnId']   = $intent['txnId'] ?? null;
 				$intents[]         = $intent;
-				$answers[]         = array(
-					'kind'    => 'intent',
-					'id'      => $intent_id,
-					'verdict' => null,
-				);
 			}
 
 			return array(
@@ -891,6 +943,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				'resolutions' => $resolutions,
 				'cancels'     => $cancels,
 				'answers'     => $answers,
+				'refusals'    => $refusals,
 				'refused'     => $refused,
 			);
 		}

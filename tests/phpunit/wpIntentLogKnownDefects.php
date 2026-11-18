@@ -1097,12 +1097,10 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Defect: the `invalid-payload` verdict is not stored. The very same
-	 * row, sent again later, can get a different answer. Here it is
-	 * refused first, because its base is past the end of the history,
-	 * and applied on the repeat, once the history has grown.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * The `invalid-payload` verdict is stored, so the very same row sent
+	 * again later gets the same answer. Here the row is refused because
+	 * its base is past the end of the history. Without the stored verdict
+	 * the repeat would be applied, once the history has grown.
 	 */
 	public function test_refused_edit_sent_again_gets_the_same_verdict() {
 		list( , $room, $block ) = $this->make_room();
@@ -1123,12 +1121,76 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 
 		$again = self::commit( self::engine(), $room, 101, array( $row ) );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $first, $again ) {
-				$this->assertSame( self::verdict( $first, 'early-1' ), self::verdict( $again, 'early-1' ) );
-			}
+		$this->assertSame( self::verdict( $first, 'early-1' ), self::verdict( $again, 'early-1' ) );
+		$this->assertSame(
+			array(
+				array(
+					'intentId' => 'early-1',
+					'reason'   => 'invalid-payload',
+				),
+			),
+			self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_VOIDED ),
+			'The refusal is stored once, however often the row is sent.'
 		);
+		$this->assertSame( array( 'b-1' ), self::stored_edit_ids( $room ) );
+	}
+
+	/**
+	 * The first row with an edit id decides for that id, also inside one
+	 * request: a good row that follows a malformed row with the same id
+	 * gets the refusal and is not stored.
+	 */
+	public function test_first_row_with_an_edit_id_decides_inside_one_request() {
+		list( , $room, $block ) = $this->make_room();
+
+		$malformed = self::edit( 'twice-1', 0, 'insert_text', array() );
+		$good      = self::text_edit( 'twice-1', $block, 0, 'x', 0 );
+		$answer    = self::commit( self::engine(), $room, 101, array( $malformed, $good ) );
+
+		$refusal = array(
+			'intentId' => 'twice-1',
+			'status'   => 'voided',
+			'reason'   => 'invalid-payload',
+		);
+		$this->assertSame( array( $refusal, $refusal ), $answer['dispositions'] );
+		$this->assertSame( array(), self::stored_edit_ids( $room ) );
+
+		// The other way round, the good row decides.
+		$answer = self::commit( self::engine(), $room, 101, array( self::text_edit( 'twice-2', $block, 0, 'x', 0 ), self::edit( 'twice-2', 0, 'insert_text', array() ) ) );
+
+		$applied = array(
+			'intentId' => 'twice-2',
+			'status'   => 'applied',
+		);
+		$this->assertSame( array( $applied, $applied ), $answer['dispositions'] );
+		$this->assertSame( array( 'twice-2' ), self::stored_edit_ids( $room ) );
+	}
+
+	/**
+	 * An edit refused as `stale-base` gets the same answer when it is
+	 * sent again, with no stored marker: the start of the stored history
+	 * only moves forward. A marker row would reach the author's tab
+	 * before the answer and settle the edit there before the tab has
+	 * recovered its text.
+	 */
+	public function test_stale_edit_sent_again_gets_the_same_verdict_without_a_stored_marker() {
+		list( , $room, $block ) = $this->make_room();
+		$this->type_three_edits_past_a_snapshot( $room, $block );
+		for ( $i = 3; $i < 6; $i++ ) {
+			self::commit( self::engine(), $room, 101, array( self::text_edit( "typed-$i", $block, 0, 'x', $i ) ) );
+		}
+
+		$row   = self::text_edit( 'late-gone', $block, 13, '?', 2 );
+		$stale = array(
+			'status' => 'voided',
+			'reason' => 'stale-base',
+		);
+		$this->assertSame( $stale, self::verdict( self::commit( self::engine(), $room, 202, array( $row ) ), 'late-gone' ) );
+
+		self::commit( self::engine(), $room, 101, array( self::text_edit( 'typed-6', $block, 0, 'x', 6 ) ) );
+
+		$this->assertSame( $stale, self::verdict( self::commit( self::engine(), $room, 202, array( $row ) ), 'late-gone' ) );
+		$this->assertSame( array(), self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_VOIDED ) );
 	}
 
 	/*
