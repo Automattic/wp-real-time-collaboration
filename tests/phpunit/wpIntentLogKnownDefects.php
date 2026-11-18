@@ -853,12 +853,11 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Defect: when the engine loads a room it forgets every edit before
-	 * the last snapshot. An edit that was already on its way, based on a
-	 * position just before the snapshot, is refused as `stale-base`,
-	 * although the rows needed to combine it are still stored.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * An edit that was already on its way when a snapshot was written,
+	 * based on a position just before it, is combined like any other
+	 * edit: the rows it needs are still stored. Once the engine forgot
+	 * every edit before the last snapshot when it loaded a room, and
+	 * refused such an edit as `stale-base`.
 	 */
 	public function test_edit_in_flight_across_a_snapshot_is_combined() {
 		list( , $room, $block ) = $this->make_room();
@@ -868,21 +867,14 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 		// two of the three edits ("xxHello world", 13 characters).
 		$answer = self::commit( self::engine(), $room, 202, array( self::text_edit( 'late-1', $block, 13, '!', 2 ) ) );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer ) {
-				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'late-1' ) );
-			}
-		);
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'late-1' ) );
 	}
 
 	/**
-	 * Defect: the list of edit ids already handled is forgotten at the
-	 * same point. An edit that was applied just before a snapshot and is
-	 * sent again (its answer was lost, say) gets `stale-base` instead of
-	 * its first verdict, `applied`.
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * The verdicts of the edits before a snapshot are kept as well. An
+	 * edit that was applied just before a snapshot and is sent again (its
+	 * answer was lost, say) gets its first verdict, `applied`, and not
+	 * `stale-base`.
 	 */
 	public function test_applied_edit_sent_again_after_a_snapshot_gets_its_first_verdict() {
 		list( , $room, $block ) = $this->make_room();
@@ -890,16 +882,55 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 
 		$answer = self::commit( self::engine(), $room, 101, array( $third ) );
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer ) {
-				$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'typed-2' ) );
-			}
-		);
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'typed-2' ) );
 		$this->assertSame(
 			array( 'typed-0', 'typed-1', 'typed-2' ),
 			self::stored_edit_ids( $room ),
 			'A repeat never stores the edit twice.'
+		);
+	}
+
+	/**
+	 * Keeping the edits before a snapshot must not make snapshots more
+	 * frequent: the next one is due a full interval after the last, and
+	 * the older rows are then deleted as before. An edit based on a
+	 * position whose rows are deleted is still refused as `stale-base`.
+	 */
+	public function test_snapshots_keep_their_interval_and_edits_below_the_stored_rows_stay_refused() {
+		list( , $room, $block ) = $this->make_room();
+		$this->type_three_edits_past_a_snapshot( $room, $block );
+
+		// Two more edits: no new snapshot yet.
+		for ( $i = 3; $i < 5; $i++ ) {
+			$answer = self::commit( self::engine(), $room, 101, array( self::text_edit( "typed-$i", $block, 0, 'x', $i ) ) );
+			$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, "typed-$i" ) );
+		}
+		$this->assertCount( 2, self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT ) );
+
+		// The sixth edit writes the second snapshot, and the rows before
+		// the first snapshot are deleted.
+		$answer = self::commit( self::engine(), $room, 101, array( self::text_edit( 'typed-5', $block, 0, 'x', 5 ) ) );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'typed-5' ) );
+		$this->assertSame( array( 3, 6 ), array_column( self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT ), 'seq' ) );
+		$this->assertSame( array( 'typed-3', 'typed-4', 'typed-5' ), self::stored_edit_ids( $room ) );
+
+		// The room still loads to the right document and position.
+		$this->assertSame( 6, self::engine()->head_seq( $room ) );
+		$this->assertStringContainsString( 'xxxxxxHello world', (string) self::engine()->materialize( $room ) );
+
+		// Based on a position whose rows are still stored: combined.
+		$kept = self::commit( self::engine(), $room, 202, array( self::text_edit( 'late-kept', $block, 15, '!', 4 ) ) );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $kept, 'late-kept' ) );
+		$this->assertStringContainsString( 'xxxxxxHello world!', (string) self::engine()->materialize( $room ) );
+
+		// Based on a position whose rows are gone: refused.
+		$gone = self::commit( self::engine(), $room, 202, array( self::text_edit( 'late-gone', $block, 13, '?', 2 ) ) );
+		$this->assertSame(
+			array(
+				'status' => 'voided',
+				'reason' => 'stale-base',
+			),
+			self::verdict( $gone, 'late-gone' )
 		);
 	}
 

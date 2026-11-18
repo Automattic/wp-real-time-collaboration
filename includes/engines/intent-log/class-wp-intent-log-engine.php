@@ -46,7 +46,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 	 * checkpoint is then trimmed and recorded as the room floor. Clients
 	 * whose cursor falls below the floor bootstrap again from the retained
 	 * checkpoint snapshot, and unresolved proposals below the trim are
-	 * re-appended so review work survives (see maybe_checkpoint()).
+	 * re-appended so review work survives (see maybe_checkpoint()). The
+	 * rows between the previous checkpoint and the newest one stay stored,
+	 * and load_room() keeps them in the history, so an edit made just
+	 * before a checkpoint is still combined after it.
 	 *
 	 * Genesis/materialization map a block's inner HTML onto the engine's
 	 * `content` field plus the `_wrapper` internal attr (the Phase 2a
@@ -586,7 +589,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			}
 
 			$log       = $state['log'];
-			$doc_cache = array( $base_seq => $state['genesis'] );
+			$doc_cache = array(
+				$base_seq              => $state['genesis'],
+				$state['snapshot_seq'] => $state['snapshot_doc'],
+			);
 			$doc_at    = function ( int $seq ) use ( $log, $base_seq, &$doc_cache ): array {
 				if ( isset( $doc_cache[ $seq ] ) ) {
 					return $doc_cache[ $seq ];
@@ -725,7 +731,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$checkpointed = $this->maybe_checkpoint(
 				$room,
 				$client_id,
-				count( $state['log'] ) + $accepted_count,
+				$head_seq - $state['snapshot_seq'] + $accepted_count,
 				$head_seq + $accepted_count,
 				$plan['headDoc']
 			);
@@ -1088,8 +1094,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 *
 		 * @param string $room               Room identifier.
 		 * @param int    $client_id          Requesting client id (row attribution).
-		 * @param int    $window_intent_rows Intent rows since the reconstructed
-		 *                                   genesis, after this commit.
+		 * @param int    $window_intent_rows Intent rows since the newest
+		 *                                   stored snapshot, after this commit.
 		 * @param int    $head_seq           Engine seq at the new head.
 		 * @param array  $head_doc           Document at the new head.
 		 * @return bool Whether a checkpoint was appended.
@@ -1317,9 +1323,30 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				return null;
 			}
 
+			return self::document_at_seq( $state, $seq );
+		}
+
+		/**
+		 * The document at a position inside a loaded room's history,
+		 * replayed from the nearest stored snapshot at or before it.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array $state Room state from load_room().
+		 * @param int   $seq   A position from `base_seq` to the head.
+		 * @return array Engine document.
+		 */
+		private static function document_at_seq( array $state, int $seq ): array {
+			$from_seq = (int) $state['base_seq'];
+			$from_doc = $state['genesis'];
+			if ( $seq >= $state['snapshot_seq'] ) {
+				$from_seq = (int) $state['snapshot_seq'];
+				$from_doc = $state['snapshot_doc'];
+			}
+
 			return WP_Intent_Log_Document::replay(
-				$state['genesis'],
-				array_slice( $state['log'], 0, $seq - $base_seq )
+				$from_doc,
+				array_slice( $state['log'], $from_seq - (int) $state['base_seq'], $seq - $from_seq )
 			);
 		}
 
@@ -1353,7 +1380,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			if ( is_wp_error( $state ) ) {
 				return null;
 			}
-			$doc = WP_Intent_Log_Document::replay( $state['genesis'], $state['log'] );
+			$doc = self::document_at_seq( $state, (int) $state['base_seq'] + count( $state['log'] ) );
 
 			$serialized = array();
 			foreach ( $doc['root'] as $block ) {
@@ -1396,6 +1423,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$resolved       = array();
 			$parked         = array();
 			$base_seq       = 0;
+			$snapshot_seq   = 0;
+			$snapshot_doc   = null;
 
 			foreach ( $rows as $row ) {
 				$decoded = json_decode( $row['data'], true );
@@ -1404,20 +1433,42 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 				switch ( $row['type'] ) {
 					case self::UPDATE_TYPE_SNAPSHOT:
-						if ( ! empty( $decoded['checkpoint'] ) ) {
-							// A compaction checkpoint supersedes everything
-							// before it: reconstruct from here. Settled
-							// state for the retained window rebuilds from
-							// the rows that follow.
-							$genesis  = $decoded['doc'];
-							$base_seq = (int) ( $decoded['seq'] ?? 0 );
-							$log      = array();
-							$settled  = array();
-						} elseif ( null === $genesis ) {
-							// Genesis: the first snapshot wins, so a racing
-							// second initializer is ignored the same way
-							// on every server.
-							$genesis = $decoded['doc'];
+						$is_checkpoint = ! empty( $decoded['checkpoint'] );
+						$seq           = $is_checkpoint ? (int) ( $decoded['seq'] ?? 0 ) : 0;
+						if ( null === $genesis ) {
+							/*
+							 * The oldest stored snapshot is where the history
+							 * starts: the room's first document, or the
+							 * oldest checkpoint the trim kept. A second first
+							 * document from a racing initializer is ignored,
+							 * the same way on every server.
+							 */
+							$genesis      = $decoded['doc'];
+							$base_seq     = $seq;
+							$snapshot_seq = $seq;
+							$snapshot_doc = $genesis;
+						} elseif ( $is_checkpoint && $seq === $base_seq + count( $log ) ) {
+							/*
+							 * A later checkpoint. The edits before it stay in
+							 * the history, with their verdicts, for as long
+							 * as their rows are stored: an edit that was on
+							 * its way when the checkpoint was written is
+							 * still combined, and a repeat still gets its
+							 * first verdict. The checkpoint only saves
+							 * replaying those edits to reach the newest
+							 * document.
+							 */
+							$snapshot_seq = $seq;
+							$snapshot_doc = $decoded['doc'];
+						} elseif ( $is_checkpoint ) {
+							// The rows before it do not add up to its
+							// position, so nothing before it can be used.
+							$genesis      = $decoded['doc'];
+							$base_seq     = $seq;
+							$snapshot_seq = $seq;
+							$snapshot_doc = $genesis;
+							$log          = array();
+							$settled      = array();
 						}
 						break;
 					case self::UPDATE_TYPE_INTENT:
@@ -1469,7 +1520,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				if ( is_wp_error( $genesis ) ) {
 					return $genesis;
 				}
-				$created = true;
+				$snapshot_doc = $genesis;
+				$created      = true;
 			}
 
 			// A park settled below the retained window is dropped from the
@@ -1497,9 +1549,13 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				// Each actor's planner escalations with their settling seq:
 				// the frame state the actor's next batch plans from.
 				'parked'         => $parked,
-				// Engine seq of the reconstructed genesis (0, or the
+				// Engine seq of the oldest stored snapshot (0, or that
 				// checkpoint's seq): log[i] is engine seq base_seq + i.
 				'base_seq'       => $base_seq,
+				// The newest stored snapshot, a shortcut to recent
+				// documents. Equal to the genesis when there is only one.
+				'snapshot_seq'   => $snapshot_seq,
+				'snapshot_doc'   => $snapshot_doc,
 				// The id of the room's newest row when this was loaded.
 				'cursor'         => $cursor,
 			);

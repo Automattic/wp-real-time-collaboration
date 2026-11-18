@@ -526,18 +526,21 @@ class Tests_Collaboration_WpSyncEngineBenchmark extends WP_UnitTestCase {
 
 	public function test_intent_log_floor_reset_retries_recover_stale_voided_edits() {
 		$interval = static function () {
-			return 20;
+			return 1;
 		};
 		add_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
 
 		try {
-			// 30 rounds x 3 clients against a 20-row checkpoint interval:
-			// checkpoints raise the retention floor mid-round, stale-voiding
-			// in-flight intents, including seed-round INSERTS whose blocks
-			// the workload later contends. The profile's floor-reset retry
-			// lane must re-author them (visible as followups), or those
-			// contentions would target blocks the room never had and show
-			// phantom missing-target lost work.
+			// 30 rounds x 3 clients with a checkpoint after every row. The
+			// engine keeps the rows back to the checkpoint before the
+			// newest one, so only an edit that is two or more rows behind
+			// falls below the stored history and is stale-voided. With
+			// three clients a round that happens, including to seed-round
+			// INSERTS whose blocks the workload later contends. The
+			// profile's floor-reset retry lane must re-author them
+			// (visible as followups), or those contentions would target
+			// blocks the room never had and show phantom missing-target
+			// lost work.
 			$report = $this->run_intent_log_rounds( 'remove-contention', 30, 3 );
 
 			$this->assertGreaterThan( 0, $report['quality']['dispositions']['voided'], 'expected stale-base voids to exercise the retry lane' );
