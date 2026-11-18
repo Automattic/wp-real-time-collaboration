@@ -57,7 +57,7 @@ function tab( wire: WireServer = createWireServer( BLOCKS ), clientId = 11 ) {
 						},
 					},
 				],
-				{ baseSeq: session.getSeq(), observe: false }
+				{ baseSeq: session.getSeq() }
 			),
 			startsNewLevel
 		);
@@ -245,7 +245,7 @@ describe( 'undo history', () => {
 					},
 				},
 			],
-			{ baseSeq: bob.session.getSeq(), observe: false }
+			{ baseSeq: bob.session.getSeq() }
 		);
 		bob.link.poll();
 		alice.link.poll();
@@ -263,7 +263,7 @@ describe( 'undo history', () => {
 		// Bob removes the block while Alice types in it.
 		bob.session.authorBatch(
 			[ { type: 'remove_block', payload: { syncId: 'p1' } } ],
-			{ baseSeq: bob.session.getSeq(), observe: false }
+			{ baseSeq: bob.session.getSeq() }
 		);
 		alice.type( '!' );
 		bob.link.poll();
@@ -309,7 +309,7 @@ describe( 'undo history', () => {
 						},
 					},
 				],
-				{ baseSeq: first.session.getSeq(), observe: false }
+				{ baseSeq: first.session.getSeq() }
 			),
 			true
 		);

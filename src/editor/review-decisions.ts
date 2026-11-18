@@ -50,6 +50,12 @@ export interface ReviewDecisionsOptions {
 	rawContent?: RawContentAdapter;
 	saveMarkup?: SaveMarkupAdapter;
 	/**
+	 * The default attribute values of a block type. An accepted merge is
+	 * parsed from markup, and parsed blocks carry default values that
+	 * the document may leave out. Those are not edits.
+	 */
+	attributeDefaults?: ( blockName: string ) => Record< string, unknown >;
+	/**
 	 * Called with the edits a decision made, so they can become an undo
 	 * step.
 	 */
@@ -293,7 +299,13 @@ function isBlockSpec( value: unknown ): value is BlockSpec {
 export function createReviewDecisions(
 	options: ReviewDecisionsOptions
 ): ReviewDecisions {
-	const { session, richTextFields, rawContent, saveMarkup } = options;
+	const {
+		session,
+		richTextFields,
+		rawContent,
+		saveMarkup,
+		attributeDefaults,
+	} = options;
 	const blocksOf = ( doc: EngineDocument ): BridgeBlock[] =>
 		engineDocumentToBlocks( doc, richTextFields, rawContent );
 
@@ -398,6 +410,7 @@ export function createReviewDecisions(
 		collectRun( doc.root );
 
 		const derived = deriveIntents( doc, tree, {
+			attributeDefaults,
 			removableIds,
 			richTextFields,
 			rawContent,
@@ -412,7 +425,6 @@ export function createReviewDecisions(
 			session.authorBatch( derived.intents, {
 				txnId: globalThis.crypto.randomUUID(),
 				baseSeq: session.getSeq(),
-				observe: false,
 			} )
 		);
 	};

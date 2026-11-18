@@ -18,7 +18,10 @@ import { addFilter, removeFilter } from '@wordpress/hooks';
 /**
  * Internal dependencies
  */
-import { getBlock } from '../../../src/engines/intent-log/document.js';
+import {
+	createDocument,
+	getBlock,
+} from '../../../src/engines/intent-log/document.js';
 import type { BlockSpec } from '../../../src/engines/intent-log/document.js';
 import { INTENT_LOG_UPDATE_TYPES } from '../../../src/engines/intent-log-session';
 import type {
@@ -589,6 +592,81 @@ describe( 'provider: local edits', () => {
 		expect( serverText( 'p1' ) ).toBe( 'One changed' );
 	} );
 
+	it( 'does not take the content the editor writes when it saves for an edit', async () => {
+		/*
+		 * Each save, the editor writes the whole content as text into the
+		 * record, marked as not to be undone. The text is made from the
+		 * blocks, whose edits the engine already has. Comparing it with
+		 * the document would send whatever the text and the document
+		 * spell differently, from every tab that saves.
+		 */
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+		const rowsBefore = wire.rowCount();
+
+		tab.edit(
+			[
+				{
+					type: 'set-field',
+					field: 'content',
+					previousValue: 'old text',
+					value: JSON.stringify( [
+						{
+							name: 'core/paragraph',
+							attributes: {
+								content: 'Spelled differently',
+								metadata: { syncId: 'p1' },
+							},
+							innerBlocks: [],
+						},
+					] ),
+				},
+			],
+			{ undoIgnore: true }
+		);
+		tab.sync();
+
+		expect( wire.rowCount() ).toBe( rowsBefore );
+		expect( serverOrder() ).toEqual( [ 'p1', 'p2' ] );
+		expect( serverText( 'p1' ) ).toBe( 'One' );
+	} );
+
+	it( 'does not add a block a second time when a batch inserts a block the document already holds', async () => {
+		/*
+		 * After a save, core-data can lose the block list it compares
+		 * against. Its next comparison then starts from nothing, or from
+		 * blocks parsed afresh from the saved text, and reports every
+		 * block of the editor as inserted. Those blocks are the ones the
+		 * document holds already.
+		 */
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+
+		tab.edit( [
+			{
+				type: 'insert',
+				block: paragraph( 'c-2', 'Two', 'p2' ),
+				parent: null,
+				before: null,
+			},
+			{
+				type: 'insert',
+				block: paragraph( 'c-1', 'One more', 'p1' ),
+				parent: null,
+				before: 'c-2',
+			},
+		] );
+		tab.sync();
+
+		expect( serverOrder() ).toEqual( [ 'p1', 'p2' ] );
+		expect( serverText( 'p1' ) ).toBe( 'One more' );
+		expect( serverText( 'p2' ) ).toBe( 'Two' );
+	} );
+
 	it( 'keeps one block for text typed in the code editor, keystroke after keystroke', async () => {
 		const tab = await openTab( [
 			paragraph( 'c-1', 'One', 'p1' ),
@@ -1040,6 +1118,62 @@ describe( 'provider: two people in one paragraph', () => {
 	} );
 } );
 
+describe( 'provider: typing that is about to be set aside', () => {
+	it( 'leaves the text under the caret alone until the person pauses', async () => {
+		/*
+		 * Alice is typing when Bob's edit of the same paragraph arrives.
+		 * Her tab knows at once that her unanswered letters will be set
+		 * aside, before the server says so. Her editor must keep her text
+		 * until she pauses, so that the letters she types next go into
+		 * the same text, and into the same review record.
+		 */
+		wire = createWireServer( [ roomParagraph( 'p1', 'Alpha' ) ] );
+
+		let typing = true;
+		const alice = await openTab(
+			[ paragraph( 'a-1', 'Alpha', 'p1' ) ],
+			{},
+			{ isTypingIn: ( clientId ) => typing && 'a-1' === clientId }
+		);
+		const bob = await openTab( [ paragraph( 'b-1', 'Alpha', 'p1' ) ] );
+		const pushesBefore = alice.pushes.length;
+
+		bob.type( 'b-1', 'Alpha', 'Bob: Alpha' );
+		bob.sync();
+
+		alice.type( 'a-1', 'Alpha', 'Alpha 1' );
+		alice.type( 'a-1', 'Alpha 1', 'Alpha 12' );
+		alice.sync();
+
+		// Nothing was written to her editor: it still shows "Alpha 12".
+		expect( alice.pushes ).toHaveLength( pushesBefore );
+
+		// She types on, in the text her editor shows.
+		alice.type( 'a-1', 'Alpha 12', 'Alpha 123' );
+		alice.sync();
+		alice.sync();
+		await Promise.resolve();
+
+		expect( alice.pushes ).toHaveLength( pushesBefore );
+		expect( serverText( 'p1' ) ).toBe( 'Bob: Alpha' );
+
+		// All three letters are in one review record, in order.
+		const records = alice.provider.conflicts.getOpenConflicts(
+			'postType/post',
+			'1'
+		);
+
+		expect( records ).toHaveLength( 1 );
+		expect( records[ 0 ].proposed ).toContain( 'Alpha 123' );
+
+		// She pauses, and her editor is brought to the server's text.
+		typing = false;
+		jest.advanceTimersByTime( 300 );
+
+		expect( alice.blocks()[ 0 ].attributes.content ).toBe( 'Bob: Alpha' );
+	} );
+} );
+
 describe( 'provider: joining a room that has a history', () => {
 	it( 'does not add the saved blocks a second time when a batch arrives early', async () => {
 		// Someone added a block earlier. The room's first document is
@@ -1140,6 +1274,84 @@ describe( 'provider: an edit the server refuses because its history is gone', ()
 
 		expect( again.intentId ).not.toBe( first.intentId );
 		expect( JSON.stringify( again.payload ) ).toContain( '!!' );
+	} );
+
+	it( 'sends the lost edit again when a newer copy of the room comes with the refusal', async () => {
+		/*
+		 * The tab fell behind: the server trimmed history the tab never
+		 * received. It refuses the tab's edit and sends a newer copy of
+		 * the whole document, which lacks that edit. The text must not
+		 * vanish, and the other person's change must show.
+		 */
+		const tab = await openTab( [
+			paragraph( 'c-1', 'One', 'p1' ),
+			paragraph( 'c-2', 'Two', 'p2' ),
+		] );
+		const { session } = links[ 0 ];
+		const sent: string[] = [];
+
+		session.onLocalUpdate( ( update ) => sent.push( update.data ) );
+		tab.type( 'c-1', 'One', 'One!!' );
+
+		const first = JSON.parse( sent[ 0 ] );
+
+		session.receiveUpdate( {
+			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+			data: JSON.stringify( {
+				doc: createDocument( [
+					roomParagraph( 'p1', 'One' ),
+					roomParagraph( 'p2', 'Two more' ),
+				] ),
+				seq: 40,
+			} ),
+		} );
+		session.receiveDispositions?.( [
+			{
+				intentId: first.intentId,
+				status: 'voided',
+				reason: 'stale-base',
+			},
+		] );
+		jest.runOnlyPendingTimers();
+
+		const again = JSON.parse( sent.at( -1 ) ?? '{}' );
+
+		expect( again.intentId ).not.toBe( first.intentId );
+		expect( again.baseSeq ).toBe( 40 );
+		expect( JSON.stringify( again.payload ) ).toContain( '!!' );
+		expect( tab.blocks() ).toMatchObject( [
+			{ attributes: { content: 'One!!' } },
+			{ attributes: { content: 'Two more' } },
+		] );
+	} );
+
+	it( 'shows a newer copy of the room at once, even while text is being composed', async () => {
+		/*
+		 * Writes to the editor wait while text is composed. This one may
+		 * not: the history between what the editor shows and the newer
+		 * copy is gone, so an edit made against the old text could not be
+		 * combined with it.
+		 */
+		let composing = false;
+		const tab = await openTab(
+			[ paragraph( 'c-1', 'One', 'p1' ) ],
+			{},
+			{ isComposing: () => composing }
+		);
+		const { session } = links[ 0 ];
+
+		composing = true;
+		session.receiveUpdate( {
+			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+			data: JSON.stringify( {
+				doc: createDocument( [ roomParagraph( 'p1', 'One newer' ) ] ),
+				seq: 40,
+			} ),
+		} );
+
+		expect( tab.blocks() ).toMatchObject( [
+			{ attributes: { content: 'One newer' } },
+		] );
 	} );
 } );
 

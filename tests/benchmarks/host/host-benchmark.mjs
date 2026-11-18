@@ -519,6 +519,27 @@ async function verifyEditors( wins, expected ) {
 			return;
 		}
 		if ( Date.now() >= deadline ) {
+			// Say what each editor holds, so a wrong document can be
+			// told apart: a block twice, text twice, or text missing.
+			for ( const win of wins ) {
+				const blocks = await win.page
+					.evaluate( () =>
+						window.wp.data
+							.select( 'core/block-editor' )
+							.getBlocks()
+							.map( ( block ) => ( {
+								name: block.name,
+								syncId: block.attributes.metadata?.syncId,
+								text: String( block.attributes.content ?? '' ),
+							} ) )
+					)
+					.catch( () => null );
+				console.error(
+					`  editor ${ win.index } blocks: ${ JSON.stringify(
+						blocks
+					) }`
+				);
+			}
 			throw new Error(
 				'Editors did not reach the expected document; no cost comparison will be reported.'
 			);

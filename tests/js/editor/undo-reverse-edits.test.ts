@@ -70,7 +70,6 @@ function harness( userId = 1, clientId = 11 ) {
 	) => {
 		const envelopes = session.authorBatch( intents, {
 			baseSeq: session.getSeq(),
-			observe: false,
 		} );
 
 		history.record( session, envelopes, true );
@@ -522,9 +521,9 @@ describe( 'undo: the reverse edits', () => {
 			},
 		] );
 		link.poll();
-		// Push the observed frame forward; without the undo pin the replica
+		// Move what the editor shows forward; without the undo pin the replica
 		// would be free to trim the first row away.
-		session.setObservedSeq( session.getSeq() );
+		session.setShownSeq( session.getSeq() );
 		for ( let i = 0; i < 5; i++ ) {
 			edit( [
 				{
@@ -538,7 +537,7 @@ describe( 'undo: the reverse edits', () => {
 				},
 			] );
 			link.poll();
-			session.setObservedSeq( session.getSeq() );
+			session.setShownSeq( session.getSeq() );
 		}
 		expect( session.getRetainedFloor() ).toBeLessThanOrEqual( 0 );
 		// The first unit is still derivable and undoable…

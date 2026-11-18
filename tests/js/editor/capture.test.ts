@@ -868,6 +868,55 @@ describe( 'capture: an editor that is behind the engine', () => {
 		expect( result.counters.stalePreviousValue ).toBe( 1 );
 	} );
 
+	it( 'does not add typed text a second time when the editor names a text older than the engine’s', () => {
+		/*
+		 * core-data lost the block list it compares against and fell
+		 * back to the blocks of the saved post. It reports everything
+		 * typed since as one change. The engine has that text already.
+		 */
+		const { capture } = setup( [ paragraph( 'c-1', 'Anchor one two' ) ] );
+
+		const result = capture( [
+			{
+				type: 'set-attribute',
+				clientId: 'c-1',
+				attribute: 'content',
+				previousValue: 'Anchor',
+				value: 'Anchor one two',
+			},
+		] );
+
+		expect( result.intents ).toEqual( [] );
+		expect( text( result.doc, 'b1' ) ).toBe( 'Anchor one two' );
+	} );
+
+	it( 'sends only the new text when the editor names a text older than the engine’s', () => {
+		const { capture } = setup( [ paragraph( 'c-1', 'Anchor one two' ) ] );
+
+		const result = capture( [
+			{
+				type: 'set-attribute',
+				clientId: 'c-1',
+				attribute: 'content',
+				previousValue: 'Anchor',
+				value: 'Anchor one two three',
+			},
+		] );
+
+		expect( result.intents ).toEqual( [
+			{
+				type: 'insert_text',
+				payload: {
+					syncId: 'b1',
+					field: 'content',
+					offset: 14,
+					text: ' three',
+				},
+			},
+		] );
+		expect( text( result.doc, 'b1' ) ).toBe( 'Anchor one two three' );
+	} );
+
 	it( 'counts a plain attribute whose old value is not the engine’s', () => {
 		const { capture } = setup( [
 			block( 'c-1', 'core/heading', { content: 'Title', level: 3 } ),

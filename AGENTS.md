@@ -288,6 +288,14 @@ before a big change. A durable lesson from an issue goes here.
   defaults out, while the editor's blocks always carry them (a
   paragraph's `dropCap: false`). Sending an unchanged default as an
   edit makes two tabs' first edits clash on every such block.
+- **A tab takes its own unanswered typing out of its document before
+  the server says it was set aside.** The tab sees the clash itself
+  when the other person's edit arrives (`getPredictedSetAside` in
+  `src/engines/intent-log-session.ts`). The review record opens only
+  with the server's answer. A write to the editor between those two
+  moments removes the text under the caret, and the letters typed next
+  go into a different text than the ones before. So `shouldHoldPushes`
+  in `src/editor/provider.ts` waits from the first moment.
 - **The storage's `get_cursor()` and `get_update_count()` are
   per-request caches refreshed only by `get_updates_after_cursor()`**,
   kept that way from the fallback storage on purpose. Do

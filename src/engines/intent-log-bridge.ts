@@ -187,6 +187,15 @@ export interface DeriveOptions {
 	removableIds?: Set< string >;
 
 	/**
+	 * The default attribute values of a block type. The server's first
+	 * copy of a post leaves default values out, and blocks parsed by the
+	 * editor carry them. A default value the document leaves out is not
+	 * an edit: sent as one, it clashes with the same edit from another
+	 * tab. Needed when the target blocks come from the editor's parser.
+	 */
+	attributeDefaults?: ( blockName: string ) => Record< string, unknown >;
+
+	/**
 	 * Whether a block whose id the document does not know may take over
 	 * the id of a document block of the same type with the same or
 	 * similar text (see adoptExistingIds). Off unless asked for: blocks
@@ -1091,16 +1100,32 @@ export function deriveIntents(
 		for ( const spec of specList ) {
 			const attrs = spec.attrs as Record< string, unknown >;
 			const docBlock = docBlocksById.get( spec.syncId as string );
+			const defaults =
+				options.attributeDefaults?.( spec.blockType as string ) ?? {};
+
 			for ( const key of Object.keys( attrs ) ) {
-				if ( undefined !== attrs[ key ] ) {
+				if ( undefined === attrs[ key ] ) {
+					if ( docBlock && key in docBlock.attrs ) {
+						attrs[ key ] = docBlock.attrs[ key ];
+					} else {
+						delete attrs[ key ];
+					}
+
 					continue;
 				}
-				if ( docBlock && key in docBlock.attrs ) {
-					attrs[ key ] = docBlock.attrs[ key ];
-				} else {
+
+				// A default value the document leaves out is not an edit.
+				if (
+					docBlock &&
+					! ( key in docBlock.attrs ) &&
+					key in defaults &&
+					JSON.stringify( defaults[ key ] ) ===
+						JSON.stringify( attrs[ key ] )
+				) {
 					delete attrs[ key ];
 				}
 			}
+
 			fillUndefinedAttrs( spec.children as BlockSpec[] );
 		}
 	};

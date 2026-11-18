@@ -206,6 +206,11 @@ interface RecordState {
 	selection?: EditorSelection;
 	/** True while a local batch is being applied to the session. */
 	capturing: boolean;
+	/**
+	 * The session jumped to a newer copy of the document and the editor
+	 * does not show it yet. The next write to the editor is not held.
+	 */
+	resetPending: boolean;
 	pushTimer: ReturnType< typeof setTimeout > | null;
 	/** Whether the next push must hand over the blocks even if they look unchanged. */
 	forcePush: boolean;
@@ -392,7 +397,6 @@ export function createIntentLogProvider(
 		try {
 			return state.session.authorBatch( intents, {
 				baseSeq,
-				observe: false,
 			} );
 		} finally {
 			state.capturing = false;
@@ -414,7 +418,7 @@ export function createIntentLogProvider(
 		state.shown = { doc, seq };
 		// The session keeps its copy of the history from here on, so an
 		// edit made against this document can still be combined.
-		state.session.setObservedSeq( seq );
+		state.session.setShownSeq( seq );
 	};
 
 	/**
@@ -422,7 +426,8 @@ export function createIntentLogProvider(
 	 *
 	 * @param state The record.
 	 * @return Whether text is being composed, or the person is typing in a
-	 *         block whose review card is waiting for them to pause.
+	 *         block whose review card is waiting for them to pause, or in
+	 *         a block whose typing is about to be set aside.
 	 */
 	const shouldHoldPushes = ( state: RecordState ): boolean => {
 		if ( options.isComposing?.() ) {
@@ -430,19 +435,40 @@ export function createIntentLogProvider(
 		}
 
 		const { isTypingIn } = options;
+		const isTypedIn = ( syncId: unknown ): boolean => {
+			if ( ! isTypingIn || 'string' !== typeof syncId ) {
+				return false;
+			}
+
+			const clientId = state.ids.getClientId( syncId );
+
+			return undefined !== clientId && isTypingIn( clientId );
+		};
 		let typing = false;
 
 		if ( isTypingIn && state.session.getOpenProposals().length > 0 ) {
-			typing = state.review.list().some(
-				( conflict ) =>
-					true === conflict.followsTyping &&
-					'blocks' === conflict.target.type &&
-					( conflict.target.ids ?? [] ).some( ( syncId ) => {
-						const clientId = state.ids.getClientId( syncId );
+			typing = state.review
+				.list()
+				.some(
+					( conflict ) =>
+						true === conflict.followsTyping &&
+						'blocks' === conflict.target.type &&
+						( conflict.target.ids ?? [] ).some( isTypedIn )
+				);
+		}
 
-						return undefined !== clientId && isTypingIn( clientId );
-					} )
-			);
+		if ( ! typing && isTypingIn ) {
+			/*
+			 * The person's own unanswered typing clashes with an edit that
+			 * just arrived. The session has taken it out of its document
+			 * already, and the review record opens only with the server's
+			 * answer. A write now would remove the text under the caret,
+			 * and the letters typed next would go into a different text
+			 * than the ones before.
+			 */
+			typing = state.session
+				.getPredictedSetAside()
+				.some( ( intent ) => isTypedIn( intent.payload.syncId ) );
 		}
 
 		if ( ! typing ) {
@@ -546,7 +572,9 @@ export function createIntentLogProvider(
 
 		state.forcePush = state.forcePush || force;
 
-		if ( shouldHoldPushes( state ) ) {
+		// After a reset the editor must show the new document before its
+		// next edit, so that write does not wait.
+		if ( ! state.resetPending && shouldHoldPushes( state ) ) {
 			if ( ! state.pushTimer ) {
 				state.pushTimer = setTimeout( () => {
 					state.pushTimer = null;
@@ -610,6 +638,7 @@ export function createIntentLogProvider(
 			Object.assign( edits, fieldEdits );
 		}
 
+		state.resetPending = false;
 		setShown( state, doc, session.getSeq() );
 
 		if ( Object.keys( edits ).length > 0 ) {
@@ -666,7 +695,18 @@ export function createIntentLogProvider(
 				blockOperations.push( operation );
 			} else if ( 'content' !== operation.field ) {
 				fieldOperations.push( operation );
-			} else if ( 'string' === typeof operation.value ) {
+			} else if (
+				'string' === typeof operation.value &&
+				! batch.options.undoIgnore
+			) {
+				/*
+				 * The person changed the raw text in the code editor.
+				 *
+				 * The editor also writes the whole content as text into
+				 * the record each time it saves, marked as not to be
+				 * undone. That text is made from the blocks, whose edits
+				 * the engine already has, so it is not an edit.
+				 */
 				content = operation.value;
 			}
 		}
@@ -786,6 +826,7 @@ export function createIntentLogProvider(
 				doc,
 				toBridgeBlocks( parse( content ) ),
 				{
+					attributeDefaults,
 					matchBlocksWithoutIds: true,
 					richTextFields,
 					rawContent,
@@ -1101,6 +1142,7 @@ export function createIntentLogProvider(
 					richTextFields,
 					rawContent,
 					saveMarkup,
+					attributeDefaults,
 					// A decision is one undo step of its own.
 					onAuthored: ( envelopes ) =>
 						undo.record( session, envelopes, true ),
@@ -1114,6 +1156,7 @@ export function createIntentLogProvider(
 				seedBlocks: null,
 				restartFrom: null,
 				capturing: false,
+				resetPending: false,
 				pushTimer: null,
 				forcePush: false,
 				rawContentToRefresh: new Set(),
@@ -1159,6 +1202,14 @@ export function createIntentLogProvider(
 					// the new room's first document is there.
 					state.ready = false;
 					state.restartFrom = state.shown.doc;
+				} else if ( state.shown ) {
+					/*
+					 * The session jumped to a newer copy, past history it
+					 * never received. An edit made against what the editor
+					 * shows now could not be combined with that history,
+					 * so the write that follows this call is not held.
+					 */
+					state.resetPending = true;
 				}
 			} );
 

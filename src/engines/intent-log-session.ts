@@ -115,10 +115,16 @@ export interface SettledDisposition extends EngineDisposition {
 	predicted?: IntentDisposition | null;
 }
 
-/** The local effect lost when a caught-up replica receives stale-base acks. */
+/**
+ * The local effect lost when the server refuses edits because it no longer
+ * holds the history they were made against (stale-base acks).
+ */
 interface StaleBaseRecovery {
+	/** The document without the refused edits. */
 	base: EngineDocument;
+	/** The same document with them. */
 	target: EngineDocument;
+	/** The log position to author the difference at. */
 	seq: number;
 }
 
@@ -171,34 +177,36 @@ export interface IntentLogSession extends EngineSessionCodec {
 
 	/**
 	 * Authors a batch of intents that were all derived against ONE document
-	 * state — by default the OBSERVED state (see setObservedSeq), not the
-	 * optimistic head. Every intent is stamped with that state's seq, so the
-	 * planner (here and on the server) rebases it over everything that
-	 * landed since; the optimistic document is recomputed once, from the
-	 * plan, rather than by applying stale coordinates to the head.
+	 * state: the document at `baseSeq`, plus this session's own edits. That
+	 * is usually not the optimistic head. Every intent is stamped with
+	 * `baseSeq`, so the planner (here and on the server) rebases it over
+	 * everything that landed since; the optimistic document is recomputed
+	 * once, from the plan, rather than by applying stale coordinates to the
+	 * head. `baseSeq` is clamped into the history the replica still holds.
 	 */
 	authorBatch: (
 		intents: Array< { type: string; payload: Record< string, unknown > } >,
-		options?: { txnId?: string; baseSeq?: number; observe?: boolean }
+		options: { baseSeq: number; txnId?: string }
 	) => IntentEnvelope[];
 
 	/**
-	 * Records the engine log position the consumer's own view (the editor
-	 * tree) is expressed against — the seq authorBatch stamps and the floor
-	 * below which the replica may not trim its log copy.
+	 * Records the engine log position of the document the editor shows.
+	 * The editor's next edit is made against that document, so the replica
+	 * may not trim its log copy below it: the planner needs the rows since
+	 * then to rebase the edit.
 	 *
 	 * The value is clamped into [firstSeq, cursor] and advanced over any
 	 * contiguous run of entries this session authored itself: those are
-	 * already part of the consumer's view (it is where they came from), and
-	 * the one-sided transform skips same-actor priors anyway.
+	 * already part of what the editor shows (it is where they came from),
+	 * and the one-sided transform skips same-actor priors anyway.
 	 */
-	setObservedSeq: ( seq: number ) => void;
+	setShownSeq: ( seq: number ) => void;
 
 	/**
 	 * Pins the replica's log retention at (or below) a seq the undo stack
-	 * may still derive inverses from, independent of the observed seq.
+	 * may still derive inverses from, independent of the shown seq.
 	 * `null` releases the pin. The effective retention floor is the MINIMUM
-	 * of the observed seq and this pin.
+	 * of the shown seq and this pin.
 	 */
 	setUndoRetainSeq: ( seq: number | null ) => void;
 
@@ -234,9 +242,6 @@ export interface IntentLogSession extends EngineSessionCodec {
 		) => void
 	) => void;
 
-	/** The engine log position captures are currently authored against. */
-	getObservedSeq: () => number;
-
 	/** The optimistic document (acked + pending), or null pre-snapshot. */
 	getDocument: () => EngineDocument | null;
 
@@ -269,6 +274,15 @@ export interface IntentLogSession extends EngineSessionCodec {
 	getPendingCount: () => number;
 
 	/**
+	 * The authored intents the server has not answered and that this tab
+	 * expects it to set aside for review. The tab works this out itself
+	 * as soon as it receives the edit they clash with, and takes them out
+	 * of its document then. The server's answer, which opens the review
+	 * record, comes later.
+	 */
+	getPredictedSetAside: () => IntentEnvelope[];
+
+	/**
 	 * Cancels a set of authored intents that are ALL still unacked —
 	 * all-or-nothing (canceling half a unit would strand half an edit).
 	 * The intents leave the outbox, the optimistic document replans (the
@@ -289,9 +303,7 @@ export interface IntentLogSession extends EngineSessionCodec {
 
 	/**
 	 * Whether a horizon-reset snapshot is deferred behind un-settled
-	 * local work (see deferredResetBuffer in the factory). The manager's
-	 * stale-void recovery skips re-capturing while true: the reset's own
-	 * recapture will re-derive everything at the new frame.
+	 * local work (see deferredResetBuffer in the factory).
 	 */
 	hasDeferredReset: () => boolean;
 
@@ -324,8 +336,13 @@ export interface IntentLogSession extends EngineSessionCodec {
 	/**
 	 * Recovers stale-base edits using the retained log's merged document.
 	 * Both documents include remote edits and still-pending local work.
-	 * Runs after settlement, before a change can push the reverted document.
-	 * A deferred horizon reset uses its separate reset recovery instead.
+	 * The listener authors the difference between them at `seq`.
+	 *
+	 * Usually this runs after settlement, before a change can push the
+	 * reverted document. When a horizon reset is waiting (see onReset),
+	 * it runs after the reset has been applied: the two documents are
+	 * then older than the checkpoint, and the difference is authored
+	 * against the checkpoint.
 	 */
 	onStaleBaseRecovery: (
 		listener: ( recovery: StaleBaseRecovery ) => void
@@ -337,9 +354,18 @@ export interface IntentLogSession extends EngineSessionCodec {
 	/**
 	 * Subscribes to horizon resets: the server compacted history this
 	 * replica never observed and re-bootstrapped it from a checkpoint.
-	 * Pending unacked intents are dropped (their offsets reference trimmed
-	 * history); the bridge re-derives them from the editor tree on the next
-	 * capture.
+	 * Also fires when the server restarted the room (see onRoomRestart).
+	 *
+	 * A horizon reset is applied only when none of this session's edits is
+	 * unanswered (one that arrives earlier waits). The session's document
+	 * is then the checkpoint. The listener must bring the editor to it
+	 * before the editor's next edit is authored: the rows between the old
+	 * shown seq and the checkpoint are gone, so an edit made against the
+	 * old view cannot be rebased over them.
+	 *
+	 * An edit the server refused while the reset waited is not in the
+	 * checkpoint. It is handed to the onStaleBaseRecovery listeners right
+	 * after the reset.
 	 */
 	onReset: ( listener: () => void ) => void;
 
@@ -357,11 +383,11 @@ export interface IntentLogSession extends EngineSessionCodec {
 	/**
 	 * Transport hook: the server restarted the room (its generation
 	 * changed), so every row this replica holds is gone. The replica is
-	 * dropped and the reset listeners fire exactly as for a horizon reset;
-	 * the fresh genesis that follows re-bootstraps it and the manager
-	 * recaptures the editor's own tree against it. Always re-bootstraps:
-	 * the editor tree is the durable local state, and capture re-derives
-	 * unsaved work from it against any baseline.
+	 * dropped and the reset listeners fire, with `isInitialized()` false
+	 * until the fresh genesis that follows re-bootstraps it. Always
+	 * re-bootstraps: what the editor shows is the durable local state, and
+	 * the listener sends the work in it that the new room lacks (see
+	 * src/editor/provider.ts).
 	 */
 	onRoomRestart: () => 'rebootstrap';
 }
@@ -393,12 +419,12 @@ export function createIntentLogSession(
 	let replica: ReturnType< typeof createClient > | null = null;
 	let bootstrapSeq: number | null = null;
 	/*
-	 * The log position the consumer's view is expressed against (see
-	 * setObservedSeq). It equals the cursor whenever the consumer is caught
-	 * up; it lags while updates have reached this replica but not the view
-	 * that authors against it.
+	 * The log position of the document the editor shows (see
+	 * setShownSeq). It equals the cursor whenever the editor is caught
+	 * up; it lags while updates have reached this replica but not the
+	 * editor.
 	 */
-	let observedSeq = 0;
+	let shownSeq = 0;
 	/*
 	 * Log rows this replica has absorbed, by intentId. The replica's log is
 	 * positional — clientReceive() appends every entry at the cursor — so a
@@ -441,9 +467,9 @@ export function createIntentLogSession(
 	>();
 	/*
 	 * The undo stack's retention pin (see setUndoRetainSeq). Kept separate
-	 * from observedSeq so the two consumers — the capture lane's observed
-	 * frame and the undo stack's oldest invertible row — cannot starve each
-	 * other's retention.
+	 * from shownSeq. The document the editor shows and the undo stack's
+	 * oldest invertible row each keep their own rows, so neither can make
+	 * the session drop rows the other still needs.
 	 */
 	let undoRetainSeq: number | null = null;
 
@@ -452,13 +478,13 @@ export function createIntentLogSession(
 	};
 
 	/**
-	 * Clamps an observed seq into the replica's authorable range and skips
-	 * the contiguous run of own entries above it (see setObservedSeq).
+	 * Clamps a shown seq into the replica's authorable range and skips
+	 * the contiguous run of own entries above it (see setShownSeq).
 	 *
-	 * @param seq Candidate observed seq.
+	 * @param seq Candidate shown seq.
 	 * @return The seq to record.
 	 */
-	const resolveObservedSeq = ( seq: number ): number => {
+	const resolveShownSeq = ( seq: number ): number => {
 		if ( ! replica ) {
 			return seq;
 		}
@@ -511,7 +537,7 @@ export function createIntentLogSession(
 
 	/**
 	 * Recomputes the replica's retention floor: the log must stay sliceable
-	 * from the observed frame (the next capture authors at it), the undo
+	 * from the shown seq (the editor's next edit is authored at it), the undo
 	 * pin (inverse derivation reads documents at retained seqs), AND the
 	 * base of every open proposal (conflict review rebuilds what the
 	 * author started from. A parked intent is no longer pending, so the
@@ -526,8 +552,8 @@ export function createIntentLogSession(
 		}
 		let floor =
 			null === undoRetainSeq
-				? observedSeq
-				: Math.min( observedSeq, undoRetainSeq );
+				? shownSeq
+				: Math.min( shownSeq, undoRetainSeq );
 		for ( const proposal of proposals ) {
 			if ( resolvedIds.has( proposal.intent.intentId ) ) {
 				continue;
@@ -541,17 +567,15 @@ export function createIntentLogSession(
 	};
 
 	/**
-	 * Records the observed seq and keeps the replica's log sliceable from
-	 * there (the next capture authors at it, and the planner needs the
-	 * slice (observedSeq, head] to rebase).
+	 * Records the shown seq and keeps the replica's log sliceable from
+	 * there (the editor's next edit is authored at it, and the planner
+	 * needs the slice (shownSeq, head] to rebase).
 	 *
-	 * @param seq Candidate observed seq.
-	 * @return The recorded seq.
+	 * @param seq Candidate shown seq.
 	 */
-	const applyObservedSeq = ( seq: number ): number => {
-		observedSeq = resolveObservedSeq( seq );
+	const applyShownSeq = ( seq: number ): void => {
+		shownSeq = resolveShownSeq( seq );
 		applyRetention();
-		return observedSeq;
 	};
 
 	/**
@@ -598,10 +622,20 @@ export function createIntentLogSession(
 	 * that assumed the voided prefix — a torn, spliced document on the
 	 * server (A2/A12's e2e finding). Deferring means every intent the
 	 * server sees stays in ONE coherent frame; once the burst settles
-	 * (all dispositions in), the reset applies and the manager's
-	 * onReset recapture re-derives the whole local delta cleanly.
+	 * (all dispositions in), the reset applies, and the edits the server
+	 * refused meanwhile are recovered against the checkpoint (see
+	 * deferredRecoveries).
 	 */
 	let deferredResetBuffer: EngineUpdate[] | null = null;
+	/*
+	 * What the edits refused while a reset waited had changed: for each
+	 * answer from the server, the document without them and with them.
+	 * Handed to the stale-base recovery listeners once the reset is in.
+	 */
+	let deferredRecoveries: Array< {
+		base: EngineDocument;
+		target: EngineDocument;
+	} > = [];
 
 	const maybeReleaseDeferredReset = (): void => {
 		if (
@@ -612,10 +646,29 @@ export function createIntentLogSession(
 			return;
 		}
 		const buffered = deferredResetBuffer;
+		const recoveries = deferredRecoveries;
+
 		deferredResetBuffer = null;
+		deferredRecoveries = [];
+
 		for ( const update of buffered ) {
 			session.receiveUpdate( update );
 		}
+
+		if ( 0 === recoveries.length || ! replica ) {
+			return;
+		}
+
+		const seq = replica.cursor;
+
+		for ( const { base, target } of recoveries ) {
+			staleBaseRecoveryListeners.forEach( ( listener ) =>
+				listener( { base, target, seq } )
+			);
+		}
+
+		// The listeners authored against the checkpoint.
+		notifyChange();
 	};
 
 	const session: IntentLogSession = {
@@ -651,7 +704,7 @@ export function createIntentLogSession(
 							snapshotSeq
 						);
 						replica.parked = ownParked();
-						observedSeq = snapshotSeq;
+						shownSeq = snapshotSeq;
 						notifyChange();
 						return;
 					}
@@ -669,10 +722,10 @@ export function createIntentLogSession(
 						 * Horizon reset: the server trimmed history between
 						 * our cursor and this checkpoint — one-sided
 						 * transforms over the gap are impossible, so the
-						 * replica re-bootstraps. Pending intents are
-						 * dropped; the manager re-captures the editor tree
-						 * against the reset document, re-deriving any
-						 * unacked local work.
+						 * replica re-bootstraps. Nothing of this session
+						 * is unanswered here (see the deferral above), and
+						 * the reset listeners bring the editor to the
+						 * checkpoint.
 						 */
 						bootstrapSeq = snapshotSeq;
 						replica = createClient(
@@ -681,7 +734,7 @@ export function createIntentLogSession(
 							snapshotSeq
 						);
 						replica.parked = ownParked();
-						observedSeq = snapshotSeq;
+						shownSeq = snapshotSeq;
 						// New epoch: rows after the checkpoint are new to
 						// this replica even if their ids were seen before.
 						appliedIntentIds = new Set();
@@ -799,7 +852,7 @@ export function createIntentLogSession(
 		receiveDispositions: ( dispositions: EngineDisposition[] ) => {
 			let recoveryTarget: EngineDocument | null = null;
 			const recoveryProposals: IntentLogProposal[] = [];
-			if ( replica && ! deferredResetBuffer ) {
+			if ( replica ) {
 				const staleIds = new Set(
 					dispositions
 						.filter(
@@ -871,7 +924,14 @@ export function createIntentLogSession(
 			if ( settled && replica ) {
 				replanClient( replica );
 			}
-			if ( recoveryTarget && replica ) {
+			if ( recoveryTarget && replica && deferredResetBuffer ) {
+				// The reset that waits replaces this document. Recover
+				// against the checkpoint, once it is in.
+				deferredRecoveries.push( {
+					base: replica.doc,
+					target: recoveryTarget,
+				} );
+			} else if ( recoveryTarget && replica ) {
 				const recovery = {
 					base: replica.doc,
 					target: recoveryTarget,
@@ -940,9 +1000,10 @@ export function createIntentLogSession(
 		onRoomRestart: () => {
 			replica = null;
 			bootstrapSeq = null;
-			observedSeq = 0;
+			shownSeq = 0;
 			appliedIntentIds = new Set();
 			deferredResetBuffer = null;
+			deferredRecoveries = [];
 			resetListeners.forEach( ( listener ) => listener() );
 			notifyChange();
 			return 'rebootstrap';
@@ -967,29 +1028,18 @@ export function createIntentLogSession(
 			return intent;
 		},
 
-		authorBatch: ( intents, batchOptions = {} ) => {
+		authorBatch: ( intents, batchOptions ) => {
 			if ( ! replica ) {
 				throw new Error(
 					'Cannot author intents before the room snapshot arrives.'
 				);
 			}
-			/*
-			 * `observe: false` authors at an explicit frame WITHOUT moving
-			 * the observed seq — the undo lane's contract: an inverse batch
-			 * is authored at the frame right after the unit it inverts,
-			 * while the editor's own observed frame stays wherever the
-			 * capture lane left it.
-			 */
-			const baseSeq =
-				false === batchOptions.observe
-					? Math.min(
-							Math.max(
-								batchOptions.baseSeq ?? replica.cursor,
-								replica.firstSeq
-							),
-							replica.cursor
-					  )
-					: applyObservedSeq( batchOptions.baseSeq ?? observedSeq );
+			// The frame the intents were derived in, within the history
+			// the replica still holds.
+			const baseSeq = Math.min(
+				Math.max( batchOptions.baseSeq, replica.firstSeq ),
+				replica.cursor
+			);
 			const authored = intents.map( ( entry ) => {
 				const intent = createIntent( entry.type, entry.payload, {
 					actorId,
@@ -1005,7 +1055,7 @@ export function createIntentLogSession(
 			}
 			if ( baseSeq < replica.cursor ) {
 				/*
-				 * The payloads are expressed in the observed frame, not the
+				 * The payloads are expressed in the frame at baseSeq, not the
 				 * head's: only a replan (the planner the server also runs)
 				 * turns them into the correct optimistic document — rebased
 				 * over everything that landed since baseSeq, with the
@@ -1017,11 +1067,9 @@ export function createIntentLogSession(
 			return authored;
 		},
 
-		setObservedSeq: ( seq ) => {
-			applyObservedSeq( seq );
+		setShownSeq: ( seq ) => {
+			applyShownSeq( seq );
 		},
-
-		getObservedSeq: () => observedSeq,
 
 		setUndoRetainSeq: ( seq ) => {
 			undoRetainSeq = seq;
@@ -1085,6 +1133,18 @@ export function createIntentLogSession(
 			proposalsChangeListeners.add( listener );
 		},
 		getPendingCount: () => replica?.outbox.length ?? 0,
+		getPredictedSetAside: () => {
+			if ( ! replica ) {
+				return [];
+			}
+
+			const { predictions } = replica;
+
+			return replica.outbox.filter(
+				( intent ) =>
+					'escalated' === predictions.get( intent.intentId )?.status
+			);
+		},
 
 		cancelPendingIntents: ( intentIds: string[] ) => {
 			if ( ! replica || 0 === intentIds.length ) {

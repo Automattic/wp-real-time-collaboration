@@ -12,6 +12,7 @@ import {
 	type IntentLogSession,
 } from '../../../src/engines/intent-log-session';
 import type { EngineUpdate } from '../../../src/registry/types';
+import type { EngineDocument } from '../../../src/engines/intent-log/engine-types';
 // The engine core is the same code the deterministic simulator validates;
 // its in-memory server is the vector-pinned twin of WP_Intent_Log_Engine.
 import {
@@ -223,13 +224,20 @@ describe( 'intent-log session codec', () => {
 
 	it( 'a checkpoint snapshot past the cursor DEFERS behind pending work, then resets when it settles', () => {
 		const session = makeSession( 1, 11 );
-		const recover = jest.fn();
-		session.onStaleBaseRecovery( recover );
+		let resets = 0;
+		const recoveries: Array< {
+			base: EngineDocument;
+			target: EngineDocument;
+			seq: number;
+			resets: number;
+		} > = [];
+		session.onStaleBaseRecovery( ( recovery ) => {
+			recoveries.push( { ...recovery, resets } );
+		} );
 		session.receiveUpdate( {
 			data: JSON.stringify( { doc: createDocument( GENESIS_BLOCKS ) } ),
 			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
 		} );
-		let resets = 0;
 		session.onReset( () => resets++ );
 
 		// Pending local work exists when the reset arrives.
@@ -273,8 +281,19 @@ describe( 'intent-log session codec', () => {
 		] );
 
 		expect( resets ).toBe( 1 );
-		expect( recover ).not.toHaveBeenCalled();
 		expect( session.hasDeferredReset() ).toBe( false );
+
+		// The refused edit is not in the checkpoint. It is handed to the
+		// recovery listener after the reset, to be authored again against
+		// the checkpoint: the document without it, and with it.
+		expect( recoveries ).toHaveLength( 1 );
+		const [ { base, target, seq, resets: resetsBefore } ] = recoveries;
+		expect( resetsBefore ).toBe( 1 );
+		expect( seq ).toBe( 40 );
+		expect( base.root[ 0 ].fields.content.text ).toBe( 'Hello world' );
+		expect( target.root[ 0 ].fields.content.text ).toBe(
+			'pendingHello world'
+		);
 		expect( session.getSeq() ).toBe( 40 );
 		expect( session.getPendingCount() ).toBe( 0 );
 		expect( canonicalJson( session.getDocument()! ) ).toBe(
@@ -488,7 +507,7 @@ describe( 'intent-log session codec', () => {
 					payload: { syncId: 'p1', offset: 2, text: 'c' },
 				},
 			],
-			{ baseSeq: 0, observe: false }
+			{ baseSeq: 0 }
 		);
 		expect( c.baseSeq ).toBe( 0 );
 		// Predicted as the dependent it will be: absent from Bob's canvas.
@@ -663,7 +682,7 @@ describe( 'intent-log session codec', () => {
 		} );
 		// The editor displays the genesis (the manager records this at
 		// bootstrap), so the log stays sliceable from it for now.
-		session.setObservedSeq( 0 );
+		session.setShownSeq( 0 );
 		session.receiveUpdate( remote( 'r1', 0 ) );
 		session.receiveUpdate( remote( 'r2', 1 ) );
 
@@ -690,8 +709,8 @@ describe( 'intent-log session codec', () => {
 		} );
 
 		// The editor catches up to the head. Without the open proposal the
-		// log would now trim up to the observed frame.
-		session.setObservedSeq( session.getSeq() );
+		// log would now trim up to what the editor shows.
+		session.setShownSeq( session.getSeq() );
 		session.receiveUpdate( remote( 'r3', 2 ) );
 		expect( session.getRetainedFloor() ).toBe( 0 );
 		expect( session.getDocumentAt( 0 ) ).not.toBeNull();
@@ -704,7 +723,7 @@ describe( 'intent-log session codec', () => {
 			} ),
 			type: INTENT_LOG_UPDATE_TYPES.RESOLVED,
 		} );
-		session.setObservedSeq( session.getSeq() );
+		session.setShownSeq( session.getSeq() );
 		session.receiveUpdate( remote( 'r4', 3 ) );
 		expect( session.getRetainedFloor() ).toBeGreaterThan( 0 );
 		expect( session.getDocumentAt( 0 ) ).toBeNull();

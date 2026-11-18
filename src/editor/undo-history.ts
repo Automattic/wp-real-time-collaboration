@@ -261,7 +261,6 @@ export function createUndoHistory(): UndoHistory {
 				...session.authorBatch( inverses, {
 					txnId,
 					baseSeq: seq + 1,
-					observe: false,
 				} )
 			);
 		}

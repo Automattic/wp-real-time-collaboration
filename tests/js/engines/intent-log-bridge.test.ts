@@ -357,6 +357,65 @@ describe( 'intent-log bridge', () => {
 		} );
 	} );
 
+	describe( 'default attribute values', () => {
+		const defaults = () => ( { dropCap: false } );
+
+		it( 'does not send a default value the document leaves out', () => {
+			// The server's first copy of a post leaves default values
+			// out. Blocks parsed by the editor carry them. Two tabs that
+			// both sent "drop cap: off" would clash.
+			const doc = docFromBlocks( [ paragraph( 'p1', 'One' ) ] );
+			const derived = deriveIntents(
+				doc,
+				[ paragraph( 'p1', 'One more', { dropCap: false } ) ],
+				{ attributeDefaults: defaults }
+			)!;
+
+			expect( derived.intents.map( ( intent ) => intent.type ) ).toEqual(
+				[ 'insert_text' ]
+			);
+			expect( derived.coarseBlockCount ).toBe( 0 );
+		} );
+
+		it( 'finds nothing to send when only default values differ', () => {
+			const doc = docFromBlocks( [ paragraph( 'p1', 'One' ) ] );
+
+			expect(
+				deriveIntents(
+					doc,
+					[ paragraph( 'p1', 'One', { dropCap: false } ) ],
+					{ attributeDefaults: defaults }
+				)
+			).toBeNull();
+		} );
+
+		it( 'sends a value that is not the default, and a default the document holds another value for', () => {
+			const doc = docFromBlocks( [
+				paragraph( 'p1', 'One' ),
+				paragraph( 'p2', 'Two', { dropCap: true } ),
+			] );
+			const derived = deriveIntents(
+				doc,
+				[
+					paragraph( 'p1', 'One', { dropCap: true } ),
+					paragraph( 'p2', 'Two', { dropCap: false } ),
+				],
+				{ attributeDefaults: defaults }
+			)!;
+
+			expect(
+				derived.intents.map( ( intent ) => [
+					intent.type,
+					intent.payload.syncId,
+					intent.payload.value,
+				] )
+			).toEqual( [
+				[ 'set_attr', 'p1', true ],
+				[ 'set_attr', 'p2', false ],
+			] );
+		} );
+	} );
+
 	describe( 'end to end through a session', () => {
 		it( 'derived intents are valid vocabulary and converge two sessions', () => {
 			const genesisBlocks = [

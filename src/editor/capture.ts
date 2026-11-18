@@ -1085,6 +1085,20 @@ export function captureBlockOperations(
 		return block;
 	};
 
+	/**
+	 * How much text a change removes and inserts.
+	 *
+	 * @param change The change, or null for none.
+	 * @return The number of UTF-16 units.
+	 */
+	const changeSize = ( change: TextChange | null ): number => {
+		if ( ! change ) {
+			return 0;
+		}
+
+		return change.removed.length + change.inserted.length;
+	};
+
 	const emitTextChange = (
 		syncId: string,
 		field: string,
@@ -1153,6 +1167,11 @@ export function captureBlockOperations(
 			counters.stalePreviousValue++;
 			change = findTextChange( previous.text, next.text, hint ).change;
 
+			const fromCurrent = findTextChange(
+				current.text,
+				next.text
+			).change;
+
 			if (
 				change &&
 				current.text.slice(
@@ -1160,7 +1179,19 @@ export function captureBlockOperations(
 					change.start + change.removed.length
 				) !== change.removed
 			) {
-				change = findTextChange( current.text, next.text ).change;
+				change = fromCurrent;
+			} else if ( changeSize( fromCurrent ) < changeSize( change ) ) {
+				/*
+				 * The value is closer to the engine's text than to the
+				 * text the editor names. So the editor did show the
+				 * engine's text, and the text it names is older than
+				 * that. core-data does this when it has lost the block
+				 * list it compares against and falls back to the blocks
+				 * of the saved post: it then reports everything typed
+				 * since as one change. Placing that change on the
+				 * engine's text would add the typed text a second time.
+				 */
+				change = fromCurrent;
 			}
 		} else {
 			const result = findTextChange( current.text, next.text, hint );

@@ -32,7 +32,9 @@ it together. The code is in `src/review/`.
 - The card waits while its author is still typing in the block (1.2
   seconds of quiet, 20 seconds at most), but only when the engine
   promises that the later typing joins the same record. Other windows
-  show the card at once.
+  show the card at once. The author's own text stays in their editor
+  for the same time. That starts when their tab first sees the clash,
+  which is before the server's answer opens the record.
 - An open dialog follows a change a collaborator makes meanwhile. The
   merged result follows too, unless the reviewer already edited it. A
   notice says which happened.
