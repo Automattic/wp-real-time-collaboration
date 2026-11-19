@@ -41,7 +41,16 @@ swapped atomically by `WP_Sync_Atomic_Option` (a compare-and-swap:
 change a value only if nobody changed it first; the
 `wp_sync_cas_backend` filter can substitute Redis). Intent-log's
 per-room lock is an options row too (`WP_Sync_Room_Lock`, replaceable
-through `wp_sync_lock_backend`).
+through `wp_sync_lock_backend`). A commit, the making of a room's first
+document, and a reset all hold that lock.
+
+Intent-log stores the rows of one request in one database transaction,
+so a failure in the middle stores none of them and the sender can send
+the request again. The table storage offers this (`begin_batch`,
+`commit_batch`, `rollback_batch`); the fallback storage does not, and
+writes each row as it is made. The `wp_rtc_commit_in_transaction`
+filter turns it off, for a setup whose database connection already
+runs inside a transaction of its own.
 
 There is no per-room parent row, so looking at a room never creates it;
 the read-only helpers (`list_rooms`, `get_room_size`,

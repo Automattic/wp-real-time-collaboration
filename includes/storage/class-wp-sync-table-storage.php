@@ -327,6 +327,56 @@ if ( ! class_exists( 'WP_Sync_Table_Storage' ) ) {
 		}
 
 		/**
+		 * Starts a batch of writes that are stored together or not at
+		 * all: a database transaction. Not part of the WP_RTC_Storage
+		 * contract; an engine checks for it with `method_exists`. On a
+		 * table engine without transactions the three batch methods do
+		 * nothing, and each write is stored as it is made.
+		 *
+		 * Starting a transaction ends one that is already open on the
+		 * connection, so a batch must not be started inside another.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @global wpdb $wpdb WordPress database abstraction object.
+		 *
+		 * @return bool True when the batch was started.
+		 */
+		public function begin_batch(): bool {
+			global $wpdb;
+
+			return false !== $wpdb->query( 'START TRANSACTION' );
+		}
+
+		/**
+		 * Stores the writes made since `begin_batch()`.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @global wpdb $wpdb WordPress database abstraction object.
+		 *
+		 * @return bool True when the writes are stored.
+		 */
+		public function commit_batch(): bool {
+			global $wpdb;
+
+			return false !== $wpdb->query( 'COMMIT' );
+		}
+
+		/**
+		 * Throws away the writes made since `begin_batch()`.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @global wpdb $wpdb WordPress database abstraction object.
+		 */
+		public function rollback_batch(): void {
+			global $wpdb;
+
+			$wpdb->query( 'ROLLBACK' );
+		}
+
+		/**
 		 * Gets awareness state for a given room.
 		 *
 		 * @since 0.0.1

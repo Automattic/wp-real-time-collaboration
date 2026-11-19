@@ -67,6 +67,13 @@ tests_add_filter(
 		// Test fixture engine (naive opaque relay) used by the transport and
 		// registry machinery tests; registered per-test, never in production.
 		require __DIR__ . '/phpunit/fixtures/class-test-opaque-relay-engine.php';
+		/*
+		 * WordPress runs each test inside a database transaction and rolls
+		 * it back afterwards. A transaction started by the engine would end
+		 * that one and leave the test's rows behind, so commits run without
+		 * one here. The tests that are about it switch it on themselves.
+		 */
+		add_filter( 'wp_rtc_commit_in_transaction', '__return_false' );
 		// Test fixture marker for tests that prove a defect not yet fixed.
 		require __DIR__ . '/phpunit/fixtures/trait-known-defect-assertions.php';
 

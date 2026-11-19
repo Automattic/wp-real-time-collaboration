@@ -336,10 +336,90 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				return $lock;
 			}
 			try {
-				return $this->handle_updates_locked( $room, $client_id, $updates, $context, $lock_wait_ms );
+				return $this->handle_updates_in_one_batch( $room, $client_id, $updates, $context, $lock_wait_ms );
 			} finally {
 				$this->release_room_lock( $room );
 			}
+		}
+
+		/**
+		 * Runs the commit so that the rows of one request are stored
+		 * together or not at all, where the storage can do that. A commit
+		 * is many writes: one per edit, plus markers, review items and a
+		 * snapshot. A failure in the middle must not leave half of them
+		 * stored, because the sender tries the whole request again.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string $room         Room identifier.
+		 * @param int    $client_id    Client identifier.
+		 * @param array  $updates      Typed updates.
+		 * @param array  $context      Transport context.
+		 * @param float  $lock_wait_ms Time spent acquiring the ingest lock.
+		 * @return array|WP_Error array( 'dispositions' => array ) or error.
+		 * @throws Throwable Whatever the commit raises, after the batch
+		 *                   was thrown away.
+		 */
+		private function handle_updates_in_one_batch( string $room, int $client_id, array $updates, array $context, float $lock_wait_ms ) {
+			if ( ! $this->storage_has_batches( $room ) || ! $this->storage->begin_batch() ) {
+				return $this->handle_updates_locked( $room, $client_id, $updates, $context, $lock_wait_ms );
+			}
+
+			try {
+				$result = $this->handle_updates_locked( $room, $client_id, $updates, $context, $lock_wait_ms );
+			} catch ( Throwable $error ) {
+				$this->storage->rollback_batch();
+				unset( $this->room_state[ $room ] );
+				throw $error;
+			}
+
+			if ( is_wp_error( $result ) ) {
+				$this->storage->rollback_batch();
+				unset( $this->room_state[ $room ] );
+				return $result;
+			}
+			if ( ! $this->storage->commit_batch() ) {
+				unset( $this->room_state[ $room ] );
+				return new WP_Error(
+					'rest_sync_storage_error',
+					__( 'Failed to store sync update.', 'gutenberg' ),
+					array( 'status' => 500 )
+				);
+			}
+
+			return $result;
+		}
+
+		/**
+		 * Whether a commit to this room runs as one batch of writes.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string $room Room identifier.
+		 * @return bool Whether the storage offers batches and they are on.
+		 */
+		private function storage_has_batches( string $room ): bool {
+			if (
+				! method_exists( $this->storage, 'begin_batch' ) ||
+				! method_exists( $this->storage, 'commit_batch' ) ||
+				! method_exists( $this->storage, 'rollback_batch' )
+			) {
+				return false;
+			}
+
+			/**
+			 * Filters whether the rows of one request are stored in one
+			 * database transaction. Return false where the connection
+			 * already runs inside a transaction of its own, because
+			 * starting one ends the other. The plugin's own PHPUnit
+			 * suite does that: WordPress runs each test in a transaction.
+			 *
+			 * @since n.e.x.t
+			 *
+			 * @param bool   $enabled Default true.
+			 * @param string $room    Room identifier.
+			 */
+			return (bool) apply_filters( 'wp_rtc_commit_in_transaction', true, $room );
 		}
 
 		/**

@@ -12,6 +12,7 @@
  * - The body of an inserted block is checked fully.
  * - The server checks who may decide a review item.
  * - Everything that changes a room's rows holds the room's lock.
+ * - The rows of one request are stored together or not at all.
  *
  * Most of these tests began as proof of a defect, so many of them say
  * what once went wrong.
@@ -1693,6 +1694,95 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		$this->assertNotContains( 'reset_room', Commit_Path_Lock_Backend::$events );
 		$this->assertCount( 1, ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
 	}
+
+	/*
+	 * The rows of one request are stored together or not at all.
+	 */
+
+	/**
+	 * A commit starts a batch after it has the lock, stores its rows,
+	 * and ends the batch before it gives the lock back.
+	 */
+	public function test_commit_stores_its_rows_in_one_batch() {
+		list( , $room, $block ) = $this->make_room();
+		$storage                = $this->recording_lock_and_storage();
+		$lock                   = WP_Sync_Room_Lock::name_for_room( $room );
+		add_filter( 'wp_rtc_commit_in_transaction', '__return_true', 20 );
+		$storage->real_batches = false;
+
+		$answer = self::commit(
+			new WP_Intent_Log_Engine( $storage ),
+			$room,
+			101,
+			array(
+				self::text_edit( 'batch-1', $block, 0, 'x', 0 ),
+				self::text_edit( 'batch-2', $block, 0, 'y', 0 ),
+			)
+		);
+
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'batch-2' ) );
+		$this->assertSame(
+			array( "acquire $lock", 'begin_batch', 'add_update', 'add_update', 'commit_batch', "release $lock" ),
+			Commit_Path_Lock_Backend::$events
+		);
+	}
+
+	/**
+	 * A commit whose write fails midway throws the whole batch away and
+	 * answers with an error.
+	 */
+	public function test_commit_that_fails_midway_throws_its_batch_away() {
+		list( , $room, $block ) = $this->make_room();
+		$storage                = $this->recording_lock_and_storage();
+		add_filter( 'wp_rtc_commit_in_transaction', '__return_true', 20 );
+		$storage->real_batches  = false;
+		$storage->refuse_writes = array( 2 );
+
+		$answer = self::commit(
+			new WP_Intent_Log_Engine( $storage ),
+			$room,
+			101,
+			array(
+				self::text_edit( 'batch-1', $block, 0, 'x', 0 ),
+				self::text_edit( 'batch-2', $block, 0, 'y', 0 ),
+			)
+		);
+
+		$this->assertWPError( $answer );
+		$this->assertSame(
+			array( 'begin_batch', 'add_update', 'add_update refused', 'rollback_batch' ),
+			array_slice( Commit_Path_Lock_Backend::$events, 1, 4 )
+		);
+	}
+
+	/**
+	 * The table storage's batch is a real database transaction: rows
+	 * written in a batch that is thrown away are gone.
+	 *
+	 * The test starts a transaction, which ends the one WordPress wraps
+	 * each test in. Nothing was written before that point, so nothing is
+	 * left behind.
+	 */
+	public function test_table_storage_throws_away_the_rows_of_a_batch_that_is_rolled_back() {
+		$room    = 'postType/post:987654321';
+		$storage = new WP_Sync_Table_Storage();
+
+		$this->assertTrue( $storage->begin_batch() );
+		$this->assertTrue( $storage->add_update( $room, array( 'kept' => false ) ) );
+		$this->assertCount( 1, $storage->get_updates_after_cursor( $room, 0 ) );
+		$storage->rollback_batch();
+
+		$this->assertSame( array(), $storage->get_updates_after_cursor( $room, 0 ) );
+
+		$this->assertTrue( $storage->begin_batch() );
+		$this->assertTrue( $storage->add_update( $room, array( 'kept' => true ) ) );
+		$this->assertTrue( $storage->commit_batch() );
+		$this->assertCount( 1, $storage->get_updates_after_cursor( $room, 0 ) );
+
+		// Stored for good, so removed by hand.
+		$this->assertTrue( $storage->reset_room( $room ) );
+		$storage->commit_batch();
+	}
 }
 
 /**
@@ -1712,10 +1802,56 @@ class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
 		return parent::get_updates_after_cursor( $room, $cursor );
 	}
 
+	/**
+	 * Whether the batch methods reach the database. A test that runs
+	 * inside WordPress's own test transaction turns this off.
+	 *
+	 * @var bool
+	 */
+	public $real_batches = true;
+
+	/**
+	 * Which writes to refuse, counted from 1.
+	 *
+	 * @var int[]
+	 */
+	public $refuse_writes = array();
+
+	/**
+	 * How many writes were asked for.
+	 *
+	 * @var int
+	 */
+	private $writes = 0;
+
 	public function add_update( string $room, $update ): bool {
+		++$this->writes;
+		if ( in_array( $this->writes, $this->refuse_writes, true ) ) {
+			Commit_Path_Lock_Backend::$events[] = 'add_update refused';
+			return false;
+		}
 		Commit_Path_Lock_Backend::$events[] = 'add_update';
 
 		return parent::add_update( $room, $update );
+	}
+
+	public function begin_batch(): bool {
+		Commit_Path_Lock_Backend::$events[] = 'begin_batch';
+
+		return $this->real_batches ? parent::begin_batch() : true;
+	}
+
+	public function commit_batch(): bool {
+		Commit_Path_Lock_Backend::$events[] = 'commit_batch';
+
+		return $this->real_batches ? parent::commit_batch() : true;
+	}
+
+	public function rollback_batch(): void {
+		Commit_Path_Lock_Backend::$events[] = 'rollback_batch';
+		if ( $this->real_batches ) {
+			parent::rollback_batch();
+		}
 	}
 
 	public function reset_room( string $room ): bool {
