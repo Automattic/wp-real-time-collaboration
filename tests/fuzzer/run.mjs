@@ -70,7 +70,15 @@ const DEFAULT_ENGINES = [ 'intent-log' ];
  * doc that documents the gap.
  */
 const ENGINE_CAPABILITIES = {};
-const DEFAULT_TRANSPORTS = [ 'http-polling', 'websocket' ];
+const DEFAULT_TRANSPORTS = [ 'http-polling', 'websocket', 'mixed' ];
+
+// `mixed` is not a transport of the site. The site runs on websocket, and
+// the spec keeps every second joining tab off the socket, so one room has
+// tabs on websocket and tabs on polling.
+const usesDaemon = ( transport ) =>
+	'websocket' === transport || 'mixed' === transport;
+const siteTransport = ( transport ) =>
+	'mixed' === transport ? 'websocket' : transport;
 
 const CLI_OPTIONS = {
 	engines: { type: 'string' },
@@ -147,7 +155,8 @@ function printUsage() {
 			'Usage: npm run fuzz -- [options]',
 			'',
 			'  --engines=a,b        Engines to sweep (default: intent-log)',
-			'  --transports=a,b     Transports to sweep (default: http-polling,websocket)',
+			'  --transports=a,b     Transports to sweep (default: http-polling,websocket,mixed;',
+			'                       mixed = one room with tabs on websocket and on polling)',
 			'  --combos=e/t,...     Explicit engine/transport pairs (overrides the cross product)',
 			'  --seeds=N            Seeds per combo (default: 5)',
 			'  --seed-start=N       First seed (default: 1)',
@@ -799,7 +808,10 @@ async function main() {
 
 			await enableCollaboration();
 			await setOption( ENGINE_OPTION, combo.engine );
-			await setOption( TRANSPORT_OPTION, combo.transport );
+			await setOption(
+				TRANSPORT_OPTION,
+				siteTransport( combo.transport )
+			);
 			const wiped = await wipeSyncRooms();
 			if ( wiped ) {
 				log( `Emptied ${ wiped } sync-storage room(s).` );
@@ -808,7 +820,7 @@ async function main() {
 			// The daemon caches options at boot: start it AFTER the engine
 			// flip, per combo.
 			let daemon = null;
-			if ( 'websocket' === combo.transport ) {
+			if ( usesDaemon( combo.transport ) ) {
 				log( 'Starting sync daemon…' );
 				daemon = await startWsDaemon( composeFile );
 				log( `Daemon healthy on ws://localhost:${ WS_PORT }.` );

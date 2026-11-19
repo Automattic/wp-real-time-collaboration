@@ -34,7 +34,7 @@
 /**
  * External dependencies
  */
-import type { Locator, Page } from '@playwright/test';
+import type { Browser, BrowserContext, Locator, Page } from '@playwright/test';
 
 /**
  * WordPress dependencies
@@ -102,9 +102,66 @@ const DISCOVERY_TIMEOUT_MS = getEnvInt(
 	'RTC_FUZZ_DISCOVERY_TIMEOUT_MS',
 	30000
 );
+// A mixed run: the site is on websocket, and every second tab that joins
+// is kept off the socket, so it falls back to polling. One room then has
+// tabs on both transports, which is the default setup of a real site.
+const MIXED = TRANSPORT === 'mixed';
+const USES_SOCKET = MIXED || TRANSPORT === 'websocket';
 const DISABLE_SYNC_FAULTS =
-	process.env.RTC_FUZZ_DISABLE_SYNC_FAULTS === '1' ||
-	TRANSPORT === 'websocket';
+	process.env.RTC_FUZZ_DISABLE_SYNC_FAULTS === '1' || USES_SOCKET;
+
+// The browser contexts a mixed run keeps off the socket.
+const pollingContexts = new WeakSet< BrowserContext >();
+
+/**
+ * In a mixed run, makes every second browser context the test opens fall
+ * back to polling, starting with the first: its request for a socket token
+ * is blocked, so its socket never opens. The test's own first tab is not
+ * opened through here and stays on the socket.
+ *
+ * @param browser The test's browser.
+ * @return A function that puts the browser back as it was.
+ */
+function mixTransports( browser: Browser ): () => void {
+	if ( ! MIXED ) {
+		return () => {};
+	}
+	const newContext = browser.newContext.bind( browser );
+	let opened = 0;
+	browser.newContext = ( async (
+		...args: Parameters< Browser[ 'newContext' ] >
+	) => {
+		const created = await newContext( ...args );
+		if ( opened % 2 === 0 ) {
+			await created.route( '**/*ws-token*', ( route ) => route.abort() );
+			pollingContexts.add( created );
+		}
+		opened += 1;
+		return created;
+	} ) as Browser[ 'newContext' ];
+
+	return () => {
+		browser.newContext = newContext;
+	};
+}
+
+/**
+ * Which transport each tab is on right now, read from the page.
+ *
+ * @param pages The tabs.
+ * @return One of `websocket` or `http-polling` per tab.
+ */
+async function transportsInUse( pages: Page[] ): Promise< string[] > {
+	return Promise.all(
+		pages.map( async ( pg ) =>
+			( await pg.evaluate(
+				() => !! ( window as any ).__wpSyncWsState?.open
+			) )
+				? 'websocket'
+				: 'http-polling'
+		)
+	);
+}
 const DISABLE_RELOAD = process.env.RTC_FUZZ_DISABLE_RELOAD === '1';
 // Engines with a documented no-title-sync gap (the runner sets this from
 // its capability map) skip title actions; untouched titles stay converged,
@@ -1426,11 +1483,20 @@ async function waitForDiscovery( pages: Page[] ) {
 				.waitFor( { timeout: DISCOVERY_TIMEOUT_MS } )
 		)
 	);
-	if ( 'websocket' === TRANSPORT ) {
+	if ( USES_SOCKET ) {
 		// Sync rides WS frames. Require evidence of the selected
 		// transport: successful polling fallback must not certify it.
+		// In a mixed run the tabs kept off the socket are checked the
+		// polling way instead.
+		const onSocket = pages.filter(
+			( pg ) => ! pollingContexts.has( pg.context() )
+		);
+		const onPolling = pages.filter( ( pg ) =>
+			pollingContexts.has( pg.context() )
+		);
+		await Promise.all( onPolling.map( ( pg ) => waitForSyncQuiet( pg ) ) );
 		await Promise.all(
-			pages.map( ( pg ) =>
+			onSocket.map( ( pg ) =>
 				pg.waitForFunction(
 					() => {
 						const state = ( window as any ).__wpSyncWsState;
@@ -1510,10 +1576,14 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 
 	for ( const seed of seeds ) {
 		test( `seed ${ seed }`, async ( {
+			browser,
 			collaborationUtils,
 			requestUtils,
 		}, testInfo ) => {
 			test.setTimeout( TEST_TIMEOUT_MS );
+			const restoreBrowser = mixTransports( browser );
+			// The transports the tabs were on after they found each other.
+			let transportsSeen: string[] = [];
 
 			const rng = createRng( seed );
 			const trace: TraceEntry[] = [];
@@ -1715,6 +1785,14 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 				const activePages = () =>
 					participants.map( ( entry ) => entry.page );
 				await waitForDiscovery( activePages() );
+				transportsSeen = await transportsInUse( activePages() );
+				if ( MIXED ) {
+					// A mixed run that is not mixed proves nothing.
+					expect(
+						[ ...transportsSeen ].sort(),
+						'one tab on each transport'
+					).toEqual( [ 'http-polling', 'websocket' ] );
+				}
 				await waitForConvergence(
 					activePages(),
 					CONVERGENCE_TIMEOUT_MS
@@ -2119,6 +2197,7 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 					'saved post content must match the converged editor'
 				).toBe( persisted[ 1 ] );
 			} finally {
+				restoreBrowser();
 				await testInfo.attach( 'fuzz-run.json', {
 					body: JSON.stringify(
 						{
@@ -2138,6 +2217,7 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 							stepCount: STEP_COUNT,
 							trace,
 							transport: TRANSPORT,
+							transportsSeen,
 							userCount: USER_COUNT,
 						},
 						null,

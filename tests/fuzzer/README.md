@@ -35,6 +35,8 @@ npm run fuzz:quick                               # post-change smoke: intent-log
 npm run fuzz -- --seeds=20 --steps=15            # deeper sweep
 npm run fuzz -- --engines=intent-log             # one engine, all transports
 npm run fuzz -- --transports=websocket           # all engines, one transport
+npm run fuzz -- --transports=mixed               # websocket and polling tabs
+                                                 # in one room
 npm run fuzz -- --users=3                        # adds a seeded late joiner
 npm run fuzz -- --no-faults --no-reload          # low-noise convergence-only
 npm run fuzz -- --combos=intent-log/http-polling \
@@ -192,6 +194,13 @@ change one source of stress at a time:
 -   Use `--users=3` to test a new participant after edits already exist.
 -   Test both transports. A passing polling run does not prove that a
     socket reconnect works.
+-   Use `--transports=mixed` for one room with tabs on both transports.
+    The site runs on websocket, and every second tab that joins has its
+    token request blocked, so it falls back to polling. This is what a
+    real site looks like when one person's socket cannot open, and it is
+    the setup where two server processes write to one room. The run
+    fails if the tabs did not end up on both transports. Fault injection
+    is off, as on websocket.
 -   Use `RTC_FUZZ_CPU_THROTTLE=5` when a failure depends on slow editor updates.
 
 Keep the original failing run before reducing steps or changing settings.
