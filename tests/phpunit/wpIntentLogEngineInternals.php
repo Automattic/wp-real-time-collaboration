@@ -365,7 +365,8 @@ class Tests_Collaboration_WpIntentLogEngineInternals extends WP_UnitTestCase {
 			$room,
 			array(
 				'client_id' => 9,
-				'data'      => wp_json_encode( $intent ),
+				// A stored edit carries the room's position after it.
+				'data'      => wp_json_encode( array_merge( $intent, array( 'seq' => 1 ) ) ),
 				'type'      => WP_Intent_Log_Engine::UPDATE_TYPE_INTENT,
 			)
 		);
@@ -407,6 +408,7 @@ class Tests_Collaboration_WpIntentLogEngineInternals extends WP_UnitTestCase {
 			),
 			$result['dispositions']
 		);
+		$this->assertSame( 1, self::engine()->head_seq( $room ), 'The stored edit is still in the history.' );
 	}
 
 	public function test_materialize_returns_null_for_unparseable_room() {

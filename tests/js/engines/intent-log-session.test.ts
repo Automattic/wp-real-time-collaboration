@@ -59,9 +59,13 @@ function makeWireServer() {
 			const logBefore = server.log.length;
 			const proposalsBefore = server.proposals.length;
 			const results = serverIngestBatch( server, intents );
+			// As the PHP engine does, each stored edit carries the room's
+			// position after it.
+			let seq = logBefore;
 			for ( const entry of server.log.slice( logBefore ) ) {
+				seq += 1;
 				rows.push( {
-					data: JSON.stringify( entry ),
+					data: JSON.stringify( { ...entry, seq } ),
 					type: INTENT_LOG_UPDATE_TYPES.INTENT,
 				} );
 			}
@@ -534,6 +538,98 @@ describe( 'intent-log session codec', () => {
 		expect( wire.doc().root[ 0 ].fields.content.text ).toBe(
 			'Hxello world '
 		);
+	} );
+
+	describe( 'the position stored with each edit', () => {
+		const row = ( id: string, seq: number, offset = 0 ): EngineUpdate => ( {
+			type: INTENT_LOG_UPDATE_TYPES.INTENT,
+			data: JSON.stringify( {
+				intentId: id,
+				actorId: 'u9c99',
+				baseSeq: seq - 1,
+				txnId: null,
+				type: 'insert_text',
+				payload: {
+					syncId: 'p1',
+					field: 'content',
+					offset,
+					text: 'x',
+				},
+				seq,
+			} ),
+		} );
+		const text = ( session: IntentLogSession ) =>
+			session.getDocument()!.root[ 0 ].fields.content.text;
+
+		function openSession() {
+			const session = makeSession( 1, 11 );
+			session.receiveUpdate( {
+				data: JSON.stringify( {
+					doc: createDocument( GENESIS_BLOCKS ),
+				} ),
+				type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+			} );
+			return session;
+		}
+
+		it( 'applies rows in order and skips one it already has', () => {
+			const session = openSession();
+
+			session.receiveUpdate( row( 'a', 1 ) );
+			session.receiveUpdate( row( 'b', 2 ) );
+			// The same position again, under an id it has not seen.
+			session.receiveUpdate( row( 'b-again', 2 ) );
+
+			expect( text( session ) ).toBe( 'xxHello world' );
+			expect( session.getSeq() ).toBe( 2 );
+			expect( session.takeRestartRequest!() ).toBe( false );
+		} );
+
+		it( 'asks to start the room over when a row is missing, and applies nothing more', () => {
+			const session = openSession();
+
+			session.receiveUpdate( row( 'a', 1 ) );
+			// Row 2 never arrived.
+			session.receiveUpdate( row( 'c', 3 ) );
+			session.receiveUpdate( row( 'd', 4 ) );
+
+			expect( text( session ) ).toBe( 'xHello world' );
+			expect( session.takeRestartRequest!() ).toBe( true );
+			// The request is given once.
+			expect( session.takeRestartRequest!() ).toBe( false );
+		} );
+
+		it( 'asks to start the room over when the server is ahead after its own answer', () => {
+			const session = openSession();
+
+			session.receiveUpdate( row( 'a', 1 ) );
+			session.receiveHeadSeq!( 1 );
+			expect( session.takeRestartRequest!() ).toBe( false );
+
+			session.receiveHeadSeq!( 2 );
+			expect( session.takeRestartRequest!() ).toBe( true );
+		} );
+
+		it( 'reads the room again after the transport starts it over', () => {
+			const session = openSession();
+			session.receiveUpdate( row( 'a', 1 ) );
+			session.receiveUpdate( row( 'c', 3 ) );
+			expect( session.takeRestartRequest!() ).toBe( true );
+
+			expect( session.onRoomRestart() ).toBe( 'rebootstrap' );
+			session.receiveUpdate( {
+				data: JSON.stringify( {
+					doc: createDocument( GENESIS_BLOCKS ),
+				} ),
+				type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+			} );
+			session.receiveUpdate( row( 'a', 1 ) );
+			session.receiveUpdate( row( 'b', 2 ) );
+			session.receiveUpdate( row( 'c', 3 ) );
+
+			expect( text( session ) ).toBe( 'xxxHello world' );
+			expect( session.takeRestartRequest!() ).toBe( false );
+		} );
 	} );
 
 	it( 'opens a review item again when the server refuses the decision on it', () => {

@@ -13,6 +13,7 @@
  * - The server checks who may decide a review item.
  * - Everything that changes a room's rows holds the room's lock.
  * - The rows of one request are stored together or not at all.
+ * - Every stored edit carries the room's position after it.
  *
  * Most of these tests began as proof of a defect, so many of them say
  * what once went wrong.
@@ -1782,6 +1783,115 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		// Stored for good, so removed by hand.
 		$this->assertTrue( $storage->reset_room( $room ) );
 		$storage->commit_batch();
+	}
+
+	/*
+	 * Every stored edit carries the room's position after it.
+	 */
+
+	/**
+	 * The server stamps `seq` on each edit it stores: 1 for a room's
+	 * first edit, and on from there, also across a snapshot. An edit that
+	 * is set aside or thrown away takes no number. A number a tab sends
+	 * is not used.
+	 */
+	public function test_stored_edits_carry_their_position() {
+		list( , $room, $block ) = $this->make_room();
+		add_filter(
+			'wp_sync_intent_log_checkpoint_interval',
+			static function () {
+				return 3;
+			}
+		);
+
+		self::commit( self::engine(), $room, 101, array( self::text_edit( 'n-1', $block, 0, 'x', 0 ), self::text_edit( 'n-2', $block, 0, 'x', 0 ) ) );
+		// Clashes with nothing, but its base is past the end: refused.
+		self::commit( self::engine(), $room, 101, array( self::text_edit( 'n-bad', $block, 0, 'x', 9 ) ) );
+		$forged        = json_decode( self::text_edit( 'n-3', $block, 0, 'x', 2 )['data'], true );
+		$forged['seq'] = 77;
+		self::commit(
+			self::engine(),
+			$room,
+			101,
+			array(
+				array(
+					'type' => WP_Intent_Log_Engine::UPDATE_TYPE_INTENT,
+					'data' => wp_json_encode( $forged ),
+				),
+			)
+		);
+		self::commit( self::engine(), $room, 101, array( self::text_edit( 'n-4', $block, 0, 'x', 3 ) ) );
+
+		$this->assertSame(
+			array(
+				'n-1' => 1,
+				'n-2' => 2,
+				'n-3' => 3,
+				'n-4' => 4,
+			),
+			array_column( self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_INTENT ), 'seq', 'intentId' )
+		);
+		$this->assertSame( array( 3 ), array_column( array_slice( self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT ), 1 ), 'seq' ) );
+	}
+
+	/**
+	 * A request that stored edits is answered with the room's newest
+	 * position, so the tab can tell whether it has every row. A request
+	 * that stored nothing carries no number.
+	 */
+	public function test_answer_to_a_commit_carries_the_newest_position() {
+		list( , $room, $block ) = $this->make_room();
+
+		$answer = self::polling_request(
+			array(
+				'room'      => $room,
+				'client_id' => 101,
+				'updates'   => array( self::text_edit( 'h-1', $block, 0, 'x', 0 ), self::text_edit( 'h-2', $block, 0, 'x', 0 ) ),
+			)
+		);
+		$this->assertSame( 2, $answer['seq'] );
+
+		$poll = self::polling_request(
+			array(
+				'room'      => $room,
+				'client_id' => 101,
+				'after'     => $answer['end_cursor'],
+			)
+		);
+		$this->assertArrayNotHasKey( 'seq', $poll );
+	}
+
+	/**
+	 * A room written before edits carried their position cannot be read
+	 * by today's tabs. It is reset when it is first opened: the tab gets
+	 * a new first document built from the saved post.
+	 */
+	public function test_room_with_edits_that_carry_no_position_is_reset_when_opened() {
+		list( , $room, $block ) = $this->make_room();
+		$old_rows               = static function () use ( $room, $block ) {
+			$edit = json_decode( self::text_edit( 'old-1', $block, 0, 'OLD ', 0 )['data'], true );
+			( new WP_Sync_Table_Storage() )->add_update(
+				$room,
+				array(
+					'client_id' => 9,
+					'data'      => wp_json_encode( array_merge( $edit, array( 'actorId' => 'u9c9' ) ) ),
+					'type'      => WP_Intent_Log_Engine::UPDATE_TYPE_INTENT,
+				)
+			);
+		};
+
+		// Opened by a read.
+		$old_rows();
+		$opened = self::engine()->get_updates_since( $room, 101, 0, array() );
+		$this->assertSame( array( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT ), array_column( $opened['updates'], 'type' ) );
+		$this->assertSame( array(), self::stored_edit_ids( $room ) );
+
+		// Opened by a commit.
+		$old_rows();
+		$answer = self::commit( self::engine(), $room, 101, array( self::text_edit( 'new-1', $block, 0, 'x', 0 ) ) );
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'new-1' ) );
+		$this->assertSame( array( 'new-1' ), self::stored_edit_ids( $room ) );
+		$this->assertStringContainsString( '<p>xHello world</p>', (string) self::engine()->materialize( $room ) );
 	}
 }
 

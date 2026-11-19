@@ -87,6 +87,8 @@ interface ServerRoom {
 	/** Changes whenever the server restarts the room (fresh genesis). */
 	generation?: string;
 	dispositions?: unknown[];
+	/** The room's newest position, sent when the request stored updates. */
+	seq?: number;
 }
 
 const rooms = new Map< string, RoomState >();
@@ -342,6 +344,17 @@ function applyServerRoom( serverRoom: ServerRoom ): void {
 	state.cursor = serverRoom.end_cursor;
 	publishDebugState();
 
+	if ( 'number' === typeof serverRoom.seq ) {
+		state.session.receiveHeadSeq?.( serverRoom.seq );
+	}
+
+	// The session found that it missed a row: read the room again from
+	// its first row, as after a restart of the room by the server.
+	if ( state.session.takeRestartRequest?.() ) {
+		restartRoom( state, state.generation, [] );
+		return;
+	}
+
 	// Updates produced while applying (an engine's ack/response) go back out.
 	if ( responses.length > 0 ) {
 		const pending = new Map< string, EngineUpdate[] >();
@@ -361,7 +374,7 @@ function applyServerRoom( serverRoom: ServerRoom ): void {
  */
 function restartRoom(
 	state: RoomState,
-	generation: string,
+	generation: string | undefined,
 	updates: EngineUpdate[]
 ): void {
 	const session = state.session as TransportSessionCodec;

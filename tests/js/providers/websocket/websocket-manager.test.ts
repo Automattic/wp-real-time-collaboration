@@ -676,6 +676,48 @@ describe( 'websocket manager', () => {
 		expect( frame.rooms[ 0 ].updates ).toEqual( [ initial ] );
 	} );
 
+	it( 'a session that missed a row gets the room again from cursor 0', async () => {
+		setup();
+		const session = fakeSession() as EngineSessionCodec & {
+			onRoomRestart: jest.Mock;
+			receiveHeadSeq: jest.Mock;
+			takeRestartRequest: jest.Mock;
+		};
+		session.onRoomRestart = jest.fn( () => 'rebootstrap' );
+		session.receiveHeadSeq = jest.fn();
+		session.takeRestartRequest = jest.fn( () => true );
+		websocketManager.registerRoom( {
+			room: 'postType/post:1',
+			session,
+			onStatusChange: jest.fn(),
+		} );
+		await Promise.resolve();
+		await Promise.resolve();
+		const ws = FakeWebSocket.instances[ 0 ];
+		ws.open();
+
+		const sentBefore = ws.sent.length;
+		ws.receive( {
+			type: 'sync',
+			rooms: [
+				{
+					room: 'postType/post:1',
+					awareness: {},
+					updates: [ { type: 'update', data: 'AQ==' } ],
+					end_cursor: 7,
+					generation: 'g1',
+					seq: 3,
+				},
+			],
+		} );
+
+		expect( session.receiveHeadSeq ).toHaveBeenCalledWith( 3 );
+		expect( session.onRoomRestart ).toHaveBeenCalledTimes( 1 );
+		expect( ws.sent.length ).toBe( sentBefore + 1 );
+		const frame = JSON.parse( ws.sent[ ws.sent.length - 1 ] );
+		expect( frame.rooms[ 0 ].after ).toBe( 0 );
+	} );
+
 	it( 'a session that declines to rejoin after a room restart is disconnected', async () => {
 		setup();
 		const session = fakeSession() as EngineSessionCodec & {

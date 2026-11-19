@@ -142,6 +142,21 @@ export interface EngineSessionCodec {
 	 * response, so the session's document never goes backwards.
 	 */
 	receiveDispositions?: ( dispositions: EngineDisposition[] ) => void;
+
+	/**
+	 * Receives the room's newest position (`seq` in the room's answer),
+	 * which the server sends when the request stored updates. Called
+	 * after the answer's updates and dispositions.
+	 */
+	receiveHeadSeq?: ( seq: number ) => void;
+
+	/**
+	 * Asked after each answer was applied: whether the session found
+	 * that it missed an update and must read the room again from its
+	 * first row. A true answer is given once. The transport then starts
+	 * the room over, as it does when the server restarted the room.
+	 */
+	takeRestartRequest?: () => boolean;
 }
 
 export interface ConnectionStatusConnected {

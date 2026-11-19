@@ -123,9 +123,13 @@ export function createWireServer(
 				answered.add( intent.intentId );
 			}
 
+			// As the PHP engine does, each stored edit carries the room's
+			// position after it.
+			let seq = logBefore;
 			for ( const entry of server.log.slice( logBefore ) ) {
+				seq += 1;
 				rows.push( {
-					data: JSON.stringify( entry ),
+					data: JSON.stringify( { ...entry, seq } ),
 					type: INTENT_LOG_UPDATE_TYPES.INTENT,
 				} );
 			}

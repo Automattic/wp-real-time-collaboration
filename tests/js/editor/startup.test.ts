@@ -136,7 +136,7 @@ beforeEach( () => {
 	page.__experimentalEnableRealTimeCollaboration = true;
 	page._wpCollaborationSync = {
 		engine: 'intent-log',
-		engineProtocol: 2,
+		engineProtocol: 3,
 		transports: [ 'http-polling', 'websocket' ],
 		transportProtocol: 1,
 	};
@@ -177,7 +177,7 @@ describe( 'the plugin’s startup', () => {
 	it( 'registers both transports', () => {
 		page._wpCollaborationSync = {
 			engine: 'intent-log',
-			engineProtocol: 2,
+			engineProtocol: 3,
 			transports: [ 'websocket' ],
 			transportProtocol: 1,
 		};

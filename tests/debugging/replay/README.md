@@ -11,6 +11,11 @@ toolchains. Where the engine benchmark (`tests/benchmarks/`) replays
 between them: **real captured traffic, replayed at HTTP scale** — repeatable
 load with genuine engine payloads, no browsers needed at replay time.
 
+A capture holds requests exactly as they were sent, so it only replays
+against a site that speaks the same engine protocol version. A capture
+made before intent-log protocol 3 is refused with a 409: record it
+again.
+
 ## The workflow
 
 ```bash

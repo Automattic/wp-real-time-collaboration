@@ -1247,6 +1247,16 @@ function applyRoomResponse(
 		room.dispositions,
 		room.should_compact
 	);
+
+	if ( 'number' === typeof room.seq ) {
+		state.session.receiveHeadSeq?.( room.seq );
+	}
+
+	// The session found that it missed a row: read the room again from
+	// its first row, as after a restart of the room by the server.
+	if ( state.session.takeRestartRequest?.() ) {
+		restartRoom( state, state.generation, [] );
+	}
 }
 
 /**
@@ -1625,13 +1635,16 @@ function poll(): void {
  * local state cannot safely meet the new room); sessions without an
  * opinion re-bootstrap.
  *
+ * Also used, with the generation unchanged, when the session finds that
+ * it missed a row and has to read the room again from its first row.
+ *
  * @param roomState  The room's transport state.
  * @param generation The new generation token.
  * @param updates    The rows the response carried for the new room.
  */
 function restartRoom(
 	roomState: RoomState,
-	generation: string,
+	generation: string | undefined,
 	updates: SyncUpdate[]
 ): void {
 	const session = roomState.session as TransportSessionCodec;
@@ -1649,7 +1662,9 @@ function restartRoom(
 		decision = 'disconnect';
 	}
 	roomState.log(
-		'Room restarted by the server',
+		previous === generation
+			? 'Room read again from its first row (a row was missing)'
+			: 'Room restarted by the server',
 		{ from: previous, to: generation, decision },
 		'error',
 		true // force

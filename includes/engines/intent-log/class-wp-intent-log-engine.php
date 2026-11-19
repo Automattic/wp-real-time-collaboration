@@ -24,7 +24,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 	 *   stores ACCEPTED intents with their transformed payloads, and relays
 	 *   those rows to every client (including the author, who needs the
 	 *   authoritative transformed form). The engine log = intent rows in
-	 *   storage order; an intent's `baseSeq` counts intent rows.
+	 *   storage order; an intent's `baseSeq` counts intent rows. Each
+	 *   stored intent row carries `seq`, the room's position after it
+	 *   (the first edit of a room has 1), stamped by the server. A tab
+	 *   checks it and starts the room over when a number is missing.
 	 * - `parked` (server → clients): JSON `{ intent, actorId, reason }` —
 	 *   an escalated intent parked for review (the proposal lane).
 	 * - `voided` (server → clients): JSON `{ intentId, reason }` — a voided
@@ -76,7 +79,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @since 7.2.0
 		 * @var int
 		 */
-		const PROTOCOL_VERSION = 2;
+		const PROTOCOL_VERSION = 3;
 
 		/**
 		 * Update type: client-authored intent (stored transformed; when the
@@ -174,6 +177,15 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @var array<string, array>
 		 */
 		private array $debug_stash = array();
+
+		/**
+		 * The newest position of a room after this request's commit, keyed
+		 * by room. The read half of the same request sends it as `seq`.
+		 *
+		 * @since n.e.x.t
+		 * @var array<string, int>
+		 */
+		private array $head_seq_stash = array();
 
 		/**
 		 * Constructor.
@@ -509,6 +521,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$plan['headDoc']
 			);
 			$this->note_commit( $room, $context, $lock_wait_ms, $state, $plan, $stale, $requires_approval, $head_seq + $accepted_count, $checkpointed );
+			$this->head_seq_stash[ $room ] = $head_seq + $accepted_count;
 
 			// 8. Review decisions, after the edits.
 			$refused_decisions = $this->apply_decisions( $room, $client_id, $actor_id, $decoded['resolutions'], $state );
@@ -849,10 +862,15 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @return true|WP_Error True, or a storage error.
 		 */
 		private function store_plan( string $room, int $client_id, array $plan, int $head_seq, callable $doc_at, array &$state ) {
+			$seq = $head_seq;
 			foreach ( $plan['rows'] as $row ) {
 				$intent_id = $row['intent']['intentId'];
 				if ( null !== $row['accepted'] ) {
 					$accepted = $row['accepted'];
+
+					// The room's position after this edit, stored with it.
+					// Nobody has to count rows to know where an edit sits.
+					$accepted['seq'] = ++$seq;
 
 					/*
 					 * The row stores the transformed form (its coordinates
@@ -1232,6 +1250,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 
 				// Attribution is a server-side fact: stamp, never trust.
+				// So is the position, which the commit stamps on storing.
+				unset( $intent['seq'] );
 				$intent['actorId'] = $actor_id;
 				$intent['txnId']   = $intent['txnId'] ?? null;
 				$intents[]         = $intent;
@@ -1362,6 +1382,26 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			}
 
 			return true;
+		}
+
+		/**
+		 * Whether a list of stored rows holds an edit with no `seq`: the
+		 * mark of a room written before edits carried their position. A
+		 * text search, so a tab's first read of a long room stays cheap.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array[] $rows Stored rows (`type`, `data`).
+		 * @return bool Whether such an edit is among them.
+		 */
+		private static function has_unnumbered_edit( array $rows ): bool {
+			foreach ( $rows as $row ) {
+				if ( self::UPDATE_TYPE_INTENT === ( $row['type'] ?? null ) && false === strpos( (string) ( $row['data'] ?? '' ), '"seq":' ) ) {
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		/**
@@ -1812,7 +1852,9 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			 * room. A room that holds rows needs nothing more than the
 			 * rows, so an ordinary poll never rebuilds the room's state.
 			 */
-			if ( 0 === $this->storage->get_cursor( $room ) ) {
+			if ( 0 === $this->storage->get_cursor( $room ) || ( 0 === $cursor && self::has_unnumbered_edit( $rows ) ) ) {
+				// The second case is a room written before edits carried
+				// their position. Loading it resets it (see load_room()).
 				$this->load_room( $room );
 				$rows = $this->storage->get_updates_after_cursor( $room, $cursor );
 			}
@@ -1832,6 +1874,13 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				'total_updates'  => $this->storage->get_update_count( $room ),
 				'updates'        => $typed_updates,
 			);
+
+			// The room's newest position, when this request committed. The
+			// tab compares it with the rows it has, to notice a missing one.
+			if ( isset( $this->head_seq_stash[ $room ] ) ) {
+				$response['seq'] = $this->head_seq_stash[ $room ];
+				unset( $this->head_seq_stash[ $room ] );
+			}
 
 			// The debug envelope: engine facts from this request's ingest
 			// half (the stash) plus read-side counts. Attached only when
@@ -1975,6 +2024,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$base_seq       = 0;
 			$snapshot_seq   = 0;
 			$snapshot_doc   = null;
+			$unnumbered     = false;
 
 			foreach ( $rows as $row ) {
 				$decoded = json_decode( $row['data'], true );
@@ -2022,6 +2072,9 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 						}
 						break;
 					case self::UPDATE_TYPE_INTENT:
+						if ( ! is_int( $decoded['seq'] ?? null ) ) {
+							$unnumbered = true;
+						}
 						$log[]                           = $decoded;
 						$settled[ $decoded['intentId'] ] = array( 'status' => 'applied' );
 						break;
@@ -2065,6 +2118,29 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 						);
 						break;
 				}
+			}
+
+			/*
+			 * A room written before edits carried their position cannot be
+			 * read by today's tabs, and there is no conversion. It is
+			 * reset: emptied here, under the lock, and given a new first
+			 * document from the saved post just below. Edits in it that
+			 * were never saved are lost.
+			 */
+			if ( $unnumbered && method_exists( $this->storage, 'reset_room' ) ) {
+				if ( isset( $this->room_lock_tokens[ $room ] ) ) {
+					$this->storage->reset_room( $room );
+					// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
+					do_action( 'qm/debug', "wp-sync: reset room {$room} (written by an older protocol version)" );
+				}
+				$genesis        = null;
+				$log            = array();
+				$settled        = array();
+				$proposals_open = array();
+				$resolved       = array();
+				$parked         = array();
+				$base_seq       = 0;
+				$snapshot_seq   = 0;
 			}
 
 			$created = false;

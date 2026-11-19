@@ -69,6 +69,11 @@ interface SyncEnvelopeFromServer {
 	 * room-bound state and start over from cursor 0.
 	 */
 	generation?: string;
+	/**
+	 * The room's newest position, sent when the request stored updates.
+	 * The engine defines what it counts.
+	 */
+	seq?: number;
 	should_compact?: boolean;
 	room: string;
 	updates: SyncUpdate[];

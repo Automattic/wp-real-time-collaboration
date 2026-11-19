@@ -2559,6 +2559,52 @@ describe( 'polling-manager', () => {
 			expect( session.onRoomRestart ).toHaveBeenCalledTimes( 1 );
 		} );
 
+		it( 'when the session says it missed a row: reads the room again from cursor 0 at once', async () => {
+			const row = createMockUpdate( 2 );
+			mockPostSyncUpdate
+				.mockResolvedValueOnce( roomResponse( 'g10', [], 5 ) )
+				.mockResolvedValueOnce( {
+					rooms: [
+						{
+							...roomResponse( 'g10', [ row ], 9 ).rooms[ 0 ],
+							seq: 4,
+						},
+					],
+				} )
+				.mockResolvedValue( roomResponse( 'g10', [ row ], 9 ) );
+			const takeRestartRequest = jest
+				.fn< () => boolean >()
+				.mockReturnValue( false );
+			const session = {
+				...createMockSession( 1 ),
+				onRoomRestart: jest.fn( () => 'rebootstrap' as const ),
+				receiveHeadSeq: jest.fn(),
+				takeRestartRequest,
+			};
+			pollingManager.registerRoom( {
+				room: 'test-room',
+				session,
+				log: jest.fn(),
+				onStatusChange: jest.fn(),
+			} );
+
+			await jest.advanceTimersByTimeAsync( 0 );
+			expect( session.onRoomRestart ).not.toHaveBeenCalled();
+
+			// The second answer carries the room's newest position, and
+			// the session then says a row is missing.
+			takeRestartRequest.mockReturnValueOnce( true );
+			await jest.advanceTimersByTimeAsync( 4000 );
+
+			expect( session.receiveHeadSeq ).toHaveBeenCalledWith( 4 );
+			expect( session.onRoomRestart ).toHaveBeenCalledTimes( 1 );
+
+			await jest.advanceTimersByTimeAsync( 1 );
+			const repoll = mockPostSyncUpdate.mock
+				.calls[ 2 ][ 0 ] as SyncPayload;
+			expect( repoll.rooms[ 0 ].after ).toBe( 0 );
+		} );
+
 		it( 'a session that cannot rejoin is disconnected and unregistered', async () => {
 			mockPostSyncUpdate
 				.mockResolvedValueOnce( roomResponse( 'g10' ) )

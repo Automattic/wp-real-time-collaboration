@@ -67,7 +67,7 @@ export const INTENT_LOG_ENGINE_SLUG = 'intent-log';
  * Protocol version of the intent-log engine. Must match
  * WP_Intent_Log_Engine::PROTOCOL_VERSION on the PHP side.
  */
-export const INTENT_LOG_ENGINE_PROTOCOL = 2;
+export const INTENT_LOG_ENGINE_PROTOCOL = 3;
 
 /**
  * Wire kinds, matching WP_Intent_Log_Engine::UPDATE_TYPE_*.
@@ -105,6 +105,14 @@ export interface IntentLogResolution {
 	resolution: 'restored' | 'dismissed';
 	resolvedBy?: string;
 	time?: number;
+}
+
+/**
+ * An accepted edit as the server stores and relays it: the edit, plus the
+ * room's position after it. The first edit of a room has 1.
+ */
+interface StoredIntent extends IntentEnvelope {
+	seq?: number;
 }
 
 /**
@@ -648,6 +656,14 @@ export function createIntentLogSession(
 	 * deferredRecoveries).
 	 */
 	let deferredResetBuffer: EngineUpdate[] | null = null;
+
+	/*
+	 * Set when a stored row turns out to be missing. The transport asks
+	 * for it after each answer (takeRestartRequest) and starts the room
+	 * over from its first row, the same way as after a server restart of
+	 * the room.
+	 */
+	let restartWanted = false;
 	/*
 	 * What the edits refused while a reset waited had changed: for each
 	 * answer from the server, the document without them and with them.
@@ -706,6 +722,11 @@ export function createIntentLogSession(
 		},
 
 		receiveUpdate: ( update: EngineUpdate ): void => {
+			// A row is missing (see the intent case). Nothing more is
+			// applied until the transport starts the room over.
+			if ( restartWanted ) {
+				return;
+			}
 			// Everything behind a deferred reset stays ordered behind it.
 			if ( null !== deferredResetBuffer ) {
 				deferredResetBuffer.push( update );
@@ -772,11 +793,29 @@ export function createIntentLogSession(
 							'Received an intent before the room snapshot.'
 						);
 					}
-					const intent = decoded as IntentEnvelope;
+					const intent = decoded as StoredIntent;
 					// Redelivered row (see appliedIntentIds): already
 					// absorbed at its true log position; skip.
 					if ( appliedIntentIds.has( intent.intentId ) ) {
 						return;
+					}
+					/*
+					 * The server stores each edit with the room's position
+					 * after it. This replica holds the edits up to
+					 * `cursor`, so the next row must carry `cursor + 1`.
+					 * A lower number is a row it has already. A higher
+					 * one means a row never arrived: applying this one
+					 * would put it, and every edit after it, at the wrong
+					 * position. The room is started over instead.
+					 */
+					if ( typeof intent.seq === 'number' ) {
+						if ( intent.seq <= replica.cursor ) {
+							return;
+						}
+						if ( intent.seq > replica.cursor + 1 ) {
+							restartWanted = true;
+							return;
+						}
 					}
 					/*
 					 * Normally our own accepted intents were settled by the
@@ -868,6 +907,25 @@ export function createIntentLogSession(
 						`Unknown intent-log update type: ${ update.type }`
 					);
 			}
+		},
+
+		receiveHeadSeq: ( seq: number ) => {
+			// The room's newest position, sent with the answer to a
+			// request that stored edits. The rows of that answer came
+			// first, so a replica that is still behind is missing one.
+			if (
+				replica &&
+				null === deferredResetBuffer &&
+				seq > replica.cursor
+			) {
+				restartWanted = true;
+			}
+		},
+
+		takeRestartRequest: () => {
+			const wanted = restartWanted;
+			restartWanted = false;
+			return wanted;
 		},
 
 		receiveDispositions: ( answers: EngineDisposition[] ) => {
@@ -1032,6 +1090,7 @@ export function createIntentLogSession(
 		},
 
 		onRoomRestart: () => {
+			restartWanted = false;
 			replica = null;
 			bootstrapSeq = null;
 			shownSeq = 0;

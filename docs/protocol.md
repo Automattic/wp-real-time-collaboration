@@ -31,7 +31,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 
 ```json
 { "rooms": [ { "room": "postType/post:123", "client_id": 12345, "after": 987654,
-               "engine": "intent-log", "engine_protocol": 2, "awareness": {},
+               "engine": "intent-log", "engine_protocol": 3, "awareness": {},
                "updates": [ { "type": "intent", "data": "…" } ],
                "presence_token": "…", "debug": false } ],
   "advisory": { "seq": 7 } }
@@ -59,6 +59,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | | A review decision (`resolved` row) is answered with `resolved`, or with `refused` and the reason `not-allowed` when the user may not decide that item. |
 | | An update sent again gets the answer it got the first time. The engine stores each verdict, also the refusal of a malformed update that has an id. |
 | | Reasons are engine-defined, for example `frame-conflict`, `stale-base`, `invalid-payload` (a malformed update), `invalid-type` (a row type only the server writes). |
+| `seq` | The room's newest position, sent when the request stored edits. A tab whose own count is lower after applying the answer has missed a row, and reads the room again from its first row. It does the same when an `intent` row arrives whose `seq` skips a number. |
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |
 | `advisory` | The advisory channel's discovery probe, answered beside the rooms. |
@@ -80,12 +81,17 @@ marked "client".
 
 | Engine | Type | Sent by | Holds |
 | --- | --- | --- | --- |
-| intent-log (protocol 2) | `intent` | client | One typed edit, stored after the server transformed it against newer rows. |
+| intent-log (protocol 3) | `intent` | client | One typed edit, stored after the server transformed it against newer rows. The server adds `seq` to the stored row: the room's position after this edit, 1 for the room's first. |
 | | `snapshot` | server | A full copy of the document: the first version and later checkpoints. |
 | | `parked` | server | An edit held for review. |
 | | `voided` | server | A marker that an edit was thrown away. |
 | | `resolved` | client | A reviewer's decision on a parked edit. |
 | | `cancel` | client, never stored | Cancels edits the server has not accepted yet; all or nothing. |
+
+Protocol 3 added `seq` and made `engine_protocol` required. A tab that
+speaks an older version is refused (409). A room that still holds edits
+stored without `seq` is reset to the saved post the first time it is
+opened; there is no conversion.
 
 A script or plugin that saves a post needs none of this. If it names
 the version it read (`base_seq`), the server merges its save with other

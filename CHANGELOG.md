@@ -35,6 +35,16 @@ release, which the release script generates from the commit history.
   interface or registers a transport must use the new names.
 - Gutenberg's `__unstable_wp_sync_storage` filter no longer changes the
   plugin's storage. Use `wp_rtc_storage`.
+- The intent-log protocol is version 3. Each stored edit carries the
+  room's position after it (`seq`), a request must name its protocol
+  version, and each row of a request gets its own answer. A browser tab
+  loaded before the update is refused and falls back to the post lock
+  until it is reloaded. A room that still holds edits from an older
+  version is reset to the saved post when it is first opened, so edits
+  in it that were never saved are lost.
+- Only a user who may publish unfiltered HTML can approve an edit held
+  for that reason, and only such a user or the edit's author can dismiss
+  it. The server refuses any other decision.
 
 ### Removed
 
