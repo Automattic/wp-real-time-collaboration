@@ -69,15 +69,23 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	 *                                response object on non-200.
 	 */
 	private function poll( array $updates = array(), array $overrides = array() ) {
-		$room    = array_merge(
+		$room = array_merge(
 			array(
-				'after'     => 0,
-				'awareness' => array( 'user' => 'test' ),
-				'client_id' => 101,
-				'room'      => $this->room(),
-				'updates'   => $updates,
+				'after'           => 0,
+				'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+				'awareness'       => array( 'user' => 'test' ),
+				'client_id'       => 101,
+				'room'            => $this->room(),
+				'updates'         => $updates,
 			),
 			$overrides
+		);
+		// A null override leaves the field out of the request.
+		$room    = array_filter(
+			$room,
+			static function ( $value ) {
+				return null !== $value;
+			}
 		);
 		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
 		$request->set_body_params( array( 'rooms' => array( $room ) ) );
@@ -429,8 +437,16 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	}
 
 	public function test_old_protocol_is_refused_before_reading_rows() {
-		$this->assertErrorResponse( 'rest_sync_engine_mismatch', $this->poll( array(), array( 'engine_protocol' => 1 ) ), 409 );
-		$this->assertIsArray( $this->poll( array(), array( 'engine_protocol' => 2 ) ) );
+		$this->assertErrorResponse( 'rest_sync_engine_mismatch', $this->poll( array(), array( 'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION - 1 ) ), 409 );
+		$this->assertIsArray( $this->poll( array(), array( 'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION ) ) );
+	}
+
+	public function test_request_with_no_protocol_version_is_refused() {
+		// A tab that names no version cannot be told apart from an old one.
+		$refused = $this->poll( array(), array( 'engine_protocol' => null ) );
+
+		$this->assertErrorResponse( 'rest_sync_engine_mismatch', $refused, 409 );
+		$this->assertSame( WP_Intent_Log_Engine::PROTOCOL_VERSION, $refused->get_data()['data']['engine_protocol'] );
 	}
 
 	public function test_clients_cannot_supply_server_generated_slices() {
@@ -823,8 +839,9 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			$stale = $this->poll(
 				array(),
 				array(
-					'client_id' => 404,
-					'after'     => 1,
+					'client_id'       => 404,
+					'after'           => 1,
+					'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 				)
 			);
 			$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $stale['updates'][0]['type'] );

@@ -74,11 +74,12 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 	private function build_request( array $room_overrides = array() ): WP_REST_Request {
 		$room    = array_merge(
 			array(
-				'after'     => 0,
-				'awareness' => array( 'user' => 'test' ),
-				'client_id' => 123,
-				'room'      => 'postType/post:' . self::$post_id,
-				'updates'   => array(
+				'after'           => 0,
+				'awareness'       => array( 'user' => 'test' ),
+				'client_id'       => 123,
+				'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+				'room'            => 'postType/post:' . self::$post_id,
+				'updates'         => array(
 					array(
 						'data' => base64_encode( 'update-bytes' ),
 						'type' => Test_Opaque_Relay_Engine::UPDATE_TYPE_UPDATE,

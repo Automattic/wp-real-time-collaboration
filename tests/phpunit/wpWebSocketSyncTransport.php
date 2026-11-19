@@ -230,11 +230,12 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		// Establish the room under the resolved (default) engine first.
 		$bootstrap = $sync->process_room_request(
 			array(
-				'room'      => $room,
-				'client_id' => 7,
-				'after'     => 0,
-				'awareness' => null,
-				'updates'   => array(),
+				'room'            => $room,
+				'client_id'       => 7,
+				'after'           => 0,
+				'awareness'       => null,
+				'updates'         => array(),
+				'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
 			)
 		);
 		$this->assertIsArray( $bootstrap );

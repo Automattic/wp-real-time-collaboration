@@ -49,7 +49,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | --- | --- |
 | `after` / `end_cursor` | The id of the last row the tab saw, sent back as `after` next time (the cursor). |
 | `client_id` | A number the tab picks; bound to the user who first used it. |
-| `engine` / `engine_protocol` | The engine the tab speaks. If the room was written by another engine, the request is refused with **409 `rest_sync_engine_mismatch`** before anything is stored, and the editor falls back to the post lock. |
+| `engine` / `engine_protocol` | The engine the tab speaks. `engine_protocol` is required. If it is missing or not the server's version, or the room was written by another engine, the request is refused with **409 `rest_sync_engine_mismatch`** before anything is stored, and the editor falls back to the post lock. |
 | | Shared rooms not tied to one post (a taxonomy's list) are reset instead when a tab speaking the newly chosen engine arrives. |
 | `awareness` | This tab's presence state in; every live tab's state out. Entries expire 30 seconds after their last write. |
 | `updates` | Engine-owned rows in; stored rows after the cursor out. |

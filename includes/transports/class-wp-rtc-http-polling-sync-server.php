@@ -708,10 +708,11 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 *
 	 * Two checks, both failing with 409 `rest_sync_engine_mismatch`:
 	 *
-	 * 1. Client stamp: when the request carries `engine` /
-	 *    `engine_protocol` for the room, they must match the engine the
-	 *    server resolved. A stale tab speaking yesterday's engine is
-	 *    fenced here, before any of its updates are stored.
+	 * 1. Client stamp: the request must carry `engine_protocol` for the
+	 *    room, and it and `engine` (when sent) must match the engine the
+	 *    server resolved. A stale tab speaking yesterday's engine, or
+	 *    one that names no protocol version at all, is fenced here,
+	 *    before any of its updates are stored.
 	 * 2. Storage lineage: a room's first write stamps the engine slug;
 	 *    later writes through a different engine are rejected even if the
 	 *    site configuration changed mid-session. Mixed-engine payloads in
@@ -743,7 +744,11 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 
 		if ( isset( $room_request['engine'] ) && $room_request['engine'] !== $engine->get_slug() ) {
 			$mismatch = $room_request['engine'];
-		} elseif ( isset( $room_request['engine_protocol'] ) && $room_request['engine_protocol'] !== $engine->get_protocol_version() ) {
+		} elseif ( ! isset( $room_request['engine_protocol'] ) ) {
+			// A tab that names no protocol version cannot be told apart
+			// from one that speaks an old version, so it is refused too.
+			$mismatch = $engine->get_slug() . ' with no protocol version';
+		} elseif ( $room_request['engine_protocol'] !== $engine->get_protocol_version() ) {
 			$mismatch = $engine->get_slug() . ' protocol ' . $room_request['engine_protocol'];
 		} else {
 			$lineage = $this->storage->get_room_engine( $room );

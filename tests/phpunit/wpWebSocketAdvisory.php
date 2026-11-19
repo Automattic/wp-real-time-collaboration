@@ -209,11 +209,12 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	private function bootstrap_room(): int {
 		$response = $this->sync->process_room_request(
 			array(
-				'room'      => $this->room(),
-				'client_id' => 7,
-				'after'     => 0,
-				'awareness' => null,
-				'updates'   => array(),
+				'room'            => $this->room(),
+				'client_id'       => 7,
+				'after'           => 0,
+				'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+				'awareness'       => null,
+				'updates'         => array(),
 			)
 		);
 		$this->assertIsArray( $response );
@@ -416,11 +417,12 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 			'type'  => 'sync',
 			'rooms' => array(
 				array(
-					'room'      => $room,
-					'client_id' => $client_id,
-					'after'     => 0,
-					'awareness' => $awareness,
-					'updates'   => array(),
+					'room'            => $room,
+					'client_id'       => $client_id,
+					'after'           => 0,
+					'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+					'awareness'       => $awareness,
+					'updates'         => array(),
 				),
 			),
 		);

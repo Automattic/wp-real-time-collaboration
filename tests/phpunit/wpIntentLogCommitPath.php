@@ -353,9 +353,10 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	private function tab_sends( WP_WebSocket_Sync_Server $daemon, array $tab, array $room_request ): array {
 		$room_request = array_merge(
 			array(
-				'after'     => 0,
-				'awareness' => array( 'user' => 'test' ),
-				'updates'   => array(),
+				'after'           => 0,
+				'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+				'awareness'       => array( 'user' => 'test' ),
+				'updates'         => array(),
 			),
 			$room_request
 		);
@@ -427,9 +428,10 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		return $server->process_room_request(
 			array_merge(
 				array(
-					'after'     => 0,
-					'awareness' => array( 'user' => 'test' ),
-					'updates'   => array(),
+					'after'           => 0,
+					'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+					'awareness'       => array( 'user' => 'test' ),
+					'updates'         => array(),
 				),
 				$room_request
 			)
@@ -701,11 +703,12 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 			$daemon,
 			$first_tab,
 			array(
-				'room'           => $room,
-				'client_id'      => 101,
-				'presence_token' => 'tab-a',
-				'after'          => $first['end_cursor'],
-				'updates'        => array( self::text_edit( 'ws-1', $block, 0, 'x', 0 ) ),
+				'room'            => $room,
+				'client_id'       => 101,
+				'presence_token'  => 'tab-a',
+				'after'           => $first['end_cursor'],
+				'engine_protocol' => WP_Intent_Log_Engine::PROTOCOL_VERSION,
+				'updates'         => array( self::text_edit( 'ws-1', $block, 0, 'x', 0 ) ),
 			)
 		);
 		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $typed, 'ws-1' ) );

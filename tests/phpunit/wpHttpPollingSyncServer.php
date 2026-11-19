@@ -86,11 +86,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		}
 
 		return array(
-			'after'     => $cursor,
-			'awareness' => $awareness,
-			'client_id' => $client_id,
-			'room'      => $room,
-			'updates'   => $updates,
+			'after'           => $cursor,
+			'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+			'awareness'       => $awareness,
+			'client_id'       => $client_id,
+			'room'            => $room,
+			'updates'         => $updates,
 		);
 	}
 
@@ -478,11 +479,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms' => array(
 					array(
-						'after'     => 0,
-						'awareness' => array( 'user' => 'test' ),
-						'client_id' => 1,
-						'room'      => $this->get_post_room(),
-						'updates'   => array(
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'test' ),
+						'client_id'       => 1,
+						'room'            => $this->get_post_room(),
+						'updates'         => array(
 							array(
 								'data' => 12345,
 								'type' => 'update',
@@ -512,11 +514,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms' => array(
 					array(
-						'after'     => 0,
-						'awareness' => array( 'user' => 'test' ),
-						'client_id' => 1,
-						'room'      => $this->get_post_room(),
-						'updates'   => array(
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'test' ),
+						'client_id'       => 1,
+						'room'            => $this->get_post_room(),
+						'updates'         => array(
 							array(
 								'data' => 'dGVzdA==',
 								'type' => 'invalid_type',
@@ -546,11 +549,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms' => array(
 					array(
-						'after'     => 0,
-						'awareness' => array( 'user' => 'test' ),
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'test' ),
 						// 'client_id' deliberately omitted.
-						'room'      => $this->get_post_room(),
-						'updates'   => array(),
+						'room'            => $this->get_post_room(),
+						'updates'         => array(),
 					),
 				),
 			)
@@ -594,11 +598,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms' => array(
 					array(
-						'after'     => 0,
-						'awareness' => array( 'user' => 'test' ),
-						'client_id' => 1,
-						'room'      => $this->get_post_room(),
-						'updates'   => array(
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'test' ),
+						'client_id'       => 1,
+						'room'            => $this->get_post_room(),
+						'updates'         => array(
 							array(
 								'data' => $oversized_data,
 								'type' => 'update',
@@ -1373,11 +1378,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms'    => array(
 					array(
-						'room'      => $room,
-						'client_id' => 1,
-						'after'     => 0,
-						'awareness' => array( 'user' => 'a' ),
-						'updates'   => array(),
+						'room'            => $room,
+						'client_id'       => 1,
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'a' ),
+						'updates'         => array(),
 					),
 				),
 				'advisory' => array(
@@ -1399,11 +1405,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			array(
 				'rooms' => array(
 					array(
-						'room'      => $room,
-						'client_id' => 1,
-						'after'     => 0,
-						'awareness' => array( 'user' => 'a' ),
-						'updates'   => array(),
+						'room'            => $room,
+						'client_id'       => 1,
+						'after'           => 0,
+						'engine_protocol' => Test_Opaque_Relay_Engine::PROTOCOL_VERSION,
+						'awareness'       => array( 'user' => 'a' ),
+						'updates'         => array(),
 					),
 				),
 			)
