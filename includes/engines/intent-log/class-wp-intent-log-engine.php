@@ -298,9 +298,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @return string Lock name.
 		 */
 		private function room_lock_name( string $room ): string {
-			global $wpdb;
-
-			return $wpdb->prefix . 'sync_ingest_' . md5( $room );
+			return WP_Sync_Room_Lock::name_for_room( $room );
 		}
 
 		/**
@@ -1803,6 +1801,24 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			}
 
 			$created = false;
+			if ( null === $genesis && ! isset( $this->room_lock_tokens[ $room ] ) ) {
+				/*
+				 * The room has no first document, and this is not a commit
+				 * (a commit holds the lock already). A read is the usual
+				 * first caller. Take the lock and look again: two readers
+				 * that both find the room empty must not both store a
+				 * first document, and a reset must not run in between.
+				 */
+				$lock = $this->acquire_room_lock( $room );
+				if ( is_wp_error( $lock ) ) {
+					return $lock;
+				}
+				try {
+					return $this->load_room( $room );
+				} finally {
+					$this->release_room_lock( $room );
+				}
+			}
 			if ( null === $genesis ) {
 				$genesis = $this->initialize_room( $room );
 				if ( is_wp_error( $genesis ) ) {

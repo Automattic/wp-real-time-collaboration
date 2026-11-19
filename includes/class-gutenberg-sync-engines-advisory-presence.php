@@ -109,6 +109,16 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 		const MAILBOX_EXPIRY = 90;
 
 		/**
+		 * How long a reset of an empty room waits for the room's lock. A
+		 * commit holds the lock for milliseconds. A room that stays busy
+		 * longer is in use, and is not reset.
+		 *
+		 * @since n.e.x.t
+		 * @var float
+		 */
+		const RESET_LOCK_WAIT_SECONDS = 2.0;
+
+		/**
 		 * Caps that bound transient sizes and per-beat work.
 		 *
 		 * @since 0.0.1
@@ -763,8 +773,17 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 				return false;
 			}
 
-			$reset = (bool) $storage->reset_room( $room );
-			if ( $reset ) {
+			// Under the room's lock, so a reset never runs in the middle of
+			// a commit or while the first document is being made. A lock
+			// that is not free in time means the room is in use: no reset.
+			$reset = WP_Sync_Room_Lock::run_for_room(
+				$room,
+				static function () use ( $storage, $room ) {
+					return (bool) $storage->reset_room( $room );
+				},
+				self::RESET_LOCK_WAIT_SECONDS
+			);
+			if ( true === $reset ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
 				do_action( 'qm/debug', "wp-sync: room {$room} reset to the saved post (empty room, on {$reason})" );
 
@@ -781,7 +800,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
 				 */
 				do_action( 'gutenberg_sync_engines_room_reset', $room, $reason );
 			}
-			return $reset;
+			return true === $reset;
 		}
 
 		/**

@@ -11,6 +11,7 @@
  *   row sent again gets its first answer.
  * - The body of an inserted block is checked fully.
  * - The server checks who may decide a review item.
+ * - Everything that changes a room's rows holds the room's lock.
  *
  * Most of these tests began as proof of a defect, so many of them say
  * what once went wrong.
@@ -67,6 +68,10 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 			}
 		}
 		$this->sockets = array();
+
+		Commit_Path_Lock_Backend::$events = array();
+		Commit_Path_Lock_Backend::$busy   = false;
+		WP_Sync_Room_Lock::reset_backend_for_testing();
 
 		parent::tear_down();
 	}
@@ -1579,6 +1584,112 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		$this->assertSame( array( 'status' => 'resolved' ), self::verdict( $answer, 'b-1' ) );
 		$this->assertCount( 1, self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED ) );
 	}
+
+	/*
+	 * Everything that changes a room's rows holds the room's lock.
+	 */
+
+	/**
+	 * Swaps in a lock that records when it is taken and released, and a
+	 * storage that records its writes in the same list.
+	 *
+	 * @return Commit_Path_Recording_Storage The storage.
+	 */
+	private function recording_lock_and_storage(): Commit_Path_Recording_Storage {
+		add_filter(
+			'wp_sync_lock_backend',
+			static function () {
+				return new Commit_Path_Lock_Backend();
+			}
+		);
+		WP_Sync_Room_Lock::reset_backend_for_testing();
+		Commit_Path_Lock_Backend::$events = array();
+
+		return new Commit_Path_Recording_Storage();
+	}
+
+	/**
+	 * A read is the usual first caller of a room. The first document it
+	 * makes is stored under the room's lock, so two readers cannot both
+	 * store one and a reset cannot run in between. A read of a room that
+	 * holds rows takes no lock.
+	 */
+	public function test_first_document_made_by_a_read_is_stored_under_the_lock() {
+		list( , $room ) = $this->make_post();
+		$storage        = $this->recording_lock_and_storage();
+		$lock           = WP_Sync_Room_Lock::name_for_room( $room );
+
+		$first = ( new WP_Intent_Log_Engine( $storage ) )->get_updates_since( $room, 101, 0, array() );
+
+		$this->assertCount( 1, $first['updates'] );
+		$this->assertSame( array( "acquire $lock", 'add_update', "release $lock" ), Commit_Path_Lock_Backend::$events );
+
+		Commit_Path_Lock_Backend::$events = array();
+		( new WP_Intent_Log_Engine( $storage ) )->get_updates_since( $room, 101, 0, array() );
+
+		$this->assertSame( array(), Commit_Path_Lock_Backend::$events );
+	}
+
+	/**
+	 * When the lock is not free, a read makes no first document. The tab
+	 * gets no rows and asks again.
+	 */
+	public function test_read_makes_no_first_document_while_the_room_is_locked() {
+		list( , $room )                 = $this->make_post();
+		$storage                        = $this->recording_lock_and_storage();
+		Commit_Path_Lock_Backend::$busy = true;
+
+		$first = ( new WP_Intent_Log_Engine( $storage ) )->get_updates_since( $room, 101, 0, array() );
+
+		$this->assertSame( array(), $first['updates'] );
+		$this->assertNotContains( 'add_update', Commit_Path_Lock_Backend::$events );
+	}
+
+	/**
+	 * A commit that makes the first document takes the lock once. The
+	 * lock cannot be taken twice, also not by the process that holds it.
+	 */
+	public function test_commit_that_makes_the_first_document_takes_the_lock_once() {
+		list( , $room, $block ) = $this->make_post();
+		$storage                = $this->recording_lock_and_storage();
+		$lock                   = WP_Sync_Room_Lock::name_for_room( $room );
+
+		$answer = self::commit( new WP_Intent_Log_Engine( $storage ), $room, 101, array( self::text_edit( 'first-1', $block, 0, 'x', 0 ) ) );
+
+		$this->assertSame( array( 'status' => 'applied' ), self::verdict( $answer, 'first-1' ) );
+		$this->assertSame( array( "acquire $lock", 'add_update', 'add_update', "release $lock" ), Commit_Path_Lock_Backend::$events );
+	}
+
+	/**
+	 * The reset of a room nobody is in runs under the room's lock, so it
+	 * never runs in the middle of a commit.
+	 */
+	public function test_reset_of_an_empty_room_runs_under_the_lock() {
+		list( , $room ) = $this->make_room();
+		$storage        = $this->recording_lock_and_storage();
+		$lock           = WP_Sync_Room_Lock::name_for_room( $room );
+
+		$presence = new Gutenberg_Sync_Engines_Advisory_Presence( $storage );
+		$this->assertTrue( $presence->leave( $room, 'tab-a', 101 ) );
+
+		$this->assertSame( array( "acquire $lock", 'reset_room', "release $lock" ), Commit_Path_Lock_Backend::$events );
+		$this->assertSame( array(), ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
+	}
+
+	/**
+	 * A room whose lock is not free in time is in use, and is not reset.
+	 */
+	public function test_room_is_not_reset_while_it_is_locked() {
+		list( , $room )                 = $this->make_room();
+		$storage                        = $this->recording_lock_and_storage();
+		Commit_Path_Lock_Backend::$busy = true;
+
+		$presence = new Gutenberg_Sync_Engines_Advisory_Presence( $storage );
+		$this->assertFalse( $presence->leave( $room, 'tab-a', 101 ) );
+
+		$this->assertNotContains( 'reset_room', Commit_Path_Lock_Backend::$events );
+		$this->assertCount( 1, ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
+	}
 }
 
 /**
@@ -1596,6 +1707,51 @@ class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
 		$this->read_after[] = $cursor;
 
 		return parent::get_updates_after_cursor( $room, $cursor );
+	}
+
+	public function add_update( string $room, $update ): bool {
+		Commit_Path_Lock_Backend::$events[] = 'add_update';
+
+		return parent::add_update( $room, $update );
+	}
+
+	public function reset_room( string $room ): bool {
+		Commit_Path_Lock_Backend::$events[] = 'reset_room';
+
+		return parent::reset_room( $room );
+	}
+}
+
+/**
+ * A room lock that records when it is taken and released, and can be
+ * told that every lock is held by someone else.
+ */
+class Commit_Path_Lock_Backend implements WP_Sync_Lock_Backend {
+	/**
+	 * What happened, in order. The recording storage adds its writes.
+	 *
+	 * @var string[]
+	 */
+	public static $events = array();
+
+	/**
+	 * Whether every lock is held by someone else.
+	 *
+	 * @var bool
+	 */
+	public static $busy = false;
+
+	public function acquire( string $name, float $wait_seconds ) {
+		if ( self::$busy ) {
+			return new WP_Error( 'rest_sync_room_busy', 'Busy.', array( 'status' => 503 ) );
+		}
+		self::$events[] = "acquire $name";
+
+		return 'token';
+	}
+
+	public function release( string $name, string $token ): void {
+		self::$events[] = "release $name";
 	}
 }
 

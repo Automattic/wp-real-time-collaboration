@@ -84,6 +84,54 @@ if ( ! class_exists( 'WP_Sync_Room_Lock' ) ) {
 		}
 
 		/**
+		 * The name of the lock that guards one room's stored rows.
+		 * Everything that changes those rows takes it: a commit, the
+		 * making of the room's first document, and a reset. It carries the
+		 * table prefix, so sites that share a database do not share
+		 * locks, and a hash keeps its length bounded.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @global wpdb $wpdb WordPress database abstraction object.
+		 *
+		 * @param string $room Room identifier.
+		 * @return string Lock name.
+		 */
+		public static function name_for_room( string $room ): string {
+			global $wpdb;
+
+			return $wpdb->prefix . 'sync_ingest_' . md5( $room );
+		}
+
+		/**
+		 * Runs a piece of work while holding a room's lock.
+		 *
+		 * The lock cannot be taken twice, also not by one process. A
+		 * caller that already holds the room's lock must not use this.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string   $room         Room identifier.
+		 * @param callable $work         The work. Its result is returned.
+		 * @param float    $wait_seconds How long to wait for the lock.
+		 * @return mixed|WP_Error The work's result, or the lock's error
+		 *                        when it was not free in time. The work
+		 *                        did not run then.
+		 */
+		public static function run_for_room( string $room, callable $work, float $wait_seconds = 5.0 ) {
+			$name  = self::name_for_room( $room );
+			$token = self::acquire( $name, $wait_seconds );
+			if ( is_wp_error( $token ) ) {
+				return $token;
+			}
+			try {
+				return $work();
+			} finally {
+				self::release( $name, $token );
+			}
+		}
+
+		/**
 		 * Attempts to acquire the named lock within the wait budget.
 		 *
 		 * @global wpdb $wpdb WordPress database abstraction object.

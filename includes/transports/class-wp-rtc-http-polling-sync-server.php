@@ -819,7 +819,18 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 		// The framework storage implements reset_room; a substitute
 		// backend without one simply keeps the fence (no reset).
 		if ( method_exists( $this->storage, 'reset_room' ) ) {
-			return (bool) $this->storage->reset_room( $room );
+			// Under the room's lock, so a reset never runs in the middle
+			// of a commit. A lock that is not free in time: no reset.
+			$storage = $this->storage;
+			$reset   = WP_Sync_Room_Lock::run_for_room(
+				$room,
+				static function () use ( $storage, $room ) {
+					return (bool) $storage->reset_room( $room );
+				},
+				2.0
+			);
+
+			return true === $reset;
 		}
 
 		return false;
