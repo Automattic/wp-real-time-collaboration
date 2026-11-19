@@ -440,33 +440,115 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				return $state;
 			}
 
-			$actor_id    = self::actor_id( $client_id );
-			$base_seq    = (int) ( $state['base_seq'] ?? 0 );
-			$head_seq    = $base_seq + count( $state['log'] );
-			$decoded     = self::decode_updates( $updates, $actor_id, $head_seq );
-			$intents     = $decoded['intents'];
-			$resolutions = $decoded['resolutions'];
-			$cancels     = $decoded['cancels'];
-			$answers     = $decoded['answers'];
+			$actor_id = self::actor_id( $client_id );
+			$base_seq = (int) ( $state['base_seq'] ?? 0 );
+			$head_seq = $base_seq + count( $state['log'] );
+
+			// 1. Read the rows. A bad row is refused here, by itself.
+			$decoded = self::decode_updates( $updates, $actor_id, $head_seq );
 			if ( $decoded['refused'] > 0 ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
 				do_action( 'qm/debug', "wp-sync: {$decoded['refused']} malformed row(s) refused in {$room}" );
 			}
+			$stored = $this->store_refusals( $room, $client_id, $decoded['refusals'], $state );
+			if ( is_wp_error( $stored ) ) {
+				return $stored;
+			}
 
-			/*
-			 * The refusal of a malformed edit is stored like any other
-			 * verdict, so the same row sent again gets the same answer.
-			 * Without the marker the answer could change: an edit refused
-			 * because its base was past the end of the history would be
-			 * applied once the history had grown.
-			 *
-			 * An edit refused as `stale-base` (further down) needs no
-			 * marker. The start of the stored history only moves forward,
-			 * so a repeat is refused again. A marker would also reach the
-			 * author's tab before the answer does, and settle the edit
-			 * there before the tab has recovered its text.
-			 */
-			foreach ( $decoded['refusals'] as $intent_id => $verdict ) {
+			// 2. Cancellations of edits that have no verdict yet.
+			$cancel_dispositions = $this->apply_cancels( $room, $client_id, $decoded['cancels'], $state );
+			if ( is_wp_error( $cancel_dispositions ) ) {
+				return $cancel_dispositions;
+			}
+
+			// 3. Drop repeats and edits based below the stored history.
+			$stale = array();
+			$units = self::drop_repeats( $decoded['intents'], $state, $base_seq, $stale );
+
+			// 4. Markup the author may not publish is held for approval.
+			list( $units, $requires_approval ) = self::split_by_markup_policy( $units );
+			$doc_at                            = self::document_reader( $state );
+			$stored                            = $this->park_for_approval( $room, $client_id, $requires_approval, $head_seq, $doc_at, $state );
+			if ( is_wp_error( $stored ) ) {
+				return $stored;
+			}
+
+			// 5. Combine the edits with the history. The batch's frame
+			// continues from this actor's earlier set-aside intents, so a
+			// typist whose editor still shows a set-aside letter parks the
+			// keystrokes that follow it beside it (rule 6 across requests)
+			// instead of landing them misplaced.
+			$plan = WP_Intent_Log_Planner::plan_batch(
+				$units,
+				$state['log'],
+				$doc_at,
+				$base_seq,
+				WP_Intent_Log_Planner::seed_frame_state( $state['parked'][ $actor_id ] ?? array() )
+			);
+
+			// 6. Store the result.
+			$stored = $this->store_plan( $room, $client_id, $plan, $head_seq, $doc_at, $state );
+			if ( is_wp_error( $stored ) ) {
+				return $stored;
+			}
+
+			// 7. Growth bound: append a compaction checkpoint (and trim
+			// behind the previous one) once the retained window is large
+			// enough.
+			$accepted_count = 0;
+			foreach ( $plan['rows'] as $row ) {
+				if ( null !== $row['accepted'] ) {
+					++$accepted_count;
+				}
+			}
+			$checkpointed = $this->maybe_checkpoint(
+				$room,
+				$client_id,
+				$head_seq - $state['snapshot_seq'] + $accepted_count,
+				$head_seq + $accepted_count,
+				$plan['headDoc']
+			);
+			$this->note_commit( $room, $context, $lock_wait_ms, $state, $plan, $stale, $requires_approval, $head_seq + $accepted_count, $checkpointed );
+
+			// 8. Review decisions, after the edits.
+			$refused_decisions = $this->apply_decisions( $room, $client_id, $actor_id, $decoded['resolutions'], $state );
+			if ( is_wp_error( $refused_decisions ) ) {
+				return $refused_decisions;
+			}
+
+			unset( $this->room_state[ $room ] ); // Rows changed.
+
+			// 9. One answer per row, in the order the rows were sent.
+			return array(
+				'dispositions' => self::build_answers( $decoded['answers'], $state, $stale, $cancel_dispositions, $refused_decisions ),
+			);
+		}
+
+		/**
+		 * Stores the refusals of malformed edits.
+		 *
+		 * The refusal of a malformed edit is stored like any other
+		 * verdict, so the same row sent again gets the same answer.
+		 * Without the marker the answer could change: an edit refused
+		 * because its base was past the end of the history would be
+		 * applied once the history had grown.
+		 *
+		 * An edit refused as `stale-base` (further down) needs no
+		 * marker. The start of the stored history only moves forward,
+		 * so a repeat is refused again. A marker would also reach the
+		 * author's tab before the answer does, and settle the edit
+		 * there before the tab has recovered its text.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string $room      Room identifier.
+		 * @param int    $client_id Client identifier.
+		 * @param array  $refusals  Edit id => refusal, from decode_updates().
+		 * @param array  $state     Room state. Its verdicts are updated.
+		 * @return true|WP_Error True, or a storage error.
+		 */
+		private function store_refusals( string $room, int $client_id, array $refusals, array &$state ) {
+			foreach ( $refusals as $intent_id => $verdict ) {
 				if ( isset( $state['settled'][ $intent_id ] ) ) {
 					continue;
 				}
@@ -489,16 +571,30 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$state['settled'][ $intent_id ] = $verdict;
 			}
 
-			/*
-			 * Intent cancellations (the pre-settle undo lane).
-			 * All-or-nothing per cancel row: if ANY target already settled
-			 * (other than as canceled), nothing cancels and the cancel acks
-			 * `cancel-too-late` — the client resurrects the unit from the
-			 * accepted rows. Confirmed targets settle as voided/`canceled`
-			 * marker rows: idempotent against redelivery, dead against a
-			 * late-arriving copy of the intent, and same-batch copies drop
-			 * in the settled filter below.
-			 */
+			return true;
+		}
+
+		/**
+		 * Applies the cancellations of one request.
+		 *
+		 * Intent cancellations (the pre-settle undo lane).
+		 * All-or-nothing per cancel row: if ANY target already settled
+		 * (other than as canceled), nothing cancels and the cancel acks
+		 * `cancel-too-late` — the client resurrects the unit from the
+		 * accepted rows. Confirmed targets settle as voided/`canceled`
+		 * marker rows: idempotent against redelivery, dead against a
+		 * late-arriving copy of the intent, and same-batch copies drop
+		 * in the settled filter below.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string $room      Room identifier.
+		 * @param int    $client_id Client identifier.
+		 * @param array  $cancels   Cancel rows, from decode_updates().
+		 * @param array  $state     Room state. Its verdicts are updated.
+		 * @return array|WP_Error Cancel id => answer, or a storage error.
+		 */
+		private function apply_cancels( string $room, int $client_id, array $cancels, array &$state ) {
 			$cancel_dispositions = array();
 			foreach ( $cancels as $cancel ) {
 				$targets  = array_values( array_filter( $cancel['intentIds'], 'is_string' ) );
@@ -547,23 +643,39 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				do_action( 'qm/debug', 'wp-sync: canceled ' . count( $targets ) . " queued intent(s) in {$room}" );
 			}
 
-			// Group first, then drop already-settled intents within units, so
-			// a redelivered prefix cannot fuse two distinct units (mirrors the
-			// JS engine's serverIngestBatch). The in-batch set extends the
-			// idempotency to duplicates WITHIN one request: the settled map
-			// is only populated after planning. Intents authored BELOW the
-			// retention horizon (baseSeq < base_seq — the priors they need
-			// were compacted away, so a one-sided transform is impossible)
-			// settle immediately as stale voids without planning; the client
-			// re-derives the work from its editor tree after its reset.
-			$seen_in_batch = array();
-			$stale         = array();
-			$units         = array();
+			return $cancel_dispositions;
+		}
+
+		/**
+		 * Groups the edits of one request into units and drops the ones
+		 * that need no combining.
+		 *
+		 * Group first, then drop already-settled intents within units, so
+		 * a redelivered prefix cannot fuse two distinct units (mirrors the
+		 * JS engine's serverIngestBatch). The in-batch set extends the
+		 * idempotency to duplicates WITHIN one request: the settled map
+		 * is only populated after planning. Intents authored BELOW the
+		 * retention horizon (baseSeq < base_seq — the priors they need
+		 * were compacted away, so a one-sided transform is impossible)
+		 * settle immediately as stale voids without planning; the client
+		 * re-derives the work from its editor tree after its reset.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array $intents  Usable edits, from decode_updates().
+		 * @param array $state    Room state.
+		 * @param int   $base_seq Where the stored history starts.
+		 * @param array $stale    Filled with edit id => `stale-base` refusal.
+		 * @return array[] The units left to combine.
+		 */
+		private static function drop_repeats( array $intents, array $state, int $base_seq, array &$stale ): array {
+			$seen_in_batch     = array();
+						$units = array();
 			foreach ( WP_Intent_Log_Planner::group_units( $intents ) as $unit ) {
 				$fresh = array_values(
 					array_filter(
 						$unit,
-						function ( $intent ) use ( $state, $base_seq, &$seen_in_batch, &$stale ) {
+						static function ( $intent ) use ( $state, $base_seq, &$seen_in_batch, &$stale ) {
 							$intent_id = $intent['intentId'];
 							if ( isset( $state['settled'][ $intent_id ] ) || isset( $seen_in_batch[ $intent_id ] ) ) {
 								return false;
@@ -585,18 +697,30 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			/*
-			 * Capability enforcement (the kses lane): when the authoring user
-			 * lacks `unfiltered_html`, an intent whose payload carries
-			 * protected markup never reaches the planner — its WHOLE unit (a
-			 * batch of edits made together) parks as a `requires-approval`
-			 * proposal instead. This closes the laundering hole where a
-			 * filtered user's markup would otherwise materialize into every
-			 * collaborator's editor and then persist under a privileged
-			 * saver's capability. Restoring the proposal re-authors the
-			 * content as ordinary intents under the RESTORER's capability, so
-			 * approval semantics need no separate machinery.
-			 */
+			return $units;
+		}
+
+		/**
+		 * Splits the units into those to combine and those to hold for
+		 * approval.
+		 *
+		 * Capability enforcement (the kses lane): when the authoring user
+		 * lacks `unfiltered_html`, an intent whose payload carries
+		 * protected markup never reaches the planner — its WHOLE unit (a
+		 * batch of edits made together) parks as a `requires-approval`
+		 * proposal instead. This closes the laundering hole where a
+		 * filtered user's markup would otherwise materialize into every
+		 * collaborator's editor and then persist under a privileged
+		 * saver's capability. Restoring the proposal re-authors the
+		 * content as ordinary intents under the RESTORER's capability, so
+		 * approval semantics need no separate machinery.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array[] $units Units of edits.
+		 * @return array{array[], array[]} Units to combine, units to hold.
+		 */
+		private static function split_by_markup_policy( array $units ): array {
 			$requires_approval = array();
 			if ( ! current_user_can( 'unfiltered_html' ) ) {
 				$kept = array();
@@ -617,12 +741,26 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$units = $kept;
 			}
 
+			return array( $units, $requires_approval );
+		}
+
+		/**
+		 * A function that gives the document at a position of a loaded
+		 * room, replayed from the nearest document it already has.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array $state Room state.
+		 * @return callable Position => document.
+		 */
+		private static function document_reader( array $state ): callable {
+			$base_seq  = (int) $state['base_seq'];
 			$log       = $state['log'];
 			$doc_cache = array(
 				$base_seq              => $state['genesis'],
 				$state['snapshot_seq'] => $state['snapshot_doc'],
 			);
-			$doc_at    = function ( int $seq ) use ( $log, $base_seq, &$doc_cache ): array {
+			return static function ( int $seq ) use ( $log, $base_seq, &$doc_cache ): array {
 				if ( isset( $doc_cache[ $seq ] ) ) {
 					return $doc_cache[ $seq ];
 				}
@@ -639,10 +777,24 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$doc_cache[ $seq ] = $doc;
 				return $doc;
 			};
+		}
 
-			// Park capability-gated units as proposals (same row shape as
-			// planner escalations, so replay/retention/resolution machinery
-			// applies unchanged).
+		/**
+		 * Stores the units held for approval as review items, in the same
+		 * row shape as the planner's set-aside edits, so replay, retention
+		 * and review decisions treat them alike.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string   $room              Room identifier.
+		 * @param int      $client_id         Client identifier.
+		 * @param array[]  $requires_approval Units to hold.
+		 * @param int      $head_seq          The newest position before this commit.
+		 * @param callable $doc_at            Position => document.
+		 * @param array    $state             Room state. Updated.
+		 * @return true|WP_Error True, or a storage error.
+		 */
+		private function park_for_approval( string $room, int $client_id, array $requires_approval, int $head_seq, callable $doc_at, array &$state ) {
 			foreach ( $requires_approval as $unit ) {
 				foreach ( $unit as $intent ) {
 					$intent_id = $intent['intentId'];
@@ -679,19 +831,24 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			// The batch's frame continues from this actor's earlier set-aside
-			// intents, so a typist whose editor still shows a set-aside
-			// letter parks the keystrokes that follow it beside it (rule 6
-			// across requests) instead of landing them misplaced.
-			$plan = WP_Intent_Log_Planner::plan_batch(
-				$units,
-				$state['log'],
-				$doc_at,
-				$base_seq,
-				WP_Intent_Log_Planner::seed_frame_state( $state['parked'][ $actor_id ] ?? array() )
-			);
+			return true;
+		}
 
-			// Commit the plan to storage.
+		/**
+		 * Stores what the planner decided: accepted edits, set-aside edits
+		 * and markers for the ones thrown away.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string   $room      Room identifier.
+		 * @param int      $client_id Client identifier.
+		 * @param array    $plan      The planner's result.
+		 * @param int      $head_seq  The newest position before this commit.
+		 * @param callable $doc_at    Position => document.
+		 * @param array    $state     Room state. Updated.
+		 * @return true|WP_Error True, or a storage error.
+		 */
+		private function store_plan( string $room, int $client_id, array $plan, int $head_seq, callable $doc_at, array &$state ) {
 			foreach ( $plan['rows'] as $row ) {
 				$intent_id = $row['intent']['intentId'];
 				if ( null !== $row['accepted'] ) {
@@ -755,24 +912,27 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$state['settled'][ $intent_id ] = $row['disposition'];
 			}
 
-			// Growth bound: append a compaction checkpoint (and trim behind
-			// the previous one) once the retained window is large enough.
-			$accepted_count = 0;
-			foreach ( $plan['rows'] as $row ) {
-				if ( null !== $row['accepted'] ) {
-					++$accepted_count;
-				}
-			}
-			$checkpointed = $this->maybe_checkpoint(
-				$room,
-				$client_id,
-				$head_seq - $state['snapshot_seq'] + $accepted_count,
-				$head_seq + $accepted_count,
-				$plan['headDoc']
-			);
+			return true;
+		}
 
-			// Breadcrumbs + the debug envelope stash (attached by the read
-			// half of this same request when the client opted in).
+		/**
+		 * Reports what a commit did to Query Monitor, and keeps the
+		 * numbers for the debug section of the answer when the tab asked
+		 * for it (the read half of the same request attaches them).
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string  $room              Room identifier.
+		 * @param array   $context           Transport context (debug opt-in).
+		 * @param float   $lock_wait_ms      Time spent acquiring the lock.
+		 * @param array   $state             Room state.
+		 * @param array   $plan              The planner's result.
+		 * @param array   $stale             Edits refused as `stale-base`.
+		 * @param array[] $requires_approval Units held for approval.
+		 * @param int     $new_head_seq      The newest position after this commit.
+		 * @param bool    $checkpointed      Whether a checkpoint was written.
+		 */
+		private function note_commit( string $room, array $context, float $lock_wait_ms, array $state, array $plan, array $stale, array $requires_approval, int $new_head_seq, bool $checkpointed ): void {
 			$plan_counts = array(
 				'applied'   => 0,
 				'escalated' => 0,
@@ -802,20 +962,34 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$this->debug_stash[ $room ] = array(
 					'lock_wait_ms' => $lock_wait_ms,
 					'window_rows'  => count( $state['log'] ),
-					'head_seq'     => $head_seq + $accepted_count,
+					'head_seq'     => $new_head_seq,
 					'plan'         => $plan_counts,
 					'checkpoint'   => $checkpointed,
 				);
 			}
+		}
 
-			/*
-			 * Resolutions, after intents: close open proposals. Idempotent by
-			 * proposalId — a redelivered, concurrent, or trimmed-and-resolved
-			 * (unknown) id acks as resolved without a new row; only a
-			 * currently-open proposal appends one, and only when the sender
-			 * may decide it (see may_decide()). A refused decision leaves
-			 * the proposal open.
-			 */
+		/**
+		 * Applies the review decisions of one request.
+		 *
+		 * Resolutions, after intents: close open proposals. Idempotent by
+		 * proposalId — a redelivered, concurrent, or trimmed-and-resolved
+		 * (unknown) id acks as resolved without a new row; only a
+		 * currently-open proposal appends one, and only when the sender
+		 * may decide it (see may_decide()). A refused decision leaves
+		 * the proposal open.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param string $room        Room identifier.
+		 * @param int    $client_id   Client identifier.
+		 * @param string $actor_id    The sender.
+		 * @param array  $resolutions Decision rows, from decode_updates().
+		 * @param array  $state       Room state. Updated.
+		 * @return array|WP_Error The places (in `$resolutions`) of the
+		 *                        refused decisions as keys, or a storage error.
+		 */
+		private function apply_decisions( string $room, int $client_id, string $actor_id, array $resolutions, array &$state ) {
 			$refused_decisions = array();
 			foreach ( $resolutions as $index => $resolution ) {
 				$proposal_id = $resolution['proposalId'];
@@ -848,9 +1022,22 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			unset( $this->room_state[ $room ] ); // Rows changed.
+			return $refused_decisions;
+		}
 
-			// One answer per row, in the order the rows were sent.
+		/**
+		 * Builds the answer: one verdict per row, in the order sent.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array[] $answers             One entry per row, from decode_updates().
+		 * @param array   $state               Room state after the commit.
+		 * @param array   $stale               Edits refused as `stale-base`.
+		 * @param array   $cancel_dispositions Cancel id => answer.
+		 * @param array   $refused_decisions   Places of the refused decisions.
+		 * @return array[] The verdicts.
+		 */
+		private static function build_answers( array $answers, array $state, array $stale, array $cancel_dispositions, array $refused_decisions ): array {
 			$dispositions = array();
 			foreach ( $answers as $answer ) {
 				$id = $answer['id'];
@@ -886,7 +1073,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 			}
 
-			return array( 'dispositions' => $dispositions );
+			return $dispositions;
 		}
 
 		/**
