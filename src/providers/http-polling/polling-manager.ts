@@ -587,10 +587,13 @@ function nextScheduledDelay(): number | null {
  */
 function scheduleNext( delay: number | null ): void {
 	if ( pollAgainRequested ) {
-		// A wake arrived while the last request was in flight.
+		// A wake arrived while the last request was in flight. If that
+		// request failed, its wait stands (see pollNow()).
 		pollAgainRequested = false;
-		pollingTimeoutId = setTimeout( poll, 0 );
-		return;
+		if ( 0 === consecutiveFailures ) {
+			pollingTimeoutId = setTimeout( poll, 0 );
+			return;
+		}
 	}
 	if ( null === delay ) {
 		isPolling = false;
@@ -603,10 +606,28 @@ function scheduleNext( delay: number | null ): void {
 /**
  * Polls now: a stopped loop restarts, a scheduled poll is brought forward,
  * an in-flight poll is followed by another as soon as it returns.
+ *
+ * One exception: the wait after a failed request stands. While requests
+ * fail, the wake paths (a local edit, an announcement, a queued handshake
+ * message) can fire many times a second, and each retry that fails at
+ * once counts toward the "connection lost" dialog. An offline tab would
+ * show it within a moment. Only the dialog's own Retry button retries at
+ * once.
  */
 function pollNow(): void {
 	if ( 0 === roomStates.size ) {
 		return;
+	}
+	if ( consecutiveFailures > 0 && ! isManualRetry ) {
+		if ( pollingTimeoutId ) {
+			// The retry is scheduled. It carries whatever woke us.
+			return;
+		}
+		if ( isPolling ) {
+			// A request is in flight. If it fails too, its own wait
+			// follows, not another request.
+			return;
+		}
 	}
 	if ( pollingTimeoutId ) {
 		clearTimeout( pollingTimeoutId );

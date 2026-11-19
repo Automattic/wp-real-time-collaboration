@@ -367,6 +367,44 @@ describe( 'polling-manager cadence', () => {
 		).toHaveLength( 1 );
 	} );
 
+	it( 'a wake-up does not shorten the wait after a failed request, so an offline tab does not race to the lost-connection dialog', async () => {
+		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ] ) );
+		const onStatusChange = jest.fn();
+		pollingManager.registerRoom( {
+			room: 'test-room',
+			session: createMockSession() as unknown as EngineSessionCodec,
+			log: jest.fn(),
+			onStatusChange,
+		} );
+		await jest.advanceTimersByTimeAsync( 0 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+
+		// The network goes away: every request from here on fails.
+		mockPostSyncUpdate.mockRejectedValue( new Error( 'offline' ) );
+		await jest.advanceTimersByTimeAsync( 1000 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
+
+		// The channel between tabs starts a handshake and queues its
+		// messages, many a second. Each one asks the loop to poll now.
+		const carrier = mockSetSignalCarrier.mock
+			.calls[ 0 ][ 0 ] as () => boolean;
+		for ( let message = 0; message < 20; message++ ) {
+			carrier();
+			await jest.advanceTimersByTimeAsync( 40 );
+		}
+
+		// 800 ms later: still inside the first wait (1 second), so no
+		// request went out and the dialog's condition is not met.
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
+		expect( onStatusChange ).not.toHaveBeenCalledWith(
+			expect.objectContaining( { backgroundRetriesFailed: true } )
+		);
+
+		// The wait ends and one retry goes out.
+		await jest.advanceTimersByTimeAsync( 300 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
+	} );
+
 	it( 'company from the heartbeat wakes a lone tab onto the timer cadence and releases its queue', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
 		const session = register();
