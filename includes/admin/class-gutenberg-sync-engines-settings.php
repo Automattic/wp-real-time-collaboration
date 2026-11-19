@@ -54,9 +54,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
 
 		/**
-		 * The transport a site uses when none is stored: WebSocket, with
-		 * polling as its backup. The same value as the default in
-		 * `wp_rtc_get_transport_slug()`.
+		 * The plugin's own default transport: WebSocket, with polling as
+		 * its backup. A site can set another default in code (see
+		 * `wp_rtc_get_default_transport_slug()`).
 		 *
 		 * @since n.e.x.t
 		 * @var string
@@ -362,7 +362,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		public static function delivery(): string {
 			$transport = self::stored_transport();
 			if ( '' === $transport ) {
-				$transport = self::TRANSPORT_DEFAULT;
+				// Nothing stored: show what the site really uses, which a
+				// constant or an environment variable may set.
+				$transport = wp_rtc_get_default_transport_slug();
 			}
 			if ( 'websocket' === $transport ) {
 				return self::DELIVERY_WEBSOCKET;

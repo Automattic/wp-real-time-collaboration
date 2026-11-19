@@ -49,11 +49,15 @@ class Tests_Collaboration_GutenbergSyncEnginesSettings extends WP_UnitTestCase {
 			$this->assertSame( $expected, Gutenberg_Sync_Engines_Settings::delivery(), "$transport + $advisory" );
 		}
 
-		// Nothing stored: the default, WebSocket with polling as its backup.
+		// Nothing stored: the list shows what the site really uses. The
+		// plugin's own default is WebSocket with polling as its backup,
+		// and the tests site sets polling with a constant.
 		delete_option( Gutenberg_Sync_Engines_Settings::TRANSPORT_OPTION );
 		delete_option( Gutenberg_Sync_Engines_Settings::ADVISORY_OPTION );
 		$this->assertSame( 'websocket', Gutenberg_Sync_Engines_Settings::TRANSPORT_DEFAULT );
-		$this->assertSame( Gutenberg_Sync_Engines_Settings::DELIVERY_WEBSOCKET, Gutenberg_Sync_Engines_Settings::delivery() );
+		$this->assertSame( 'http-polling', WP_COLLABORATION_TRANSPORT );
+		$this->assertSame( 'http-polling', wp_rtc_get_default_transport_slug() );
+		$this->assertSame( Gutenberg_Sync_Engines_Settings::DELIVERY_POLLING_WEBRTC, Gutenberg_Sync_Engines_Settings::delivery() );
 	}
 
 	public function test_saving_the_transport_list_writes_the_pair_and_stores_nothing_itself() {

@@ -109,6 +109,34 @@ if ( ! function_exists( 'wp_rtc_get_storage' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_rtc_get_default_transport_slug' ) ) {
+	/**
+	 * The transport a site uses when no choice is stored: the
+	 * `WP_COLLABORATION_TRANSPORT` constant, then the environment variable
+	 * of the same name, then WebSocket with polling as its backup.
+	 *
+	 * With WebSocket, a tab polls until its socket opens and whenever the
+	 * socket is down, and a site with no sync daemon address set never
+	 * tries the socket (see
+	 * `WP_WebSocket_Sync_Transport::has_socket_address()`).
+	 *
+	 * @since n.e.x.t
+	 *
+	 * @return string Transport slug.
+	 */
+	function wp_rtc_get_default_transport_slug(): string {
+		if ( defined( 'WP_COLLABORATION_TRANSPORT' ) && is_string( WP_COLLABORATION_TRANSPORT ) && '' !== WP_COLLABORATION_TRANSPORT ) {
+			return WP_COLLABORATION_TRANSPORT;
+		}
+		$from_env = getenv( 'WP_COLLABORATION_TRANSPORT' );
+		if ( is_string( $from_env ) && '' !== $from_env ) {
+			return $from_env;
+		}
+
+		return 'websocket';
+	}
+}
+
 if ( ! function_exists( 'wp_rtc_get_transport_slug' ) ) {
 	/**
 	 * The slug of the transport the site is configured to use.
@@ -116,27 +144,16 @@ if ( ! function_exists( 'wp_rtc_get_transport_slug' ) ) {
 	 * Read from the `WP_COLLABORATION_TRANSPORT` constant, then the
 	 * environment variable of the same name, then the
 	 * `wp_collaboration_transport` filter, which the settings screen
-	 * answers. The default is WebSocket, with polling as its backup: a
-	 * tab polls until its socket opens and whenever the socket is down,
-	 * and a site with no sync daemon address set never tries the socket
-	 * (see `WP_WebSocket_Sync_Transport::has_socket_address()`). A slug
-	 * that is not registered is replaced by a registered one in the
-	 * transport registry.
+	 * answers (see `wp_rtc_get_default_transport_slug()` for the
+	 * default). A slug that is not registered is replaced by a
+	 * registered one in the transport registry.
 	 *
 	 * @since n.e.x.t
 	 *
 	 * @return string Configured transport slug.
 	 */
 	function wp_rtc_get_transport_slug(): string {
-		$transport = 'websocket';
-		if ( defined( 'WP_COLLABORATION_TRANSPORT' ) && is_string( WP_COLLABORATION_TRANSPORT ) && '' !== WP_COLLABORATION_TRANSPORT ) {
-			$transport = WP_COLLABORATION_TRANSPORT;
-		} else {
-			$from_env = getenv( 'WP_COLLABORATION_TRANSPORT' );
-			if ( is_string( $from_env ) && '' !== $from_env ) {
-				$transport = $from_env;
-			}
-		}
+		$transport = wp_rtc_get_default_transport_slug();
 
 		/**
 		 * Filters the active collaboration transport slug.
