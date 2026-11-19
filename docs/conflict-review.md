@@ -25,7 +25,11 @@ it together. The code is in `src/review/`.
 - A block held back by the security filter (`wp_kses`, the
   `unfiltered_html` capability) shows a **held block card** with the
   held markup as inert text. A person allowed to publish unfiltered
-  HTML can open it, then approve, edit, or remove the block.
+  HTML can open it, then approve, edit, or remove the block. The
+  server enforces this: only such a person may approve a held block,
+  and only such a person or the block's author may dismiss it. Any
+  other decision is refused and the card stays open. An ordinary merge
+  conflict can be decided by anyone who can edit the post.
 - A change with no block to show it on, such as a post title or a
   proposed new block, is listed in the **"Changes to review"** panel in
   the document sidebar, with "Use proposed" and "Keep current".

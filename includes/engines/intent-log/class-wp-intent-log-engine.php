@@ -590,7 +590,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 							array( 'status' => 500 )
 						);
 					}
-					$state['proposals_open'][ $intent_id ] = true;
+					$state['proposals_open'][ $intent_id ] = array(
+						'reason'  => self::ESCALATION_REQUIRES_APPROVAL,
+						'actorId' => $intent['actorId'],
+					);
 					$state['settled'][ $intent_id ]        = array(
 						'status' => 'escalated',
 						'reason' => self::ESCALATION_REQUIRES_APPROVAL,
@@ -644,7 +647,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 					);
 					$stored              = $this->add_row( $room, $client_id, self::UPDATE_TYPE_PARKED, $proposal );
 					// Same-request resolutions can target it.
-					$state['proposals_open'][ $intent_id ] = true;
+					$state['proposals_open'][ $intent_id ] = array(
+						'reason'  => $proposal['reason'],
+						'actorId' => $proposal['actorId'],
+					);
 				} else {
 					$stored = true;
 				}
@@ -728,11 +734,20 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			 * Resolutions, after intents: close open proposals. Idempotent by
 			 * proposalId — a redelivered, concurrent, or trimmed-and-resolved
 			 * (unknown) id acks as resolved without a new row; only a
-			 * currently-open proposal appends one.
+			 * currently-open proposal appends one, and only when the sender
+			 * may decide it (see may_decide()). A refused decision leaves
+			 * the proposal open.
 			 */
-			foreach ( $resolutions as $resolution ) {
+			$refused_decisions = array();
+			foreach ( $resolutions as $index => $resolution ) {
 				$proposal_id = $resolution['proposalId'];
 				if ( isset( $state['proposals_open'][ $proposal_id ] ) && ! isset( $state['resolved'][ $proposal_id ] ) ) {
+					if ( ! self::may_decide( $state['proposals_open'][ $proposal_id ], $resolution['resolution'] ) ) {
+						$refused_decisions[ $index ] = true;
+						// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
+						do_action( 'qm/debug', "wp-sync: refused a review decision in {$room} (the sender may not decide this item)" );
+						continue;
+					}
 					$stored = $this->add_row(
 						$room,
 						$client_id,
@@ -772,6 +787,14 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 						);
 						break;
 					case 'resolution':
+						if ( isset( $refused_decisions[ $answer['index'] ] ) ) {
+							$dispositions[] = array(
+								'intentId' => $id,
+								'status'   => 'refused',
+								'reason'   => 'not-allowed',
+							);
+							break;
+						}
 						$dispositions[] = array(
 							'intentId' => $id,
 							'status'   => 'resolved',
@@ -807,7 +830,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 *   lists the ids whose first row was malformed, for the commit
 		 *   to store, and a later good row with such an id is not used.
 		 * - `resolution` or `cancel`: a usable review decision or
-		 *   cancellation, answered by the commit.
+		 *   cancellation, answered by the commit. A `resolution` carries
+		 *   its place in `resolutions` as `index`.
 		 * - `refused`: a complete refusal. A row with no readable id is
 		 *   named by `row`, its place in the request counted from 0.
 		 *
@@ -859,8 +883,9 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 					}
 					$resolutions[] = $decoded;
 					$answers[]     = array(
-						'kind' => 'resolution',
-						'id'   => $proposal_id,
+						'kind'  => 'resolution',
+						'id'    => $proposal_id,
+						'index' => count( $resolutions ) - 1,
 					);
 					continue;
 				}
@@ -955,6 +980,36 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				'refusals'    => $refusals,
 				'refused'     => $refused,
 			);
+		}
+
+		/**
+		 * Whether the current user may decide an open review item.
+		 *
+		 * An ordinary merge item is open to everyone who can edit the
+		 * post, which the transport has already checked. An edit held
+		 * because its author may not publish its markup is different:
+		 * approving it publishes that markup, so only a user with
+		 * `unfiltered_html` may approve it. Dismissing it throws the held
+		 * edit away, which its author may also do.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @param array  $proposal   The open item: `reason` and `actorId`.
+		 * @param string $resolution `restored` (approve) or `dismissed`.
+		 * @return bool Whether the decision is allowed.
+		 */
+		private static function may_decide( array $proposal, string $resolution ): bool {
+			if ( self::ESCALATION_REQUIRES_APPROVAL !== $proposal['reason'] ) {
+				return true;
+			}
+			if ( current_user_can( 'unfiltered_html' ) ) {
+				return true;
+			}
+
+			// The actor id is `u{user id}c{client id}`, stamped by the server.
+			$is_author = 0 === strpos( (string) $proposal['actorId'], 'u' . get_current_user_id() . 'c' );
+
+			return 'dismissed' === $resolution && $is_author;
 		}
 
 		/**
@@ -1710,7 +1765,10 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 							'status' => 'escalated',
 							'reason' => $decoded['reason'],
 						);
-						$proposals_open[ $decoded['intent']['intentId'] ] = true;
+						$proposals_open[ $decoded['intent']['intentId'] ] = array(
+							'reason'  => $decoded['reason'],
+							'actorId' => $decoded['actorId'] ?? '',
+						);
 
 						/*
 						 * A planner escalation stays part of its author's
@@ -1773,7 +1831,8 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				'log'            => $log,
 				'settled'        => $settled,
 				// Review lifecycle: open proposals (escalations minus
-				// resolutions) and resolved ids, for resolution validation.
+				// resolutions), each with its reason and author, and
+				// resolved ids, for resolution validation.
 				'proposals_open' => $proposals_open,
 				'resolved'       => $resolved,
 				// Each actor's planner escalations with their settling seq:

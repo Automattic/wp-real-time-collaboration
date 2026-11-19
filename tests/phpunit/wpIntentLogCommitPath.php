@@ -1,17 +1,19 @@
 <?php
 /**
- * Tests that prove server-side defects of the intent-log engine which
- * nobody has fixed yet.
+ * Tests for the rules of the intent-log engine's commit path on the
+ * server: what happens when a tab's rows arrive, with more than one
+ * process writing to a room.
  *
- * Every test states the CORRECT behavior and wraps it in
- * assert_known_defect(). The test passes while the defect is there and
- * fails once it is fixed, so the fix removes the marker. To see the real
- * failure of each defect, run the file with RTC_KNOWN_DEFECTS_RAW=1:
+ * - The engine never uses a copy of a room that another process has
+ *   changed since.
+ * - A snapshot does not throw away the recent history.
+ * - Every row gets one answer, a bad row is refused by itself, and a
+ *   row sent again gets its first answer.
+ * - The body of an inserted block is checked fully.
+ * - The server checks who may decide a review item.
  *
- *     npx @wordpress/env --config .wp-env.tests.json run cli \
- *         --env-cwd=wp-content/plugins/wp-real-time-collaboration \
- *         env RTC_KNOWN_DEFECTS_RAW=1 vendor/bin/phpunit \
- *         --filter Tests_Collaboration_WpIntentLogKnownDefects
+ * Most of these tests began as proof of a defect, so many of them say
+ * what once went wrong.
  *
  * @package Gutenberg
  */
@@ -19,17 +21,7 @@
 /**
  * @group collaboration
  */
-class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
-	use Known_Defect_Assertions;
-
-	/**
-	 * The change that is expected to fix every defect in this file. It is
-	 * named in the failure message of a test whose defect is gone.
-	 *
-	 * @var string
-	 */
-	const FIX = "the rework of the server's commit path";
-
+class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	const POST_CONTENT = "<!-- wp:paragraph -->\n<p>Hello world</p>\n<!-- /wp:paragraph -->";
 
 	/**
@@ -546,7 +538,7 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 
 		// One long-lived engine. Its first use of the room is a commit
 		// whose write the storage refuses.
-		$storage                = new Known_Defects_Refusing_Storage();
+		$storage                = new Commit_Path_Refusing_Storage();
 		$long_lived             = new WP_Intent_Log_Engine( $storage );
 		$storage->refuse_writes = 1;
 		$failed                 = self::commit( $long_lived, $room, 101, array( self::text_edit( 'a-fail', $block, 0, 'x', 0 ) ) );
@@ -1407,37 +1399,29 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 	}
 
 	/*
-	 * "The server", a review decision is not checked.
+	 * The server checks who may decide a review item.
 	 */
 
 	/**
-	 * Defect: any user who can edit the post can close any review item.
-	 * Here an edit is held because its author may not publish its markup
-	 * (no `unfiltered_html`). Another user who also lacks that right
-	 * sends "approve" (`restored`), and the server closes the item.
+	 * Holds an edit for approval: its author may not publish its markup.
+	 * In the test only the given user may publish unfiltered HTML.
 	 *
-	 * The rule comes from docs/conflict-review.md ("A person allowed to
-	 * publish unfiltered HTML can open it, then approve, edit, or remove
-	 * the block") and the editor's own text ("Only someone allowed to
-	 * publish unfiltered HTML can approve this.").
-	 *
-	 * To be fixed by the rework of the server's commit path.
+	 * @param string $room       Room name.
+	 * @param string $block      Paragraph id.
+	 * @param int    $privileged The one user who may publish unfiltered HTML.
 	 */
-	public function test_held_markup_is_not_approved_by_a_user_who_may_not_publish_it() {
-		list( , $room, $block ) = $this->make_room();
-
-		// Nobody in this test may publish unfiltered HTML.
+	private function hold_an_edit_for_approval( string $room, string $block, int $privileged ): void {
 		add_filter(
 			'map_meta_cap',
-			static function ( $caps, $cap ) {
-				if ( 'unfiltered_html' === $cap ) {
+			static function ( $caps, $cap, $user_id ) use ( $privileged ) {
+				if ( 'unfiltered_html' === $cap && $user_id !== $privileged ) {
 					return array( 'do_not_allow' );
 				}
 
 				return $caps;
 			},
 			10,
-			2
+			3
 		);
 		$this->assertFalse( current_user_can( 'unfiltered_html' ) );
 
@@ -1474,40 +1458,126 @@ class Tests_Collaboration_WpIntentLogKnownDefects extends WP_UnitTestCase {
 			),
 			self::verdict( $held, 'held-1' )
 		);
+	}
 
-		// Another editor, who may not publish it either, approves it.
-		wp_set_current_user( self::$other_editor_id );
-		$this->assertTrue( current_user_can( 'edit_post', (int) substr( $room, strlen( 'postType/post:' ) ) ) );
-		$this->assertFalse( current_user_can( 'unfiltered_html' ) );
-		$answer = self::commit(
-			self::engine(),
-			$room,
-			202,
-			array(
+	/**
+	 * One review decision row.
+	 *
+	 * @param string $proposal_id The review item.
+	 * @param string $resolution  `restored` (approve) or `dismissed`.
+	 * @return array Typed update.
+	 */
+	private static function decision( string $proposal_id, string $resolution ): array {
+		return array(
+			'type' => WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED,
+			'data' => wp_json_encode(
 				array(
-					'type' => WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED,
-					'data' => wp_json_encode(
-						array(
-							'proposalId' => 'held-1',
-							'resolution' => 'restored',
-						)
-					),
-				),
-			)
+					'proposalId' => $proposal_id,
+					'resolution' => $resolution,
+				)
+			),
+		);
+	}
+
+	/**
+	 * Who may decide an edit held for approval.
+	 *
+	 * @return array[] Data sets: who decides, the decision, whether it is allowed.
+	 */
+	public function data_decisions_on_a_held_edit(): array {
+		return array(
+			'another editor without the right approves'  => array( 'other', 'restored', false ),
+			'another editor without the right dismisses' => array( 'other', 'dismissed', false ),
+			'the author approves'                        => array( 'author', 'restored', false ),
+			'the author dismisses'                       => array( 'author', 'dismissed', true ),
+			'someone with the right approves'            => array( 'privileged', 'restored', true ),
+			'someone with the right dismisses'           => array( 'privileged', 'dismissed', true ),
+		);
+	}
+
+	/**
+	 * An edit held because its author may not publish its markup (no
+	 * `unfiltered_html`) is approved only by a user who may publish it.
+	 * It is dismissed by such a user or by its author. Every other
+	 * decision is refused, and the item stays open. Once any user who
+	 * could edit the post could close any review item.
+	 *
+	 * The rule is in docs/conflict-review.md, and in the editor's own
+	 * text ("Only someone allowed to publish unfiltered HTML can approve
+	 * this.").
+	 *
+	 * @dataProvider data_decisions_on_a_held_edit
+	 *
+	 * @param string $who        `author`, `other` or `privileged`.
+	 * @param string $resolution `restored` (approve) or `dismissed`.
+	 * @param bool   $allowed    Whether the decision is allowed.
+	 */
+	public function test_held_edit_is_decided_only_by_a_user_who_may( string $who, string $resolution, bool $allowed ) {
+		list( , $room, $block ) = $this->make_room();
+		$privileged             = self::factory()->user->create( array( 'role' => 'editor' ) );
+		$this->hold_an_edit_for_approval( $room, $block, $privileged );
+
+		$deciders = array(
+			'author'     => self::$editor_id,
+			'other'      => self::$other_editor_id,
+			'privileged' => $privileged,
+		);
+		wp_set_current_user( $deciders[ $who ] );
+		$this->assertTrue( current_user_can( 'edit_post', (int) substr( $room, strlen( 'postType/post:' ) ) ) );
+		$this->assertSame( 'privileged' === $who, current_user_can( 'unfiltered_html' ) );
+
+		// The author decides from the tab that sent the edit, the others
+		// from their own.
+		$answer = self::commit( self::engine(), $room, 'author' === $who ? 101 : 202, array( self::decision( 'held-1', $resolution ) ) );
+
+		$stored = array_column( self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED ), 'resolution', 'proposalId' );
+		if ( $allowed ) {
+			$this->assertSame( array( 'status' => 'resolved' ), self::verdict( $answer, 'held-1' ) );
+			$this->assertSame( array( 'held-1' => $resolution ), $stored );
+			return;
+		}
+
+		$this->assertSame(
+			array(
+				'status' => 'refused',
+				'reason' => 'not-allowed',
+			),
+			self::verdict( $answer, 'held-1' ),
+			'The sender is told the decision was refused.'
+		);
+		$this->assertSame( array(), $stored, 'The held item stays open for someone who may decide.' );
+
+		// A user who may decide can still close it.
+		wp_set_current_user( $privileged );
+		$later = self::commit( self::engine(), $room, 303, array( self::decision( 'held-1', 'dismissed' ) ) );
+		$this->assertSame( array( 'status' => 'resolved' ), self::verdict( $later, 'held-1' ) );
+	}
+
+	/**
+	 * An ordinary merge item (two edits that clash) is decided by anyone
+	 * who can edit the post, whether or not they may publish unfiltered
+	 * HTML.
+	 */
+	public function test_merge_item_is_decided_by_anyone_who_can_edit_the_post() {
+		list( , $room, $block ) = $this->make_room();
+		add_filter(
+			'map_meta_cap',
+			static function ( $caps, $cap ) {
+				return 'unfiltered_html' === $cap ? array( 'do_not_allow' ) : $caps;
+			},
+			10,
+			2
 		);
 
-		$this->assert_known_defect(
-			self::FIX,
-			function () use ( $answer, $room ) {
-				$this->assertSame(
-					array(),
-					self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED ),
-					'The held item stays open for someone who may decide.'
-				);
-				$verdict = self::verdict( $answer, 'held-1' );
-				$this->assertNotSame( 'resolved', $verdict['status'] ?? null, 'The sender is told the decision was refused.' );
-			}
-		);
+		self::commit( self::engine(), $room, 101, array( self::align_edit( 'a-1', $block, 'wide' ) ) );
+		$clash = self::commit( self::engine(), $room, 202, array( self::align_edit( 'b-1', $block, 'full' ) ) );
+		$this->assertSame( 'escalated', self::verdict( $clash, 'b-1' )['status'] );
+
+		wp_set_current_user( self::$other_editor_id );
+		$answer = self::commit( self::engine(), $room, 303, array( self::decision( 'b-1', 'restored' ) ) );
+
+		$this->assertSame( array( 'status' => 'resolved' ), self::verdict( $answer, 'b-1' ) );
+		$this->assertCount( 1, self::stored_rows( $room, WP_Intent_Log_Engine::UPDATE_TYPE_RESOLVED ) );
 	}
 }
 
@@ -1533,7 +1603,7 @@ class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
  * A table storage that can be told to refuse its next writes, to make a
  * commit fail midway.
  */
-class Known_Defects_Refusing_Storage extends WP_Sync_Table_Storage {
+class Commit_Path_Refusing_Storage extends WP_Sync_Table_Storage {
 	/**
 	 * How many of the next writes to refuse.
 	 *

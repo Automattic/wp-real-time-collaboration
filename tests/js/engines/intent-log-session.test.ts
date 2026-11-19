@@ -536,6 +536,60 @@ describe( 'intent-log session codec', () => {
 		);
 	} );
 
+	it( 'opens a review item again when the server refuses the decision on it', () => {
+		const wire = makeWireServer();
+		const alice = makeSession( 1, 11 );
+		const bob = makeSession( 2, 22 );
+		const aliceLink = connect( wire, alice );
+		const bobLink = connect( wire, bob );
+		aliceLink.poll();
+		bobLink.poll();
+
+		// Two changes to one attribute that did not see each other: the
+		// later one is set aside for review.
+		alice.author( 'set_attr', {
+			syncId: 'p1',
+			key: 'align',
+			value: 'wide',
+			observedVersion: 0,
+		} );
+		bob.author( 'set_attr', {
+			syncId: 'p1',
+			key: 'align',
+			value: 'full',
+			observedVersion: 0,
+		} );
+		aliceLink.poll();
+		bobLink.poll();
+		aliceLink.poll();
+		const [ item ] = alice.getOpenProposals();
+		expect( item ).toBeDefined();
+
+		const settled = jest.fn();
+		const changed = jest.fn();
+		alice.onDisposition( settled );
+		alice.onProposalsChange( changed );
+
+		// Alice decides. The item closes here at once.
+		alice.resolveProposal( item.intent.intentId, 'restored' );
+		expect( alice.getOpenProposals() ).toHaveLength( 0 );
+		changed.mockClear();
+
+		// The server answers that she may not decide it.
+		alice.receiveDispositions!( [
+			{
+				intentId: item.intent.intentId,
+				status: 'refused',
+				reason: 'not-allowed',
+			},
+		] );
+
+		expect( alice.getOpenProposals() ).toHaveLength( 1 );
+		expect( changed ).toHaveBeenCalledTimes( 1 );
+		// It is not the verdict of an edit, so those listeners hear nothing.
+		expect( settled ).not.toHaveBeenCalled();
+	} );
+
 	it( 'takes no notice of an answer that names a row by its place and not by an id', () => {
 		const wire = makeWireServer();
 		const alice = makeSession( 1, 11 );

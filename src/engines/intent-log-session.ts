@@ -921,6 +921,18 @@ export function createIntentLogSession(
 			}
 			let settled = false;
 			for ( const disposition of dispositions ) {
+				if ( 'refused' === disposition.status ) {
+					/*
+					 * The answer to a review decision this tab sent, not
+					 * to an edit: the person may not decide that item.
+					 * The decision was taken as made when it was sent, so
+					 * the item is open again here, as it is on the server.
+					 */
+					if ( resolvedIds.delete( disposition.intentId ) ) {
+						notifyProposalsChange();
+					}
+					continue;
+				}
 				/*
 				 * Best-effort: the row-processing that precedes this ack
 				 * usually settled the intent already (predicted is then

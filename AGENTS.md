@@ -319,9 +319,11 @@ before a big change. A durable lesson from an issue goes here.
 
 - **Some tests are expected failures on purpose.** Each states the
   correct behavior for a known defect and passes while the defect is
-  there: `tests/js/known-defects/` (`it.failing`) and
-  `tests/phpunit/wpIntentLogKnownDefects.php` (`assert_known_defect()`;
-  `RTC_KNOWN_DEFECTS_RAW=1` shows the real failures). A defect that
+  there: `tests/js/known-defects/` (`it.failing`), and in PHPUnit a
+  test whose assertions are wrapped in `assert_known_defect()` (the
+  trait `tests/phpunit/fixtures/trait-known-defect-assertions.php`;
+  `RTC_KNOWN_DEFECTS_RAW=1` shows the real failures; no PHPUnit test
+  uses it now). A defect that
   only a browser can show gets a Playwright test marked `test.fail`.
   A fix turns its test red. Remove the marker then, not the test.
 - The WordPress Playwright helpers fall back to port 8889 and to this
