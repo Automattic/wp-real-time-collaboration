@@ -98,6 +98,30 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 		}
 
 		/**
+		 * Whether the site says where its sync daemon is: the "WebSocket
+		 * transport server" setting holds an address, or the host or port
+		 * constant is defined, or code answers the `wp_sync_websocket_url`
+		 * filter.
+		 *
+		 * WebSocket is the default transport, and most sites run no
+		 * daemon. Without an address the browser gets none, does not ask
+		 * for a socket token, and polls. The address that
+		 * `get_socket_url()` falls back to (`127.0.0.1:8787`) only suits a
+		 * browser on the server itself, so it does not count.
+		 *
+		 * @since n.e.x.t
+		 *
+		 * @return bool Whether a daemon address is set.
+		 */
+		public static function has_socket_address(): bool {
+			if ( class_exists( 'Gutenberg_Sync_Engines_Settings' ) && '' !== Gutenberg_Sync_Engines_Settings::websocket_url() ) {
+				return true;
+			}
+
+			return defined( 'WP_SYNC_WEBSOCKET_HOST' ) || defined( 'WP_SYNC_WEBSOCKET_PORT' ) || (bool) has_filter( 'wp_sync_websocket_url' );
+		}
+
+		/**
 		 * The socket URL the client should connect to: the "WebSocket URL"
 		 * setting (Settings → Collaboration) when one is entered, else a
 		 * `ws://` URL on the configured host/port. The

@@ -47,8 +47,9 @@ environments and both Playground blueprints install it.
    once a review panel offers to restore or dismiss the change that was
    set aside.
 
-The defaults (the intent-log engine, polling with a WebRTC advisory
-channel) need nothing from the host. Every option is explained on the
+The defaults need nothing from the host: the intent-log engine, and
+the WebSocket transport with polling as its backup. Until a sync daemon
+address is set, tabs poll, with a WebRTC advisory channel. Every option is explained on the
 settings screen itself. Deactivating the plugin turns
 collaboration off and keeps the storage tables; deleting it drops them.
 

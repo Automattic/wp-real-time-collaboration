@@ -748,7 +748,8 @@ async function runDoctorMode() {
 			}, engine ${ (
 				engine || '(default: intent-log)'
 			).trim() }, transport ${ (
-				transport || '(default: http-polling)'
+				transport ||
+				'(default: websocket with polling as backup; the tests site pins http-polling)'
 			).trim() }, advisory ${
 				( advisory || '(default: webrtc-advisory)' ).trim() || 'off'
 			}`

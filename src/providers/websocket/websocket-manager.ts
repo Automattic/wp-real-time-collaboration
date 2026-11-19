@@ -136,6 +136,22 @@ async function fetchToken(): Promise< string > {
  * @return {string} Socket URL.
  */
 function socketUrl(): string {
+	const base = announcedSocketUrl();
+	if ( ! base ) {
+		throw new Error( 'WebSocket URL is not configured' );
+	}
+	return base;
+}
+
+/**
+ * The socket address the server printed, or an empty string. The server
+ * prints none when the site has no sync daemon address set. WebSocket is
+ * the default transport and most sites run no daemon, so this is the
+ * usual case there: the rooms stay on polling, and no token is asked for.
+ *
+ * @return The address, or an empty string.
+ */
+function announcedSocketUrl(): string {
 	// Announced through the framework's `wp_sync_transport_client_config`
 	// filter (hooked by this plugin's PHP half).
 	const transportConfig = (
@@ -145,11 +161,7 @@ function socketUrl(): string {
 			};
 		}
 	 )._wpCollaborationTransportConfig;
-	const base = transportConfig?.websocket?.url;
-	if ( ! base ) {
-		throw new Error( 'WebSocket URL is not configured' );
-	}
-	return base;
+	return transportConfig?.websocket?.url ?? '';
 }
 
 /**
@@ -559,6 +571,12 @@ function connect(): void {
 		return;
 	}
 	if ( socket && WebSocket.OPEN === socket.readyState ) {
+		return;
+	}
+	if ( ! announcedSocketUrl() ) {
+		// No daemon address: polling serves the rooms, for good. No
+		// token request, and nothing to try again later.
+		parkRooms();
 		return;
 	}
 	connecting = true;

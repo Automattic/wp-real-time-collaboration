@@ -49,10 +49,11 @@ class Tests_Collaboration_GutenbergSyncEnginesSettings extends WP_UnitTestCase {
 			$this->assertSame( $expected, Gutenberg_Sync_Engines_Settings::delivery(), "$transport + $advisory" );
 		}
 
-		// Nothing stored: the default pair.
+		// Nothing stored: the default, WebSocket with polling as its backup.
 		delete_option( Gutenberg_Sync_Engines_Settings::TRANSPORT_OPTION );
 		delete_option( Gutenberg_Sync_Engines_Settings::ADVISORY_OPTION );
-		$this->assertSame( Gutenberg_Sync_Engines_Settings::DELIVERY_POLLING_WEBRTC, Gutenberg_Sync_Engines_Settings::delivery() );
+		$this->assertSame( 'websocket', Gutenberg_Sync_Engines_Settings::TRANSPORT_DEFAULT );
+		$this->assertSame( Gutenberg_Sync_Engines_Settings::DELIVERY_WEBSOCKET, Gutenberg_Sync_Engines_Settings::delivery() );
 	}
 
 	public function test_saving_the_transport_list_writes_the_pair_and_stores_nothing_itself() {
@@ -72,7 +73,8 @@ class Tests_Collaboration_GutenbergSyncEnginesSettings extends WP_UnitTestCase {
 		$this->assertSame( '', get_option( Gutenberg_Sync_Engines_Settings::ADVISORY_OPTION ) );
 
 		// An unknown value falls back to the default pair.
-		$this->assertSame( 'polling-webrtc', $settings->sanitize_delivery( 'carrier-pigeon' ) );
+		$this->assertSame( 'websocket', $settings->sanitize_delivery( 'carrier-pigeon' ) );
+		$this->assertSame( 'websocket', get_option( Gutenberg_Sync_Engines_Settings::TRANSPORT_OPTION ) );
 		$this->assertSame( 'webrtc-advisory', get_option( Gutenberg_Sync_Engines_Settings::ADVISORY_OPTION ) );
 
 		// The field's own name is never stored: the plugin short-circuits
@@ -119,6 +121,28 @@ class Tests_Collaboration_GutenbergSyncEnginesSettings extends WP_UnitTestCase {
 
 		update_option( Gutenberg_Sync_Engines_Settings::ADVISORY_WEBSOCKET_URL_OPTION, 'https://not-a-socket.example.com' );
 		$this->assertSame( 'wss://daemon.example.com', Gutenberg_Sync_Engines_Settings::advisory_websocket_url(), 'A bad scheme means the default' );
+	}
+
+	/**
+	 * WebSocket is the default transport, and most sites run no daemon.
+	 * The browser is only given a socket address when the site says where
+	 * its daemon is. Without one it does not try the socket.
+	 */
+	public function test_the_browser_gets_a_socket_address_only_when_one_is_set() {
+		$plugin     = Gutenberg_Sync_Engines_Plugin::instance();
+		$transports = array( 'websocket', 'http-polling' );
+
+		// The tests site defines the host constant, which counts.
+		$this->assertTrue( defined( 'WP_SYNC_WEBSOCKET_HOST' ) );
+		$this->assertTrue( WP_WebSocket_Sync_Transport::has_socket_address() );
+		$this->assertSame(
+			WP_WebSocket_Sync_Transport::get_socket_url(),
+			$plugin->filter_transport_client_config( array(), $transports )['websocket']['url']
+		);
+
+		update_option( Gutenberg_Sync_Engines_Settings::WEBSOCKET_URL_OPTION, 'wss://daemon.example.com' );
+		$this->assertTrue( WP_WebSocket_Sync_Transport::has_socket_address() );
+		$this->assertSame( 'wss://daemon.example.com', $plugin->filter_transport_client_config( array(), $transports )['websocket']['url'] );
 	}
 
 	public function test_the_polling_interval_defaults_to_five_seconds() {

@@ -9,8 +9,18 @@ for measured latency and idle traffic on your hardware.
 
 | Transport | Edit-to-visible | Idle cost per collaborator | Needs from the host |
 | --- | --- | --- | --- |
-| `http-polling` (default) | seconds, bounded by the poll interval; under a second when the advisory channel is up | one request per interval, or none while nothing changes | nothing |
-| `websocket` | tens of milliseconds | a few frames per heartbeat, plus the daemon | the daemon, and a proxy that passes the WebSocket upgrade |
+| `http-polling` | seconds, bounded by the poll interval; under a second when the advisory channel is up | one request per interval, or none while nothing changes | nothing |
+| `websocket` (default) | tens of milliseconds | a few frames per heartbeat, plus the daemon | the daemon, and a proxy that passes the WebSocket upgrade |
+
+WebSocket is the default, with polling as its backup. A tab polls until
+its socket opens and whenever the socket is down, and takes the room
+back onto the socket when it opens again. A site that has not said
+where its daemon is (the "WebSocket transport server" setting is empty,
+neither `WP_SYNC_WEBSOCKET_HOST` nor `WP_SYNC_WEBSOCKET_PORT` is
+defined, and nothing answers the `wp_sync_websocket_url` filter) is
+taken to have no daemon: its tabs never ask for a socket token and
+poll, with the WebRTC advisory channel. So the default needs nothing
+from the host until a daemon is set up.
 
 A post admits <!-- const:DEFAULT_CLIENT_LIMIT_PER_ROOM -->5<!-- /const --> editor
 tabs by default, including the joining tab, checked on a tab's first

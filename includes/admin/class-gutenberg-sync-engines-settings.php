@@ -54,6 +54,16 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
 
 		/**
+		 * The transport a site uses when none is stored: WebSocket, with
+		 * polling as its backup. The same value as the default in
+		 * `wp_rtc_get_transport_slug()`.
+		 *
+		 * @since n.e.x.t
+		 * @var string
+		 */
+		const TRANSPORT_DEFAULT = 'websocket';
+
+		/**
 		 * The form field behind the "Transport" list. NOT an option: its
 		 * sanitize callback writes the transport and advisory options and
 		 * the value itself is never stored (see register()).
@@ -286,8 +296,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		 */
 		public static function transport_choices(): array {
 			$labels  = array(
-				'http-polling' => __( 'Short-polling (default)', 'gutenberg-sync-engines' ),
-				'websocket'    => __( 'WebSocket', 'gutenberg-sync-engines' ),
+				'http-polling' => __( 'Short-polling', 'gutenberg-sync-engines' ),
+				'websocket'    => __( 'WebSocket (default)', 'gutenberg-sync-engines' ),
 			);
 			$choices = array();
 
@@ -322,7 +332,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 				self::DELIVERY_POLLING_WEBRTC    => array(
 					'transport'   => 'http-polling',
 					'advisory'    => self::ADVISORY_WEBRTC,
-					'label'       => __( 'Polling with a WebRTC advisory channel (default)', 'gutenberg-sync-engines' ),
+					'label'       => __( 'Polling with a WebRTC advisory channel', 'gutenberg-sync-engines' ),
 					'description' => __( 'Peers connect to each other to share announcements and poll for updates only when needed. WebRTC connectivity is not guaranteed. Peers fall back to polling on failure.', 'gutenberg-sync-engines' ),
 				),
 				self::DELIVERY_POLLING_WEBSOCKET => array(
@@ -334,8 +344,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 				self::DELIVERY_WEBSOCKET         => array(
 					'transport'   => 'websocket',
 					'advisory'    => self::ADVISORY_WEBRTC,
-					'label'       => __( 'WebSocket', 'gutenberg-sync-engines' ),
-					'description' => __( 'Updates are exchanged over a persistent socket connection to WordPress. Peers fall back to polling on failure.', 'gutenberg-sync-engines' ),
+					'label'       => __( 'WebSocket, with polling as the backup (default)', 'gutenberg-sync-engines' ),
+					'description' => __( 'Updates are exchanged over a persistent socket connection to the sync daemon. A tab polls until its socket opens and whenever the socket is down. A site with no sync daemon address set does not try the socket: its tabs poll, with a WebRTC advisory channel.', 'gutenberg-sync-engines' ),
 				),
 			);
 		}
@@ -351,6 +361,9 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 		 */
 		public static function delivery(): string {
 			$transport = self::stored_transport();
+			if ( '' === $transport ) {
+				$transport = self::TRANSPORT_DEFAULT;
+			}
 			if ( 'websocket' === $transport ) {
 				return self::DELIVERY_WEBSOCKET;
 			}
@@ -714,6 +727,8 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 				$value = 'http-polling';
 			}
 			$choices = self::transport_choices();
+			// A slug that is not offered, such as a removed transport,
+			// becomes polling, which needs nothing beside WordPress.
 			return isset( $choices[ $value ] ) ? $value : 'http-polling';
 		}
 
@@ -730,7 +745,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			$choices = self::delivery_choices();
 			$value   = (string) $value;
 			if ( ! isset( $choices[ $value ] ) ) {
-				$value = self::DELIVERY_POLLING_WEBRTC;
+				$value = self::DELIVERY_WEBSOCKET;
 			}
 			update_option( self::TRANSPORT_OPTION, $choices[ $value ]['transport'] );
 			update_option( self::ADVISORY_OPTION, $choices[ $value ]['advisory'] );
@@ -852,7 +867,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Settings' ) ) {
 			$effective = class_exists( 'WP_WebSocket_Sync_Transport' ) ? WP_WebSocket_Sync_Transport::get_socket_url() : '';
 			$this->render_url_input( self::WEBSOCKET_URL_OPTION, self::websocket_url(), $effective );
 			echo '<p class="description">' . wp_kses(
-				__( 'The address of the sync daemon, the long-running process that serves the WebSocket (use <code>wss://</code> behind TLS in production). If empty, the daemon\'s own host and port are used: <code>WP_SYNC_WEBSOCKET_HOST</code> and <code>WP_SYNC_WEBSOCKET_PORT</code>, default <code>127.0.0.1:8787</code>. The <code>wp_sync_websocket_url</code> filter overrides this field and makes it read-only.', 'gutenberg-sync-engines' ),
+				__( 'The address of the sync daemon, the long-running process that serves the WebSocket (use <code>wss://</code> behind TLS in production). If empty, the daemon\'s own host and port are used when either is defined: <code>WP_SYNC_WEBSOCKET_HOST</code> and <code>WP_SYNC_WEBSOCKET_PORT</code>. If this field is empty and neither is defined, the editor takes the site to have no daemon: it does not try the socket, and polls. The <code>wp_sync_websocket_url</code> filter overrides this field and makes it read-only.', 'gutenberg-sync-engines' ),
 				array( 'code' => array() )
 			) . '</p>';
 			$this->show_row_for( self::WEBSOCKET_URL_OPTION, array( self::DELIVERY_WEBSOCKET ) );

@@ -6,8 +6,10 @@
  * deliberately omits the monorepo-suite-specific steps (e.g. deactivating
  * Gutenberg's CSS-animation test plugin) that assume test plugins this
  * environment does not map. The default suite runs over the HTTP-polling
- * transport. The WebSocket suite selects its transport and starts the
- * daemon itself (see playwright.rtc-websocket.config.ts).
+ * transport: the tests site pins it with the `WP_COLLABORATION_TRANSPORT`
+ * constant in `.wp-env.tests.json`, because the plugin's own default is
+ * WebSocket. The WebSocket suite stores its transport, which wins over
+ * the constant, and starts the daemon itself.
  *
  * External dependencies
  */

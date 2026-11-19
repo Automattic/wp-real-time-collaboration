@@ -390,6 +390,47 @@ describe( 'websocket manager', () => {
 	} );
 
 	describe( 'preferred transport: short polling is the fallback', () => {
+		it( 'on a site with no daemon address: polls, asks for no token, and never tries the socket', async () => {
+			setup();
+			// The server prints an empty address when none is set.
+			(
+				window as Window & {
+					_wpCollaborationTransportConfig?: unknown;
+				}
+			 )._wpCollaborationTransportConfig = {
+				websocket: { url: '' },
+			};
+			const session = fakeSession();
+			const onStatusChange = jest.fn();
+			websocketManager.registerRoom( {
+				room: 'postType/post:1',
+				session,
+				onStatusChange,
+			} );
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect( mockPolling.registerRoom ).toHaveBeenCalledTimes( 1 );
+			expect(
+				mockPolling.registerRoom.mock.calls[ 0 ][ 0 ]
+			).toMatchObject( { room: 'postType/post:1', session } );
+
+			// Not now, and not later: there is nothing to try again.
+			jest.useFakeTimers();
+			try {
+				jest.advanceTimersByTime( 120000 );
+			} finally {
+				jest.useRealTimers();
+			}
+			expect( apiFetch ).not.toHaveBeenCalled();
+			expect( FakeWebSocket.instances ).toHaveLength( 0 );
+			expect( onStatusChange ).not.toHaveBeenCalledWith( {
+				status: 'connecting',
+			} );
+
+			websocketManager.unregisterRoom( 'postType/post:1' );
+		} );
+
 		it( 'parks the room with short polling when the token cannot be minted', async () => {
 			setup();
 			( apiFetch as unknown as jest.Mock ).mockRejectedValue(

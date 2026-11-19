@@ -271,8 +271,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		 * (`window._wpCollaborationTransportConfig`): the framework carries no
 		 * transport-specific knowledge, so the WebSocket transport's socket
 		 * URL must be announced from here. Without it the client's socket
-		 * provider has no URL to connect to and the websocket transport
-		 * cannot establish a session.
+		 * provider has no URL to connect to, and its rooms stay on polling.
 		 *
 		 * @since 0.1.0
 		 *
@@ -283,8 +282,10 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Plugin' ) ) {
 		public function filter_transport_client_config( $config, $transports ): array {
 			$config = is_array( $config ) ? $config : array();
 			if ( in_array( WP_WebSocket_Sync_Transport::TRANSPORT_SLUG, (array) $transports, true ) ) {
+				// No address set means no daemon: the browser gets an empty
+				// address, does not try the socket, and polls.
 				$config[ WP_WebSocket_Sync_Transport::TRANSPORT_SLUG ] = array(
-					'url' => WP_WebSocket_Sync_Transport::get_socket_url(),
+					'url' => WP_WebSocket_Sync_Transport::has_socket_address() ? WP_WebSocket_Sync_Transport::get_socket_url() : '',
 				);
 			}
 			return $config;

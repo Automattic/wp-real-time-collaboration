@@ -35,6 +35,12 @@ release, which the release script generates from the commit history.
   interface or registers a transport must use the new names.
 - Gutenberg's `__unstable_wp_sync_storage` filter no longer changes the
   plugin's storage. Use `wp_rtc_storage`.
+- WebSocket, with polling as its backup, is the default transport. A
+  site that has set no sync daemon address is taken to have no daemon:
+  its tabs do not try the socket and poll, as before. A site that
+  defines `WP_SYNC_WEBSOCKET_HOST` or `WP_SYNC_WEBSOCKET_PORT`, or has
+  entered a daemon address, and has never chosen a transport, now uses
+  the socket. Choose "Polling" on the settings screen to keep polling.
 - The intent-log protocol is version 3. Each stored edit carries the
   room's position after it (`seq`), a request must name its protocol
   version, and each row of a request gets its own answer. A browser tab

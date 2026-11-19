@@ -93,7 +93,12 @@ npm run env start         # DEV env (.wp-env.json), http://localhost:8888;
                           # its afterStart hook starts the sync daemon
                           # (detached; the transport selection is NOT touched)
 npm run env:tests start   # TESTS env (.wp-env.tests.json), http://localhost:8889,
-                          # Redis only; what test:php / test:e2e / CI target
+                          # Redis only; what test:php / test:e2e / CI target.
+                          # It pins the transport to http-polling with the
+                          # WP_COLLABORATION_TRANSPORT constant (the plugin's
+                          # default is websocket). A stored transport option
+                          # wins over the constant, which is how the WebSocket
+                          # suite and the fuzzer switch.
 npm run env:stop          # Stops Redis + WordPress (env:tests:stop for tests)
 npm run cache:on          # Puts the Redis Object Cache drop-in in (the file that
                           # makes the object cache persistent); cache:off removes

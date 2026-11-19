@@ -13,7 +13,8 @@
     "WP_REDIS_CLIENT": "predis",
     "WP_REDIS_DISABLE_BANNERS": true,
     "WP_REDIS_DISABLE_METRICS": true,
-    "WP_SYNC_WEBSOCKET_HOST": "localhost"
+    "WP_SYNC_WEBSOCKET_HOST": "localhost",
+    "WP_COLLABORATION_TRANSPORT": "http-polling"
   },
   "lifecycleScripts": {
     "afterStart": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:start || echo 'Redis did not start: the Redis object cache is unavailable until it does (npm run doctor)'",
