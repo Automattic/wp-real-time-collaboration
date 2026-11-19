@@ -1041,10 +1041,12 @@ describe( 'provider: a room the server starts again', () => {
 
 		wire = restarted;
 		( session as { onRoomRestart?: () => void } ).onRoomRestart?.();
-		session.receiveUpdate( {
-			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
-			data: JSON.stringify( { doc: restarted.doc() } ),
-		} );
+		session.receiveUpdates( [
+			{
+				type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+				data: JSON.stringify( { doc: restarted.doc() } ),
+			},
+		] );
 		jest.runOnlyPendingTimers();
 
 		// The edit is on its way to the new room.
@@ -1254,7 +1256,13 @@ describe( 'provider: an edit the server refuses because its history is gone', ()
 		const { session } = links[ 0 ];
 		const sent: string[] = [];
 
-		session.onLocalUpdate( ( update ) => sent.push( update.data ) );
+		session.onWorkWaiting( () =>
+			sent.push(
+				...session
+					.takeUpdatesToSend( { maxBytes: Infinity } )
+					.map( ( update ) => update.data )
+			)
+		);
 		tab.type( 'c-1', 'One', 'One!!' );
 
 		const first = JSON.parse( sent[ 0 ] );
@@ -1290,21 +1298,29 @@ describe( 'provider: an edit the server refuses because its history is gone', ()
 		const { session } = links[ 0 ];
 		const sent: string[] = [];
 
-		session.onLocalUpdate( ( update ) => sent.push( update.data ) );
+		session.onWorkWaiting( () =>
+			sent.push(
+				...session
+					.takeUpdatesToSend( { maxBytes: Infinity } )
+					.map( ( update ) => update.data )
+			)
+		);
 		tab.type( 'c-1', 'One', 'One!!' );
 
 		const first = JSON.parse( sent[ 0 ] );
 
-		session.receiveUpdate( {
-			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
-			data: JSON.stringify( {
-				doc: createDocument( [
-					roomParagraph( 'p1', 'One' ),
-					roomParagraph( 'p2', 'Two more' ),
-				] ),
-				seq: 40,
-			} ),
-		} );
+		session.receiveUpdates( [
+			{
+				type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+				data: JSON.stringify( {
+					doc: createDocument( [
+						roomParagraph( 'p1', 'One' ),
+						roomParagraph( 'p2', 'Two more' ),
+					] ),
+					seq: 40,
+				} ),
+			},
+		] );
 		session.receiveDispositions?.( [
 			{
 				intentId: first.intentId,
@@ -1341,13 +1357,17 @@ describe( 'provider: an edit the server refuses because its history is gone', ()
 		const { session } = links[ 0 ];
 
 		composing = true;
-		session.receiveUpdate( {
-			type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
-			data: JSON.stringify( {
-				doc: createDocument( [ roomParagraph( 'p1', 'One newer' ) ] ),
-				seq: 40,
-			} ),
-		} );
+		session.receiveUpdates( [
+			{
+				type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+				data: JSON.stringify( {
+					doc: createDocument( [
+						roomParagraph( 'p1', 'One newer' ),
+					] ),
+					seq: 40,
+				} ),
+			},
+		] );
 
 		expect( tab.blocks() ).toMatchObject( [
 			{ attributes: { content: 'One newer' } },

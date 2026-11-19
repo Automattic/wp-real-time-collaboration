@@ -51,9 +51,14 @@ import {
  * transport, is the fallback whenever it is not — the daemon unreachable, the token
  * refused, the socket dropped. A room the socket cannot serve is PARKED
  * with the polling manager at the cursor the socket had reached; when the
- * socket (re)opens, the room is reclaimed at the cursor polling reached,
- * carrying whatever polling never sent. Rows are therefore delivered by
- * exactly one lane at a time and never replayed across the handoff.
+ * socket (re)opens, the room is reclaimed at the cursor polling reached.
+ * Rows are therefore delivered by exactly one lane at a time and never
+ * replayed across the handoff.
+ *
+ * Neither lane keeps a queue. The session holds every update the server
+ * has not answered, and whichever lane serves the room asks it what to
+ * send. When a socket closes, the session is told, and the updates that
+ * were on their way go out again on the next lane.
  */
 
 const WS_TOKEN_API_PATH = '/wp-sync/v1/ws-token';
@@ -75,8 +80,6 @@ interface RoomState {
 	onStatusChange: ( status: ConnectionStatus ) => void;
 	/** Whether short polling currently serves this room (socket down). */
 	parked: boolean;
-	/** Updates polling never sent, to ride the next initial sync. */
-	reclaimed: EngineUpdate[];
 }
 
 interface ServerRoom {
@@ -225,19 +228,24 @@ function sendFrame( pending: Map< string, EngineUpdate[] > ): void {
 }
 
 /**
- * Sends a room's local update over the socket (or opens the socket first).
+ * Sends what a room's session has waiting over the socket, or opens the
+ * socket first. The first frame on a new socket carries it then.
  *
- * @param {string}       room   Room identifier.
- * @param {EngineUpdate} update The update to send.
+ * @param state The room.
  */
-function sendUpdate( room: string, update: EngineUpdate ): void {
+function sendWaiting( state: RoomState ): void {
 	if ( ! socket || WebSocket.OPEN !== socket.readyState ) {
-		// The initial sync on (re)connect will carry the codec's queued
-		// updates; nothing to do until the socket is open.
 		connect();
 		return;
 	}
-	sendFrame( new Map( [ [ room, [ update ] ] ] ) );
+
+	const updates = state.session.takeUpdatesToSend( {
+		maxBytes: Infinity,
+	} );
+
+	if ( updates.length > 0 ) {
+		sendFrame( new Map( [ [ state.room, updates ] ] ) );
+	}
 }
 
 /**
@@ -339,16 +347,10 @@ function applyServerRoom( serverRoom: ServerRoom ): void {
 
 	state.session.applyRemoteAwareness( serverRoom.awareness );
 
-	const responses: EngineUpdate[] = [];
-	for ( const update of serverRoom.updates ?? [] ) {
-		try {
-			const response = state.session.receiveUpdate( update );
-			if ( response ) {
-				responses.push( response );
-			}
-		} catch {
-			// A malformed update must not tear down the socket.
-		}
+	try {
+		state.session.receiveUpdates( serverRoom.updates ?? [] );
+	} catch {
+		// A malformed update must not tear down the socket.
 	}
 	if ( serverRoom.dispositions && state.session.receiveDispositions ) {
 		state.session.receiveDispositions( serverRoom.dispositions as never );
@@ -364,14 +366,6 @@ function applyServerRoom( serverRoom: ServerRoom ): void {
 	// its first row, as after a restart of the room by the server.
 	if ( state.session.takeRestartRequest?.() ) {
 		restartRoom( state, state.generation, [] );
-		return;
-	}
-
-	// Updates produced while applying (an engine's ack/response) go back out.
-	if ( responses.length > 0 ) {
-		const pending = new Map< string, EngineUpdate[] >();
-		pending.set( serverRoom.room, responses );
-		sendFrame( pending );
 	}
 }
 
@@ -410,7 +404,8 @@ function restartRoom(
 	state.generation = generation;
 	state.cursor = 0;
 	publishDebugState();
-	sendFrame( new Map( [ [ state.room, session.getInitialUpdates() ] ] ) );
+	// Ask for the room again from its first row.
+	sendFrame( new Map( [ [ state.room, [] ] ] ) );
 }
 
 /**
@@ -434,7 +429,8 @@ function onMessage( event: MessageEvent ): void {
 }
 
 /**
- * Sends the initial sync for every room, carrying any queued local updates.
+ * Sends the first frame on a new socket: every room, each with what its
+ * session has waiting.
  */
 function sendInitialSync(): void {
 	if ( ! socket || WebSocket.OPEN !== socket.readyState ) {
@@ -442,24 +438,22 @@ function sendInitialSync(): void {
 	}
 	const pending = new Map< string, EngineUpdate[] >();
 	for ( const state of rooms.values() ) {
-		pending.set( state.room, [
-			...state.reclaimed.splice( 0 ),
-			...state.session.getInitialUpdates(),
-		] );
+		pending.set(
+			state.room,
+			state.session.takeUpdatesToSend( { maxBytes: Infinity } )
+		);
 	}
 	sendFrame( pending );
 }
 
 /**
- * Binds a room's local updates to the socket (the polling manager rebinds
- * them to itself while it serves the room).
+ * Makes the socket the one that hears when a room has something to send
+ * (the polling manager takes that over while it serves the room).
  *
  * @param state The room.
  */
 function bindLocalUpdates( state: RoomState ): void {
-	state.session.onLocalUpdate( ( update ) =>
-		sendUpdate( state.room, update )
-	);
+	state.session.onWorkWaiting( () => sendWaiting( state ) );
 }
 
 function log(
@@ -488,6 +482,11 @@ function parkRooms(): void {
 			continue;
 		}
 		state.parked = true;
+		// Whatever the socket carried and the server did not answer goes
+		// out again, over polling. The socket stops listening first, so
+		// that this does not make it reconnect at once.
+		state.session.onWorkWaiting( () => {} );
+		state.session.connectionLost();
 		pollingManager.registerRoom( {
 			room: state.room,
 			session: state.session,
@@ -510,9 +509,10 @@ function hasParkedRooms(): boolean {
 
 /**
  * The socket is open again: take every parked room back from short
- * polling at the cursor polling reached, carrying what it never sent.
- * Resolves once the rooms are the socket's again.
- * @param opened
+ * polling at the cursor polling reached. Resolves once the rooms are the
+ * socket's again.
+ *
+ * @param opened The socket that opened.
  */
 async function reclaimRooms( opened: WebSocket ): Promise< void > {
 	const parked = Array.from( rooms.values() ).filter(
@@ -528,19 +528,17 @@ async function reclaimRooms( opened: WebSocket ): Promise< void > {
 			if ( socket !== opened || WebSocket.OPEN !== opened.readyState ) {
 				// The socket died while polling finished its request: the
 				// room stays parked, back with polling at the cursor it
-				// reached, carrying what it never sent.
+				// reached.
 				pollingManager.registerRoom( {
 					room: state.room,
 					session: state.session,
 					log,
 					onStatusChange: state.onStatusChange,
 					initialCursor: state.cursor,
-					initialUpdates: released.unsent,
 				} );
 				return;
 			}
 			state.parked = false;
-			state.reclaimed.push( ...released.unsent );
 			bindLocalUpdates( state );
 			registerDebugSession( state.room, state.session );
 		} )
@@ -705,7 +703,6 @@ function registerRoom( options: WebSocketRoomOptions ): void {
 		cursor: 0,
 		onStatusChange: options.onStatusChange,
 		parked: false,
-		reclaimed: [],
 	};
 	rooms.set( options.room, state );
 	bindLocalUpdates( state );
@@ -723,9 +720,17 @@ function registerRoom( options: WebSocketRoomOptions ): void {
 	registerDebugSession( options.room, options.session );
 
 	if ( socket && WebSocket.OPEN === socket.readyState ) {
-		// Socket already open: send this room's initial sync now.
+		// Socket already open: ask for this room now, with what its
+		// session has waiting.
 		sendFrame(
-			new Map( [ [ options.room, options.session.getInitialUpdates() ] ] )
+			new Map( [
+				[
+					options.room,
+					options.session.takeUpdatesToSend( {
+						maxBytes: Infinity,
+					} ),
+				],
+			] )
 		);
 	} else if ( socket || connecting ) {
 		// A connection attempt is under way; the room joins its outcome.

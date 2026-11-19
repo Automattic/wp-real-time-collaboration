@@ -106,23 +106,55 @@ function response( clients: number[], cursor = 1 ) {
 	};
 }
 
-function createMockSession( clientId = 1, sendsWhileAlone = false ) {
+/**
+ * A stand-in session, as a transport sees one. It holds the updates that
+ * wait and hands them out when asked.
+ *
+ * @param clientId The client id the session announces.
+ */
+function createMockSession( clientId = 1 ) {
+	let waiting: unknown[] = [];
+	let onTheirWay: unknown[] = [];
+	let listener: ( ( size: number ) => void ) | null = null;
+
 	return {
 		applyRemoteAwareness: jest.fn(),
 		clientId,
 		engineSlug: 'intent-log',
-		...( sendsWhileAlone ? { sendsWhileAlone: true } : {} ),
 		destroy: jest.fn(),
-		getInitialUpdates: jest.fn( () => [] ),
 		getLocalAwareness: jest.fn( () => ( { user: clientId } ) ),
-		onLocalUpdate: jest.fn(),
-		receiveUpdate: jest.fn(),
+		onWorkWaiting: jest.fn( ( callback: ( size: number ) => void ) => {
+			listener = callback;
+		} ),
+		hasUpdatesToSend: jest.fn( () => waiting.length > 0 ),
+		takeUpdatesToSend: jest.fn( () => {
+			const taken = waiting;
+
+			waiting = [];
+			onTheirWay.push( ...taken );
+
+			return taken;
+		} ),
+		connectionLost: jest.fn( () => {
+			waiting = [ ...onTheirWay, ...waiting ];
+			onTheirWay = [];
+		} ),
+		// An answer from the server settles what was on its way.
+		receiveUpdates: jest.fn( () => {
+			onTheirWay = [];
+		} ),
+		// What a local edit does: the update waits, and the transport
+		// is told.
+		addUpdate( update: unknown, size: number ) {
+			waiting.push( update );
+			listener?.( size );
+		},
 	};
 }
 
 describe( 'polling-manager cadence', () => {
 	let pollingManager: Manager[ 'pollingManager' ];
-	let flushHeldUpdates: Manager[ 'flushHeldUpdates' ];
+	let flushUpdatesNow: Manager[ 'flushUpdatesNow' ];
 	let mockPostSyncUpdate: jest.Mock<
 		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdate
 	>;
@@ -144,7 +176,7 @@ describe( 'polling-manager cadence', () => {
 		jest.isolateModules( () => {
 			const managerModule: Manager = require( '../../../../src/providers/http-polling/polling-manager' );
 			pollingManager = managerModule.pollingManager;
-			flushHeldUpdates = managerModule.flushHeldUpdates;
+			flushUpdatesNow = managerModule.flushUpdatesNow;
 			mockPostSyncUpdate =
 				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdate;
 		} );
@@ -212,40 +244,62 @@ describe( 'polling-manager cadence', () => {
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( afterFocus + 1 );
 	} );
 
-	it( 'a lone tab holds its updates; a flush (before a save) sends them and holds again', async () => {
+	it( 'a lone tab sends its edits once per polling interval, and a flush (before a save) sends at once', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
-		// Held: no on-demand poll, and the discovery-window polls carry
-		// nothing.
-		await jest.advanceTimersByTimeAsync( 4000 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+		// Nobody is reading, so no request is made for them yet.
+		await jest.advanceTimersByTimeAsync( 3900 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+
+		// One polling interval after the last request, one request
+		// carries both.
+		await jest.advanceTimersByTimeAsync( 100 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 		expect(
 			mockPostSyncUpdate.mock.calls[ 1 ][ 0 ].rooms[ 0 ].updates
-		).toHaveLength( 0 );
+		).toHaveLength( 2 );
+		expect( mockAnnounceLocalWrite ).toHaveBeenCalledWith( 'test-room' );
 
-		// The save middleware's flush releases the queue and waits for the
-		// poll to return.
-		const flushed = flushHeldUpdates();
+		// The save's flush does not wait for the interval. It resolves
+		// when the request has returned.
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+		const flushed = flushUpdatesNow();
 		await jest.advanceTimersByTimeAsync( 0 );
 		await flushed;
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
 		expect(
 			mockPostSyncUpdate.mock.calls[ 2 ][ 0 ].rooms[ 0 ].updates
-		).toHaveLength( 2 );
-		expect( mockAnnounceLocalWrite ).toHaveBeenCalledWith( 'test-room' );
+		).toHaveLength( 1 );
+	} );
 
-		// Still alone: the next update is held again (no on-demand poll
-		// within the send delay).
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
-		await jest.advanceTimersByTimeAsync( 500 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
+	it( 'a lone tab past the discovery window still sends its edits within one polling interval', async () => {
+		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
+		const session = register();
+		await jest.advanceTimersByTimeAsync( 60000 );
+		const quiet = mockPostSyncUpdate.mock.calls.length;
+		await jest.advanceTimersByTimeAsync( 60000 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( quiet );
+
+		// The last request was long ago, so the edit goes out after the
+		// short delay that lets a burst pile in.
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+		await jest.advanceTimersByTimeAsync( 300 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( quiet + 1 );
+
+		// Typing goes on: the next request waits a whole interval.
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+		await jest.advanceTimersByTimeAsync( 3900 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( quiet + 1 );
+		await jest.advanceTimersByTimeAsync( 100 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( quiet + 2 );
+		expect(
+			mockPostSyncUpdate.mock.calls[ quiet + 1 ][ 0 ].rooms[ 0 ].updates
+		).toHaveLength( 1 );
 	} );
 
 	it( 'a flush that lands while a poll is in flight waits for the successor that carries the work', async () => {
@@ -253,23 +307,21 @@ describe( 'polling-manager cadence', () => {
 		mockPostSyncUpdate.mockResolvedValueOnce( response( [ 1 ] ) );
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
 
-		// A poll is in flight (built before the flush): hold it open.
+		// A poll is in flight: hold it open.
 		mockPostSyncUpdate.mockImplementationOnce(
 			() =>
 				new Promise( ( resolve ) => {
 					release = resolve;
 				} )
 		);
-		await jest.advanceTimersByTimeAsync( 25000 );
+		await jest.advanceTimersByTimeAsync( 4000 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
+
+		// An edit made now was not in that request.
+		session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
 		let flushed = false;
-		void flushHeldUpdates().then( () => {
+		void flushUpdatesNow().then( () => {
 			flushed = true;
 		} );
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ], 2 ) );
@@ -278,21 +330,18 @@ describe( 'polling-manager cadence', () => {
 		// Not resolved by the in-flight poll's end...
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
 		await jest.advanceTimersByTimeAsync( 0 );
-		// ...but by the successor, which carried the held update.
+		// ...but by the successor, which carried the edit.
 		expect( flushed ).toBe( true );
 		expect(
 			mockPostSyncUpdate.mock.calls[ 2 ][ 0 ].rooms[ 0 ].updates
 		).toHaveLength( 1 );
 	} );
 
-	it( 'a lone tab going hidden flushes its held work once, unless a pagehide follows', async () => {
+	it( 'a lone tab going hidden sends its unsent work once, unless a pagehide follows', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
+		const onLocalUpdate = session.addUpdate;
 		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
 
 		Object.defineProperty( document, 'visibilityState', {
@@ -316,55 +365,6 @@ describe( 'polling-manager cadence', () => {
 			configurable: true,
 			get: () => 'visible',
 		} );
-	} );
-
-	it( 'a codec that sends while alone (de-rtc) is exempt from the hold and polls on demand', async () => {
-		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
-		const session = register( createMockSession( 1, true ) );
-		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
-		onLocalUpdate( { type: 'fetch', data: 'AA==' }, 1 );
-		await jest.advanceTimersByTimeAsync( 300 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		expect(
-			mockPostSyncUpdate.mock.calls[ 1 ][ 0 ].rooms[ 0 ].updates
-		).toHaveLength( 1 );
-	} );
-
-	it( "updates queued while a lone (exempt) tab's poll is in flight go out right after it returns", async () => {
-		let release!: ( value: ReturnType< typeof response > ) => void;
-		mockPostSyncUpdate.mockResolvedValueOnce( response( [ 1 ] ) );
-		const session = register( createMockSession( 1, true ) );
-		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
-
-		// The on-demand poll is held open; more updates arrive meanwhile.
-		mockPostSyncUpdate.mockImplementationOnce(
-			() =>
-				new Promise( ( resolve ) => {
-					release = resolve;
-				} )
-		);
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
-		await jest.advanceTimersByTimeAsync( 300 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
-		await jest.advanceTimersByTimeAsync( 300 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-
-		mockPostSyncUpdate.mockResolvedValueOnce( response( [ 1 ], 2 ) );
-		release( response( [ 1 ], 2 ) );
-		await jest.advanceTimersByTimeAsync( 0 );
-		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-		expect(
-			mockPostSyncUpdate.mock.calls[ 2 ][ 0 ].rooms[ 0 ].updates
-		).toHaveLength( 1 );
 	} );
 
 	it( 'a wake-up does not shorten the wait after a failed request, so an offline tab does not race to the lost-connection dialog', async () => {
@@ -405,14 +405,11 @@ describe( 'polling-manager cadence', () => {
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
 	} );
 
-	it( 'company from the heartbeat wakes a lone tab onto the timer cadence and releases its queue', async () => {
+	it( 'company from the heartbeat wakes a lone tab onto the timer cadence', async () => {
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1 ] ) );
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
+		const onLocalUpdate = session.addUpdate;
 		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
 		await jest.advanceTimersByTimeAsync( 3000 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
@@ -481,10 +478,7 @@ describe( 'polling-manager cadence', () => {
 		mockCoverage = true;
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
+		const onLocalUpdate = session.addUpdate;
 		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
 		await jest.advanceTimersByTimeAsync( 300 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
@@ -497,10 +491,7 @@ describe( 'polling-manager cadence', () => {
 		await jest.advanceTimersByTimeAsync( 0 );
 		// On the 1 s timer; an undo queues inverse intents, which the
 		// pending timer would send.
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
+		const onLocalUpdate = session.addUpdate;
 		onLocalUpdate( { type: 'intent', data: 'AA==' }, 1 );
 		// The channel connects right then: coverage flips and the timer
 		// is re-evaluated. The queued work must still go out promptly.
@@ -525,10 +516,7 @@ describe( 'polling-manager cadence', () => {
 		);
 		const session = register();
 		await jest.advanceTimersByTimeAsync( 0 );
-		const onLocalUpdate = session.onLocalUpdate.mock.calls[ 0 ][ 0 ] as (
-			update: unknown,
-			size: number
-		) => void;
+		const onLocalUpdate = session.addUpdate;
 		onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
 		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ], 2 ) );
 		release( response( [ 1, 2 ] ) );
@@ -692,7 +680,7 @@ describe( 'polling-manager cadence', () => {
 	} );
 
 	describe( 'handing a room to and from a preferred transport', () => {
-		it( 'resumes at the given cursor and releases the room with its cursor and unsent work, keeping the session', async () => {
+		it( 'resumes at the given cursor and releases the room with its cursor, leaving unsent work with the session', async () => {
 			mockSignalingAvailable = false;
 			mockPostSyncUpdate.mockResolvedValue( response( [ 1 ], 9 ) );
 			const session = createMockSession();
@@ -707,15 +695,11 @@ describe( 'polling-manager cadence', () => {
 			expect(
 				mockPostSyncUpdate.mock.calls[ 0 ][ 0 ].rooms[ 0 ].after
 			).toBe( 5 );
-			const onLocalUpdate = session.onLocalUpdate.mock
-				.calls[ 0 ][ 0 ] as ( update: unknown, size: number ) => void;
-			onLocalUpdate( { type: 'update', data: 'AA==' }, 1 );
+			session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
 
 			const released = await pollingManager.releaseRoom( 'test-room' );
-			expect( released ).toEqual( {
-				cursor: 9,
-				unsent: [ { type: 'update', data: 'AA==' } ],
-			} );
+			expect( released ).toEqual( { cursor: 9 } );
+			expect( session.hasUpdatesToSend() ).toBe( true );
 			expect( session.destroy ).not.toHaveBeenCalled();
 			// The loop is empty: nothing polls any more.
 			await jest.advanceTimersByTimeAsync( 10000 );
@@ -741,7 +725,7 @@ describe( 'polling-manager cadence', () => {
 			expect( released ).toBeNull();
 			release( response( [ 1 ], 3 ) );
 			await jest.advanceTimersByTimeAsync( 0 );
-			expect( released ).toEqual( { cursor: 3, unsent: [] } );
+			expect( released ).toEqual( { cursor: 3 } );
 		} );
 	} );
 } );

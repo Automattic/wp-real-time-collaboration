@@ -104,18 +104,24 @@ jest.mock( '@wordpress/blocks', () => {
  */
 function makeFakeTransport() {
 	const captured: {
-		session?: EngineSessionCodec;
+		session?: EngineSessionCodec & {
+			receiveUpdate: ( update: EngineUpdate ) => void;
+		};
 		sent: EngineUpdate[];
 	} = { sent: [] };
 
 	const creator: ProviderCreator = async ( options ) => {
 		const { session } = options;
 
-		session.onLocalUpdate( ( update ) => captured.sent.push( update ) );
+		session.onWorkWaiting( () =>
+			captured.sent.push(
+				...session.takeUpdatesToSend( { maxBytes: Infinity } )
+			)
+		);
 		captured.session = {
 			...session,
 			receiveUpdate: ( update ) => {
-				const answer = session.receiveUpdate( update );
+				session.receiveUpdates( [ update ] );
 
 				// The provider matches the editor's blocks one task after
 				// the first document. Run that task here, so a test can go
@@ -123,8 +129,6 @@ function makeFakeTransport() {
 				if ( INTENT_LOG_UPDATE_TYPES.SNAPSHOT === update.type ) {
 					jest.runOnlyPendingTimers();
 				}
-
-				return answer;
 			},
 		};
 

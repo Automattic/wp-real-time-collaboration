@@ -23,7 +23,7 @@ jest.mock( '@wordpress/api-fetch' );
 jest.mock( '../../../../src/providers/http-polling/polling-manager', () => ( {
 	pollingManager: {
 		registerRoom: jest.fn(),
-		releaseRoom: jest.fn( async () => ( { cursor: 0, unsent: [] } ) ),
+		releaseRoom: jest.fn( async () => ( { cursor: 0 } ) ),
 		unregisterRoom: jest.fn(),
 	},
 } ) );
@@ -74,20 +74,41 @@ class FakeWebSocket {
 	}
 }
 
+/**
+ * A stand-in session, as a transport sees one. `emitLocal` makes a local
+ * edit: the update waits in the session and the transport is told.
+ *
+ * @param overrides Members to replace.
+ */
 function fakeSession(
 	overrides: Partial< EngineSessionCodec > = {}
 ): EngineSessionCodec {
-	let localListener: ( ( u: unknown ) => void ) | null = null;
+	let listener: ( ( size: number ) => void ) | null = null;
+	let waiting: unknown[] = [];
+	let onTheirWay: unknown[] = [];
 	return {
 		clientId: 101,
 		engineSlug: 'intent-log',
 		engineProtocol: 1,
-		getInitialUpdates: () => [],
-		onLocalUpdate: ( cb: ( u: unknown ) => void ) => {
-			localListener = cb;
+		onWorkWaiting: ( cb: ( size: number ) => void ) => {
+			listener = cb;
 		},
-		emitLocal: ( u: unknown ) => localListener?.( u ),
-		receiveUpdate: jest.fn< ( update: unknown ) => undefined >(),
+		hasUpdatesToSend: () => waiting.length > 0,
+		takeUpdatesToSend: () => {
+			const taken = waiting;
+			waiting = [];
+			onTheirWay.push( ...taken );
+			return taken;
+		},
+		connectionLost: jest.fn( () => {
+			waiting = [ ...onTheirWay, ...waiting ];
+			onTheirWay = [];
+		} ),
+		emitLocal: ( u: unknown ) => {
+			waiting.push( u );
+			listener?.( 1 );
+		},
+		receiveUpdates: jest.fn< ( updates: unknown[] ) => void >(),
 		receiveDispositions: jest.fn(),
 		getLocalAwareness: () => ( {} ),
 		applyRemoteAwareness: jest.fn(),
@@ -114,7 +135,6 @@ describe( 'websocket manager', () => {
 		mockPolling.releaseRoom.mockClear();
 		mockPolling.releaseRoom.mockImplementation( async () => ( {
 			cursor: 0,
-			unsent: [],
 		} ) );
 		mockPolling.unregisterRoom.mockClear();
 	} );
@@ -210,13 +230,13 @@ describe( 'websocket manager', () => {
 						code: 'connection-limit-exceeded',
 					} ),
 				} );
-				expect( session.receiveUpdate ).not.toHaveBeenCalled();
+				expect( session.receiveUpdates ).not.toHaveBeenCalled();
 				expect( session.destroy ).toHaveBeenCalledTimes( 1 );
 				expect( ws.readyState ).toBe( 3 );
 				expect( mockPolling.registerRoom ).not.toHaveBeenCalled();
 			} else {
 				expect( onStatusChange ).not.toHaveBeenCalled();
-				expect( session.receiveUpdate ).toHaveBeenCalledTimes( 1 );
+				expect( session.receiveUpdates ).toHaveBeenCalledTimes( 1 );
 			}
 		}
 	);
@@ -300,9 +320,9 @@ describe( 'websocket manager', () => {
 
 	it( 'feeds pushed updates to the codec and advances the cursor', async () => {
 		setup();
-		const receiveUpdate = jest.fn< ( update: unknown ) => undefined >();
+		const receiveUpdates = jest.fn< ( updates: unknown[] ) => void >();
 		const session = fakeSession( {
-			receiveUpdate,
+			receiveUpdates,
 		} as Partial< EngineSessionCodec > );
 
 		websocketManager.registerRoom( {
@@ -329,10 +349,12 @@ describe( 'websocket manager', () => {
 			],
 		} );
 
-		expect( receiveUpdate ).toHaveBeenCalledWith( {
-			type: 'intent',
-			data: 'AAAA',
-		} );
+		expect( receiveUpdates ).toHaveBeenCalledWith( [
+			{
+				type: 'intent',
+				data: 'AAAA',
+			},
+		] );
 		expect( session.applyRemoteAwareness ).toHaveBeenCalledWith( {
 			2: {},
 		} );
@@ -463,7 +485,7 @@ describe( 'websocket manager', () => {
 			expect( FakeWebSocket.instances ).toHaveLength( 0 );
 		} );
 
-		it( 'parks at the socket cursor on close, reclaims at the polling cursor on reopen, carrying unsent work', async () => {
+		it( 'parks at the socket cursor on close, reclaims at the polling cursor on reopen, and sends again what the dead socket carried', async () => {
 			jest.useFakeTimers();
 			try {
 				setup();
@@ -494,25 +516,35 @@ describe( 'websocket manager', () => {
 					],
 				} );
 
-				// The daemon drops: polling takes over at cursor 7.
+				// An edit goes out on the socket. No answer comes back.
+				emitLocal( { type: 'update', data: 'QQ==' } );
+				expect(
+					JSON.parse( ws.sent[ ws.sent.length - 1 ] ).rooms[ 0 ]
+						.updates
+				).toEqual( [ { type: 'update', data: 'QQ==' } ] );
+
+				// The daemon drops: polling takes over at cursor 7, and
+				// the session is told before polling gets the room, so
+				// the edit is the session's to hand out again.
 				ws.close();
+				expect( session.connectionLost ).toHaveBeenCalledTimes( 1 );
 				expect( mockPolling.registerRoom ).toHaveBeenCalledTimes( 1 );
 				expect(
 					mockPolling.registerRoom.mock.calls[ 0 ][ 0 ]
 				).toMatchObject( { initialCursor: 7 } );
-				// The polling manager binds the session's local updates to
-				// itself (the fake keeps the last listener): the socket no
-				// longer sees them.
+				expect( session.hasUpdatesToSend() ).toBe( true );
+				// The polling manager makes itself the one that hears of
+				// new work (the fake keeps the last listener): the socket
+				// no longer does.
 				const pollingBinding = jest.fn();
-				session.onLocalUpdate( pollingBinding );
+				session.onWorkWaiting( pollingBinding );
 				emitLocal( { type: 'update', data: 'AA==' } );
 				expect( pollingBinding ).toHaveBeenCalledTimes( 1 );
 
-				// Reconnect succeeds: polling reached cursor 12 and never
-				// sent one update, which rides the initial sync.
+				// Reconnect succeeds: polling reached cursor 12 and sent
+				// neither update. Both ride the first frame.
 				mockPolling.releaseRoom.mockResolvedValueOnce( {
 					cursor: 12,
-					unsent: [ { type: 'update', data: 'QQ==' } ],
 				} as never );
 				await jest.advanceTimersByTimeAsync( 1000 );
 				await Promise.resolve();
@@ -529,7 +561,10 @@ describe( 'websocket manager', () => {
 				expect( frame.rooms[ 0 ] ).toMatchObject( {
 					room: 'postType/post:1',
 					after: 12,
-					updates: [ { type: 'update', data: 'QQ==' } ],
+					updates: [
+						{ type: 'update', data: 'QQ==' },
+						{ type: 'update', data: 'AA==' },
+					],
 				} );
 
 				// Local updates go to the socket again.
@@ -574,21 +609,15 @@ describe( 'websocket manager', () => {
 				ws2.open();
 				await jest.advanceTimersByTimeAsync( 0 );
 				ws2.close();
-				release( {
-					cursor: 6,
-					unsent: [ { type: 'update', data: 'QQ==' } ],
-				} );
+				release( { cursor: 6 } );
 				await jest.advanceTimersByTimeAsync( 0 );
 
 				// Not bound to the dead socket: back with polling, at the
-				// cursor polling reached, with the unsent work.
+				// cursor polling reached.
 				expect( mockPolling.registerRoom ).toHaveBeenCalledTimes( 2 );
 				expect(
 					mockPolling.registerRoom.mock.calls[ 1 ][ 0 ]
-				).toMatchObject( {
-					initialCursor: 6,
-					initialUpdates: [ { type: 'update', data: 'QQ==' } ],
-				} );
+				).toMatchObject( { initialCursor: 6 } );
 				expect( ws2.sent ).toHaveLength( 0 );
 			} finally {
 				jest.useRealTimers();
@@ -624,7 +653,6 @@ describe( 'websocket manager', () => {
 				// The attempt finally succeeds: the room comes back.
 				mockPolling.releaseRoom.mockResolvedValueOnce( {
 					cursor: 4,
-					unsent: [],
 				} as never );
 				ws.open();
 				await jest.advanceTimersByTimeAsync( 0 );
@@ -661,12 +689,9 @@ describe( 'websocket manager', () => {
 		} );
 	} );
 
-	it( 'a changed room generation re-sends the initial sync from cursor 0 and skips the frame rows', async () => {
+	it( 'a changed room generation asks for the room again from cursor 0 and skips the frame rows', async () => {
 		setup();
-		const initial = { type: 'sync_step1', data: 'AA==' };
-		const session = fakeSession( {
-			getInitialUpdates: () => [ initial ],
-		} as Partial< EngineSessionCodec > ) as EngineSessionCodec & {
+		const session = fakeSession() as EngineSessionCodec & {
 			onRoomRestart: jest.Mock;
 		};
 		session.onRoomRestart = jest.fn( () => 'rebootstrap' );
@@ -693,7 +718,7 @@ describe( 'websocket manager', () => {
 				},
 			],
 		} );
-		expect( session.receiveUpdate ).toHaveBeenCalledWith( row );
+		expect( session.receiveUpdates ).toHaveBeenCalledWith( [ row ] );
 
 		const sentBefore = ws.sent.length;
 		const genesis = { type: 'snapshot', data: 'Ag==' };
@@ -710,11 +735,13 @@ describe( 'websocket manager', () => {
 			],
 		} );
 		expect( session.onRoomRestart ).toHaveBeenCalledWith( [ genesis ] );
-		expect( session.receiveUpdate ).not.toHaveBeenCalledWith( genesis );
+		expect( session.receiveUpdates ).not.toHaveBeenCalledWith( [
+			genesis,
+		] );
 		expect( ws.sent.length ).toBe( sentBefore + 1 );
 		const frame = JSON.parse( ws.sent[ ws.sent.length - 1 ] );
 		expect( frame.rooms[ 0 ].after ).toBe( 0 );
-		expect( frame.rooms[ 0 ].updates ).toEqual( [ initial ] );
+		expect( frame.rooms[ 0 ].updates ).toEqual( [] );
 	} );
 
 	it( 'a session that missed a row gets the room again from cursor 0', async () => {

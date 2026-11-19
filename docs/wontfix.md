@@ -25,14 +25,6 @@ one of these without filing an issue first.
   elsewhere: our changes to the bundled Gutenberg, and a fix for a
   login race in a test helper.
   *Why it waits:* each means talking to another project, a person's job.
-- **Sending a lone editor's changes right away instead of holding
-  them.** A tab editing alone keeps its changes in the browser until
-  someone else arrives, a save, or the tab going hidden. Sending them
-  after the usual short delay would be simpler and make each change
-  durable sooner, at one request per typing burst. *Why it waits:*
-  holding is what the default "discard unsaved changes" setting needs,
-  where the shared session follows saves. If that setting ever flips to
-  "keep", take the simplification in the same change.
 - **New engines, new transports, a history slider, and
   hover-to-see-who-wrote-this.** Not planned. The last two have their
   data available already; no interface work is scheduled.

@@ -51,14 +51,12 @@ the host runs (`websocket-advisory`, which reaches tabs WebRTC cannot).
 
 The channel decides how often a tab polls:
 
-1. **When you are alone, the tab stops polling**, except for 30
-   seconds after the page loads or regains focus. Its edits stay in the
-   browser until someone else arrives, until a save (the edits go
-   through the room first), or until the tab is hidden. A reload loses
-   them, which is what the editor's own unsaved-changes warning says.
-   The heartbeat's answer names the room's
-   newest row, so a script or WP-CLI saving the post still wakes the
-   tab.
+1. **When you are alone, the tab polls only to send your edits**,
+   except for 30 seconds after the page loads or regains focus, when it
+   also polls on a timer. Edits go out at most once per polling
+   interval, and at once before a save and when the tab is hidden.
+   The heartbeat's answer names the room's newest row, so a script or
+   WP-CLI saving the post still wakes the tab.
 2. **When a peer cannot be reached, the tab polls on a timer**: the
    "Polling interval" setting, <!-- const:POLLING_INTERVAL_DEFAULT -->5<!-- /const --> seconds
    by default.

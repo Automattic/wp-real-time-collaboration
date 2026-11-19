@@ -21,8 +21,8 @@ What it does, and why, is documented once:
   registers the route, checks limits and permissions, and passes each
   post's data to the active engine.
 - Client: `http-polling-provider.ts` (per-room provider lifecycle),
-  `polling-manager.ts` (the single polling loop, the queues, and
-  presence), `config.ts`
+  `polling-manager.ts` (the single polling loop and presence; it keeps
+  no queue and asks each room's session what to send), `config.ts`
   (intervals, limits, retry schedules), `types.ts` (wire types),
-  `utils.ts` (queues and API helpers). The advisory channel is in
+  `utils.ts` (API helpers). The advisory channel is in
   `../advisory/`.

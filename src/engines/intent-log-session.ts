@@ -16,7 +16,6 @@ import type { PresenceObject } from '../editor/gutenberg-contract';
 import type {
 	AwarenessState,
 	EngineSessionCodec,
-	EngineLocalUpdateListener,
 	EngineUpdate,
 	LocalAwarenessState,
 } from '../registry/types';
@@ -89,38 +88,8 @@ export interface IntentLogSession extends EngineSessionCodec {
 	/** The server-verifiable actor id this session authors as. */
 	actorId: string;
 
-	/** Takes one received row. The same as `receiveUpdates` with one. */
+	/** Takes one received row. The same as `receiveUpdates` with one row. */
 	receiveUpdate: ( update: EngineUpdate ) => void;
-
-	/**
-	 * Takes the rows of one answer, in order. A run of accepted edits is
-	 * handled in one step, so the person's unanswered edits are planned
-	 * again once per run, not once per row.
-	 */
-	receiveUpdates: ( updates: EngineUpdate[] ) => void;
-
-	/**
-	 * The updates to send now, oldest first, within a size budget: the
-	 * sum of each update's JSON form plus one byte. They count as on
-	 * their way from this call on. Nothing else holds unsent work.
-	 */
-	takeUpdatesToSend: ( limit: { maxBytes: number } ) => EngineUpdate[];
-
-	/** Whether `takeUpdatesToSend` would return anything. */
-	hasUpdatesToSend: () => boolean;
-
-	/**
-	 * The connection that carried the updates on their way is gone: a
-	 * request failed, a socket closed, or another transport takes the
-	 * room. They are handed out again by `takeUpdatesToSend`.
-	 */
-	connectionLost: () => void;
-
-	/**
-	 * Subscribes to "an update can be sent now". The listener gets the
-	 * byte length of the update's data.
-	 */
-	onWorkWaiting: ( listener: ( dataSize: number ) => void ) => void;
 
 	/** Where the room's replica stands (see src/replica/replica.ts). */
 	getState: () => ReplicaState;
@@ -331,12 +300,12 @@ export interface IntentLogSession extends EngineSessionCodec {
 	onReset: ( listener: () => void ) => void;
 
 	/**
-	 * Transport teardown hook: the transport calls this when it discards
-	 * unsent updates at room unregistration (a terminal error dropped the
-	 * room). The updates will never reach the server; listeners registered
-	 * via onDiscard surface the loss to the user.
+	 * Called by a transport that gives the room up for good while updates
+	 * are still unsent (the person lost the right to edit, or a limit was
+	 * reached). The updates will never reach the server. The listeners
+	 * registered with onDiscard tell the person.
 	 */
-	onUpdatesDiscarded: ( updates: EngineUpdate[] ) => void;
+	onUpdatesDiscarded: () => void;
 
 	/** Subscribes to unsent-update discards (see onUpdatesDiscarded). */
 	onDiscard: ( listener: ( updates: EngineUpdate[] ) => void ) => void;
@@ -377,10 +346,9 @@ export function createIntentLogSession(
 	const clientId = options.clientId ?? randomClientId();
 	const actorId = `u${ options.userId }c${ clientId }`;
 
-	let localUpdateListener: EngineLocalUpdateListener | null = null;
+	let workWaitingListener: ( ( dataSize: number ) => void ) | null = null;
 	let localAwareness: LocalAwarenessState = {};
 	let peers: AwarenessState = {};
-	const workWaitingListeners = new Set< ( dataSize: number ) => void >();
 	const proposalsChangeListeners = new Set< () => void >();
 	const changeListeners = new Set< () => void >();
 	const dispositionListeners = new Set<
@@ -398,31 +366,9 @@ export function createIntentLogSession(
 		( rows: Array< { seq: number; entry: IntentEnvelope } > ) => void
 	>();
 
-	const textEncoder = new TextEncoder();
-
 	const replica = createReplica( actorId, {
 		change: () => changeListeners.forEach( ( listener ) => listener() ),
-		workWaiting: ( dataSize ) => {
-			workWaitingListeners.forEach( ( listener ) =>
-				listener( dataSize )
-			);
-
-			/*
-			 * A transport that still wants each update handed to it gets
-			 * everything that can be sent, at once. It keeps its own queue
-			 * from there on.
-			 */
-			if ( localUpdateListener ) {
-				for ( const update of replica.takeToSend( {
-					maxBytes: Infinity,
-				} ) ) {
-					localUpdateListener(
-						update,
-						textEncoder.encode( update.data ).length
-					);
-				}
-			}
-		},
+		workWaiting: ( dataSize ) => workWaitingListener?.( dataSize ),
 		acceptedRows: ( rows ) =>
 			acceptedRowListeners.forEach( ( listener ) => listener( rows ) ),
 		settled: ( settled ) =>
@@ -445,11 +391,6 @@ export function createIntentLogSession(
 		engineProtocol: INTENT_LOG_ENGINE_PROTOCOL,
 
 		// ---- What a transport calls ----
-
-		getInitialUpdates: () => {
-			// Nothing to announce: the server sends the first document.
-			return [];
-		},
 
 		receiveUpdate: ( update ) => {
 			replica.receive( [ update ] );
@@ -478,7 +419,7 @@ export function createIntentLogSession(
 		},
 
 		onWorkWaiting: ( listener ) => {
-			workWaitingListeners.add( listener );
+			workWaitingListener = listener;
 		},
 
 		getLocalAwareness: () => {
@@ -501,14 +442,9 @@ export function createIntentLogSession(
 			}
 		},
 
-		onLocalUpdate: ( listener ) => {
-			localUpdateListener = listener;
-		},
-
 		destroy: () => {
 			replica.destroy();
-			localUpdateListener = null;
-			workWaitingListeners.clear();
+			workWaitingListener = null;
 			changeListeners.clear();
 			dispositionListeners.clear();
 			proposalListeners.clear();
@@ -518,7 +454,9 @@ export function createIntentLogSession(
 			acceptedRowListeners.clear();
 		},
 
-		onUpdatesDiscarded: ( updates ) => {
+		onUpdatesDiscarded: () => {
+			const updates = replica.takeToSend( { maxBytes: Infinity } );
+
 			discardListeners.forEach( ( listener ) => listener( updates ) );
 		},
 

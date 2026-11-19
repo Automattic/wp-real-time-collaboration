@@ -8,9 +8,8 @@ import type { EngineSessionCodec, EngineUpdate } from '../registry/types';
  * room underneath it (the room's generation changed):
  *
  * - `rebootstrap`: the session dropped its room-bound state and is ready to
- *   receive the new room from cursor 0. The transport resets its cursor,
- *   replaces the queue with the session's initial updates, and fetches
- *   again at once.
+ *   receive the new room from cursor 0. The transport resets its cursor
+ *   and fetches again at once.
  * - `disconnect`: the session cannot safely rejoin (its local state would
  *   collide with the new room). The transport unregisters the room with a
  *   disconnected status; the editor keeps its local edits as ordinary
@@ -25,17 +24,10 @@ export type RoomRestartDecision = 'rebootstrap' | 'disconnect';
  */
 export interface TransportSessionExtensions {
 	/**
-	 * Flush queued updates even with no collaborator present. Without it the
-	 * transport holds a solo editor's updates back until a second person
-	 * appears (or the session is asked to flush).
+	 * Called when the transport gives a room up while the session still
+	 * holds updates it could not send.
 	 */
-	syncWhileSolo?: boolean;
-
-	/**
-	 * Transport teardown hook: called with the unsent updates the transport
-	 * is about to discard at room unregistration.
-	 */
-	onUpdatesDiscarded?: ( updates: EngineUpdate[] ) => void;
+	onUpdatesDiscarded?: () => void;
 
 	/**
 	 * The server restarted this room: its generation token changed, so every

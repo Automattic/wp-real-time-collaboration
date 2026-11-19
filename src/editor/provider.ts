@@ -23,7 +23,7 @@ import {
 	randomClientId,
 	type IntentLogSession,
 } from '../engines/intent-log-session';
-import { flushHeldUpdates } from '../providers/http-polling/polling-manager';
+import { flushUpdatesNow } from '../providers/http-polling/polling-manager';
 import { getProviderCreators } from '../registry/transports';
 import type { ProviderCreatorResult } from '../registry/types';
 import { createEntityConflictSource } from '../review/entity-source';
@@ -336,7 +336,7 @@ export function createIntentLogProvider(
 	const conflicts = createEntityConflictSource();
 	const undo = createUndoHistory();
 	const fetchTaxonomies = options.fetchTaxonomies ?? fetchPostTypeTaxonomies;
-	const flushBeforeSave = options.flushBeforeSave ?? flushHeldUpdates;
+	const flushBeforeSave = options.flushBeforeSave ?? flushUpdatesNow;
 	const showError = options.showError ?? showEditorError;
 	const userId =
 		Number(

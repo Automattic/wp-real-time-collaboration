@@ -87,39 +87,73 @@ function createMockUpdate( sizeInBytes: number ): SyncUpdate {
 	return { data: encodeMockData( sizeInBytes ), type: 'update' };
 }
 
-// Mock engine session codec handed to registerRoom. The initial update
-// mirrors the Yjs codec's single sync_step1 announcement (1 payload byte,
-// matching the previously mocked y-protocols encoder output).
+/**
+ * A stand-in session, as a transport sees one. It holds the updates that
+ * wait, hands them out when asked, and hands them out again when it is
+ * told the connection was lost. It starts with one update waiting, so
+ * every first request carries something.
+ *
+ * @param clientId The client id the session announces.
+ */
 function createMockSession( clientId = 1 ) {
+	let waiting: SyncUpdate[] = [
+		{ data: encodeMockData( 1 ), type: 'sync_step1' },
+	];
+	let onTheirWay: SyncUpdate[] = [];
+	let listener: ( ( sizeInBytes: number ) => void ) | null = null;
+
 	return {
 		applyRemoteAwareness: jest.fn(),
 		clientId,
-		createCompactionUpdate: jest.fn( () => ( {
-			data: '',
-			type: 'compaction',
-		} ) ),
-		// Mirrors the Yjs codec: full-state recovery for unknown outcomes.
-		createRecoveryUpdate: jest.fn( () => ( {
-			data: '',
-			type: 'compaction',
-		} ) ),
 		destroy: jest.fn(),
-		getInitialUpdates: jest.fn( () => [
-			{ data: encodeMockData( 1 ), type: 'sync_step1' },
-		] ),
 		getLocalAwareness: jest.fn( () => ( {} ) ),
-		onLocalUpdate: jest.fn(),
-		receiveUpdate: jest.fn(),
+		onWorkWaiting: jest.fn( ( callback: ( size: number ) => void ) => {
+			listener = callback;
+		} ),
+		hasUpdatesToSend: jest.fn( () => waiting.length > 0 ),
+		takeUpdatesToSend: jest.fn( ( { maxBytes }: { maxBytes: number } ) => {
+			const taken: SyncUpdate[] = [];
+			let used = 0;
+
+			while ( waiting.length > 0 ) {
+				const cost = JSON.stringify( waiting[ 0 ] ).length + 1;
+
+				if ( used + cost > maxBytes ) {
+					break;
+				}
+
+				used += cost;
+				taken.push( waiting[ 0 ] );
+				waiting = waiting.slice( 1 );
+			}
+
+			onTheirWay.push( ...taken );
+
+			return taken;
+		} ),
+		connectionLost: jest.fn( () => {
+			waiting = [ ...onTheirWay, ...waiting ];
+			onTheirWay = [];
+		} ),
+		// An answer from the server settles what was on its way.
+		receiveUpdates: jest.fn( ( updates: SyncUpdate[] ) => {
+			void updates;
+			onTheirWay = [];
+		} ),
+		onUpdatesDiscarded: jest.fn(),
+		// What a local edit does: the update waits, and the transport
+		// is told.
+		addUpdate( update: SyncUpdate, sizeInBytes: number ) {
+			waiting.push( update );
+			listener?.( sizeInBytes );
+		},
 	};
 }
 
-// Helper to extract the local-update listener attached via session.onLocalUpdate.
+// The way a test makes a local edit on a session.
 function getOnLocalUpdate( session: ReturnType< typeof createMockSession > ) {
-	const call = session.onLocalUpdate.mock.calls[ 0 ];
-	if ( ! call ) {
-		throw new Error( 'onLocalUpdate listener not registered' );
-	}
-	return call[ 0 ] as ( update: SyncUpdate, sizeInBytes: number ) => void;
+	return ( update: SyncUpdate, sizeInBytes: number ) =>
+		session.addUpdate( update, sizeInBytes );
 }
 
 function simulateVisibilityChange( state: string ) {
@@ -539,13 +573,13 @@ describe( 'polling-manager', () => {
 
 			await jest.advanceTimersByTimeAsync( 0 );
 
-			expect( session.receiveUpdate ).toHaveBeenCalledWith( update );
+			expect( session.receiveUpdates ).toHaveBeenCalledWith( [ update ] );
 			expect( session.receiveDispositions ).toHaveBeenCalledWith(
 				dispositions
 			);
 			// Rows settle the state they supersede before the ack arrives.
 			expect(
-				session.receiveUpdate.mock.invocationCallOrder[ 0 ]
+				session.receiveUpdates.mock.invocationCallOrder[ 0 ]
 			).toBeLessThan(
 				session.receiveDispositions.mock.invocationCallOrder[ 0 ]
 			);
@@ -1064,8 +1098,7 @@ describe( 'polling-manager', () => {
 			).toBe( false );
 		} );
 
-		it( 'replaces queued updates with a compaction after a poll error', async () => {
-			// First poll: succeed with collaborators to resume the queue.
+		it( 'sends the same updates again after a poll error', async () => {
 			const responseWithCollaborator = {
 				rooms: [
 					{
@@ -1081,77 +1114,6 @@ describe( 'polling-manager', () => {
 			);
 
 			const session = createMockSession( 1 );
-			pollingManager.registerRoom( {
-				room: 'test-room',
-				session,
-				log: jest.fn(),
-				onStatusChange: jest.fn(),
-			} );
-
-			// Flush the initial poll (queue is paused, so no updates sent).
-			await jest.advanceTimersByTimeAsync( 0 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-
-			// Add a document update (queue is now resumed due to collaborators).
-			const onLocalUpdate = getOnLocalUpdate( session );
-			onLocalUpdate( createMockUpdate( 3 ), 3 );
-
-			// Second poll: fail with a network error.
-			mockPostSyncUpdate.mockRejectedValueOnce( new Error( 'timeout' ) );
-			await jest.advanceTimersByTimeAsync( 1000 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-
-			// Verify the second poll included the queued updates (sync_step1 + doc update).
-			const secondCallPayload = mockPostSyncUpdate.mock
-				.calls[ 1 ][ 0 ] as {
-				rooms: Array< {
-					updates: Array< { type: string } >;
-				} >;
-			};
-			expect(
-				secondCallPayload.rooms[ 0 ].updates.length
-			).toBeGreaterThan( 0 );
-
-			// Third poll: succeed — verify it sends a compaction instead of
-			// restoring the same updates.
-			mockPostSyncUpdate.mockResolvedValueOnce(
-				responseWithCollaborator
-			);
-
-			// First failure with collaborators: retry in 1000ms (schedule[0]).
-			await jest.advanceTimersByTimeAsync( 1000 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-
-			const thirdCallPayload = mockPostSyncUpdate.mock
-				.calls[ 2 ][ 0 ] as {
-				rooms: Array< {
-					updates: Array< { type: string } >;
-				} >;
-			};
-			const retryUpdates = thirdCallPayload.rooms[ 0 ].updates;
-			expect( retryUpdates ).toHaveLength( 1 );
-			expect( retryUpdates[ 0 ].type ).toBe( 'compaction' );
-		} );
-
-		it( 'restores exact updates after a poll error for a codec without createRecoveryUpdate', async () => {
-			const responseWithCollaborator = {
-				rooms: [
-					{
-						room: 'test-room',
-						end_cursor: 1,
-						awareness: { 1: {}, 2: {} },
-						updates: [],
-					},
-				],
-			};
-			mockPostSyncUpdate.mockResolvedValueOnce(
-				responseWithCollaborator
-			);
-
-			// A codec with idempotent server-side ingest: no recovery method.
-			const session = createMockSession( 1 );
-			delete ( session as { createRecoveryUpdate?: unknown } )
-				.createRecoveryUpdate;
 			pollingManager.registerRoom( {
 				room: 'test-room',
 				session,
@@ -1181,15 +1143,14 @@ describe( 'polling-manager', () => {
 			await jest.advanceTimersByTimeAsync( 1000 );
 			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
 
-			// The EXACT updates are re-sent — never a compaction, and never
-			// a cleared queue.
+			// The session was told, and handed the same updates out again.
 			const retryUpdates = (
 				mockPostSyncUpdate.mock.calls[ 2 ][ 0 ] as {
 					rooms: Array< { updates: Array< { type: string } > } >;
 				}
 			 ).rooms[ 0 ].updates;
+			expect( session.connectionLost ).toHaveBeenCalled();
 			expect( retryUpdates ).toEqual( failedUpdates );
-			expect( session.createCompactionUpdate ).not.toHaveBeenCalled();
 		} );
 
 		it( 'REGRESSION: the real intent-log session survives a poll error without losing queued intents or killing polling', async () => {
@@ -1277,8 +1238,8 @@ describe( 'polling-manager', () => {
 			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 4 );
 		} );
 
-		it( 'does not queue a compaction for rooms with no outgoing updates', async () => {
-			// First poll succeeds (no collaborators, queue stays paused).
+		it( 'sends nothing after a poll error for a room that had nothing to send', async () => {
+			// First poll succeeds and carries the one update that waited.
 			mockPostSyncUpdate.mockResolvedValueOnce( syncResponse );
 
 			pollingManager.registerRoom( {
@@ -1291,7 +1252,7 @@ describe( 'polling-manager', () => {
 			await jest.advanceTimersByTimeAsync( 0 );
 			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
 
-			// Second poll: fail (no updates were sent because queue is paused).
+			// Second poll: fail. It carried no update.
 			mockPostSyncUpdate.mockRejectedValueOnce( new Error( 'timeout' ) );
 			await jest.advanceTimersByTimeAsync( 4000 );
 			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
@@ -1305,7 +1266,7 @@ describe( 'polling-manager', () => {
 			};
 			expect( secondCallPayload.rooms[ 0 ].updates ).toHaveLength( 0 );
 
-			// Third poll: succeed — should still have no updates (no compaction queued).
+			// Third poll: succeed. It still has no update to carry.
 			// First failure solo: retry in 2000ms (schedule[0]).
 			mockPostSyncUpdate.mockResolvedValueOnce( syncResponse );
 			await jest.advanceTimersByTimeAsync( 2000 );
@@ -1318,80 +1279,6 @@ describe( 'polling-manager', () => {
 				} >;
 			};
 			expect( thirdCallPayload.rooms[ 0 ].updates ).toHaveLength( 0 );
-		} );
-
-		it( 'REGRESSION: a should_compact response with a codec that cannot compact preserves queued updates', async () => {
-			// The queue was cleared BEFORE createCompactionUpdate(), so a
-			// codec that throws there (intent-log) lost every update queued
-			// while the poll was in flight.
-			mockPostSyncUpdate.mockResolvedValueOnce( {
-				rooms: [
-					{
-						room: 'test-room',
-						end_cursor: 1,
-						awareness: { 1: {}, 2: {} },
-						updates: [],
-					},
-				],
-			} );
-
-			const session = createMockSession( 1 );
-			session.createCompactionUpdate.mockImplementation( () => {
-				throw new Error( 'intent-log sessions do not compact' );
-			} );
-			const log = jest.fn();
-			pollingManager.registerRoom( {
-				room: 'test-room',
-				session,
-				log,
-				onStatusChange: jest.fn(),
-			} );
-
-			await jest.advanceTimersByTimeAsync( 0 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-
-			// Hold the next poll in flight; the server will answer it with
-			// should_compact.
-			const deferred = createDeferred< SyncResponse >();
-			mockPostSyncUpdate.mockReturnValueOnce( deferred.promise );
-			await jest.advanceTimersByTimeAsync( 1000 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
-
-			// Typed while that poll is in flight: queued, not yet sent.
-			const onLocalUpdate = getOnLocalUpdate( session );
-			const typed = createMockUpdate( 3 );
-			onLocalUpdate( typed, 3 );
-
-			deferred.resolve( {
-				rooms: [
-					{
-						room: 'test-room',
-						end_cursor: 2,
-						awareness: { 1: {}, 2: {} },
-						updates: [],
-						should_compact: true,
-					},
-				],
-			} );
-			await jest.advanceTimersByTimeAsync( 0 );
-			expect( session.createCompactionUpdate ).toHaveBeenCalledTimes( 1 );
-
-			// The typed update survives to the next poll; no compaction was
-			// queued in its place.
-			mockPostSyncUpdate.mockResolvedValueOnce( syncResponse );
-			await jest.advanceTimersByTimeAsync( 1000 );
-			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
-			const finalUpdates = (
-				mockPostSyncUpdate.mock.calls[ 2 ][ 0 ] as {
-					rooms: Array< {
-						updates: Array< { type: string; data: string } >;
-					} >;
-				}
-			 ).rooms[ 0 ].updates;
-			expect( finalUpdates ).toContainEqual( typed );
-			expect(
-				finalUpdates.some( ( u ) => 'compaction' === u.type )
-			).toBe( false );
 		} );
 	} );
 
@@ -1460,21 +1347,15 @@ describe( 'polling-manager', () => {
 			} );
 			await jest.advanceTimersByTimeAsync( 0 );
 
-			// Solo: the queue is paused, so this update is never sent.
-			const typed = createMockUpdate( 3 );
-			getOnLocalUpdate( session )( typed, 3 );
+			// Made after the first poll, so no request has carried it.
+			getOnLocalUpdate( session )( createMockUpdate( 3 ), 3 );
 
 			pollingManager.unregisterRoom( 'test-room' );
 
 			expect( session.onUpdatesDiscarded ).toHaveBeenCalledTimes( 1 );
-			const discarded = session.onUpdatesDiscarded.mock
-				.calls[ 0 ][ 0 ] as Array< { type: string } >;
-			expect( discarded ).toContainEqual( typed );
 			expect( log ).toHaveBeenCalledWith(
-				expect.stringContaining( 'Discarding' ),
-				expect.objectContaining( {
-					types: expect.arrayContaining( [ 'update' ] ),
-				} ),
+				expect.stringContaining( 'unsent' ),
+				expect.anything(),
 				'error',
 				true
 			);
@@ -1485,7 +1366,6 @@ describe( 'polling-manager', () => {
 			mockPostSyncUpdate.mockResolvedValue( syncResponse );
 			const session = {
 				...createMockSession( 1 ),
-				getInitialUpdates: jest.fn( () => [] ),
 				onUpdatesDiscarded: jest.fn(),
 			};
 			const log = jest.fn();
@@ -1501,7 +1381,7 @@ describe( 'polling-manager', () => {
 
 			expect( session.onUpdatesDiscarded ).not.toHaveBeenCalled();
 			expect( log ).not.toHaveBeenCalledWith(
-				expect.stringContaining( 'Discarding' ),
+				expect.stringContaining( 'unsent' ),
 				expect.anything(),
 				'error',
 				true
@@ -2498,7 +2378,7 @@ describe( 'polling-manager', () => {
 			await jest.advanceTimersByTimeAsync( 0 );
 			await jest.advanceTimersByTimeAsync( 4000 );
 
-			expect( session.receiveUpdate ).toHaveBeenCalledWith( row );
+			expect( session.receiveUpdates ).toHaveBeenCalledWith( [ row ] );
 			const second = mockPostSyncUpdate.mock
 				.calls[ 1 ][ 0 ] as SyncPayload;
 			expect( second.rooms[ 0 ].after ).toBe( 1 );
@@ -2512,12 +2392,9 @@ describe( 'polling-manager', () => {
 					roomResponse( 'g20', [ newGenesis ], 9 )
 				)
 				.mockResolvedValue( roomResponse( 'g20', [ newGenesis ], 9 ) );
-			const initial = { data: encodeMockData( 1 ), type: 'sync_step1' };
 			const session = {
 				...createMockSession( 1 ),
-				getInitialUpdates: jest.fn( () => [ initial ] ),
 				onRoomRestart: jest.fn( () => 'rebootstrap' as const ),
-				syncWhileSolo: true as const,
 			};
 			const log = jest.fn();
 			pollingManager.registerRoom( {
@@ -2538,24 +2415,25 @@ describe( 'polling-manager', () => {
 			expect( session.onRoomRestart ).toHaveBeenCalledWith( [
 				newGenesis,
 			] );
-			expect( session.receiveUpdate ).not.toHaveBeenCalledWith(
-				newGenesis
-			);
+			expect( session.receiveUpdates ).not.toHaveBeenCalledWith( [
+				newGenesis,
+			] );
 			expect( session.destroy ).not.toHaveBeenCalled();
 
 			// The re-poll follows immediately (no interval wait), from
-			// cursor 0, carrying only the session's initial updates: the
-			// stale local work was dropped for the session to re-derive.
+			// cursor 0. What it carries is the session's business: a
+			// session drops work made against the old room.
 			await jest.advanceTimersByTimeAsync( 1 );
 			expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 3 );
 			const repoll = mockPostSyncUpdate.mock
 				.calls[ 2 ][ 0 ] as SyncPayload;
 			expect( repoll.rooms[ 0 ].after ).toBe( 0 );
-			expect( repoll.rooms[ 0 ].updates ).toEqual( [ initial ] );
 
 			// The new generation is adopted: its rows now apply normally.
 			await jest.advanceTimersByTimeAsync( 4000 );
-			expect( session.receiveUpdate ).toHaveBeenCalledWith( newGenesis );
+			expect( session.receiveUpdates ).toHaveBeenCalledWith( [
+				newGenesis,
+			] );
 			expect( session.onRoomRestart ).toHaveBeenCalledTimes( 1 );
 		} );
 

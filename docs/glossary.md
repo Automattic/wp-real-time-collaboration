@@ -21,7 +21,8 @@ use these terms freely; none of them is standard outside this project
   it started from (`base_seq`).
 - **Company / alone / quiet** — a tab has company when the server says
   another editor is in its room, and is alone otherwise. A tab that is
-  alone stops polling (it is quiet).
+  alone stops polling on a timer (it is quiet). It still polls to send
+  its own edits.
 - **Genesis** — the first version of the shared document, built by the
   server from the post's saved content when the first person opens it.
 - **Materialize** — turn the shared document back into ordinary

@@ -24,6 +24,18 @@ release, which the release script generates from the commit history.
 
 ### Changed
 
+- A tab that edits alone now sends its edits to the room, at most once
+  per polling interval. It used to keep them in the browser until
+  someone else arrived, a save, or the tab going hidden.
+- An edit sent over a WebSocket that closes before the server answers
+  is sent again, over polling or the next socket. It used to stay on the
+  sender's screen only.
+- The contract between an engine's session and a transport changed
+  (`src/registry/types.ts`): the session keeps all unsent updates and
+  the transport asks for them (`takeUpdatesToSend`, `connectionLost`,
+  `receiveUpdates`, `onWorkWaiting`). `onLocalUpdate`,
+  `getInitialUpdates`, and the compaction and recovery update methods
+  are gone.
 - The plugin now owns the server side of collaborative editing: the
   engine and transport contracts and registries, room names and
   permissions, the REST routes, and the settings printed for the

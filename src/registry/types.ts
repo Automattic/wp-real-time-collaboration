@@ -46,15 +46,6 @@ export interface EngineUpdate {
 }
 
 /**
- * Called for each update a local edit produces. The size lets a transport
- * enforce a size limit without decoding the payload.
- */
-export type EngineLocalUpdateListener = (
-	update: EngineUpdate,
-	sizeInBytes: number
-) => void;
-
-/**
  * The server's answer for one update this tab sent.
  */
 export interface EngineDisposition {
@@ -94,47 +85,46 @@ export interface EngineSessionCodec {
 	engineProtocol?: number;
 
 	/**
-	 * Creates one update that holds the full local state and replaces all
-	 * earlier ones. Optional. The intent-log engine does not use it.
-	 */
-	createCompactionUpdate?: () => EngineUpdate;
-
-	/**
-	 * Creates the update to send after a request whose outcome is unknown.
-	 * Only an engine whose updates cannot safely be sent twice needs it.
-	 * Without it the transport sends the same updates again.
-	 */
-	createRecoveryUpdate?: () => EngineUpdate;
-
-	/**
-	 * Merges updates the server handed back into one. Optional and unused.
-	 *
-	 * @deprecated No server asks for this any more.
-	 */
-	createCompactionFromUpdates?: ( updates: EngineUpdate[] ) => EngineUpdate;
-
-	/**
-	 * Detaches the listener registered with `onLocalUpdate`. Safe to call
-	 * more than once. A later `onLocalUpdate` call attaches again.
+	 * Detaches the listener registered with `onWorkWaiting`. Safe to call
+	 * more than once. A later `onWorkWaiting` call attaches again.
 	 */
 	destroy: () => void;
-
-	/** The updates that announce this session to a room it just joined. */
-	getInitialUpdates: () => EngineUpdate[];
 
 	/** This tab's presence state for the next request. */
 	getLocalAwareness: () => LocalAwarenessState;
 
 	/**
-	 * Subscribes to updates produced by local edits, replacing any earlier
-	 * listener. Updates applied through `receiveUpdate` are not reported.
+	 * Subscribes to "an update can be sent now", replacing any earlier
+	 * listener. The listener gets the byte length of the update's data,
+	 * so a transport can enforce a size limit. The session keeps the
+	 * update. The transport asks for it with `takeUpdatesToSend`.
 	 */
-	onLocalUpdate: ( listener: EngineLocalUpdateListener ) => void;
+	onWorkWaiting: ( listener: ( dataSize: number ) => void ) => void;
+
+	/** Whether `takeUpdatesToSend` would return anything. */
+	hasUpdatesToSend: () => boolean;
 
 	/**
-	 * Takes one received update. May return an update to send in answer.
+	 * The updates to send now, oldest first, within a size budget. An
+	 * update counts as the byte length of its JSON form plus one. The
+	 * updates are on their way from this call on, and are not handed out
+	 * again unless `connectionLost` is called. The session holds all
+	 * unsent work. A transport keeps no queue.
 	 */
-	receiveUpdate: ( update: EngineUpdate ) => EngineUpdate | void;
+	takeUpdatesToSend: ( limit: { maxBytes: number } ) => EngineUpdate[];
+
+	/**
+	 * Tells the session that the updates on their way may not have
+	 * arrived: a request failed, a socket closed, or another transport
+	 * takes the room. They are handed out again. The server must accept
+	 * an update it has already.
+	 */
+	connectionLost: () => void;
+
+	/**
+	 * Takes the updates of one answer, in order.
+	 */
+	receiveUpdates: ( updates: EngineUpdate[] ) => void;
 
 	/**
 	 * Takes the server's answers for a batch this tab sent. A transport

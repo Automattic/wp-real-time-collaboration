@@ -21,36 +21,32 @@ import apiFetch from '@wordpress/api-fetch';
 import {
 	websocketManager,
 	resetWebSocketManagerForTesting,
-} from '../../../src/providers/websocket/websocket-manager';
-import { postSyncUpdate } from '../../../src/providers/http-polling/utils';
+} from '../../../../src/providers/websocket/websocket-manager';
+import { postSyncUpdate } from '../../../../src/providers/http-polling/utils';
 import type {
 	SyncPayload,
 	SyncResponse,
 	SyncUpdate,
-} from '../../../src/providers/http-polling/types';
+} from '../../../../src/providers/http-polling/types';
 import {
 	createIntentLogSession,
 	INTENT_LOG_UPDATE_TYPES,
-} from '../../../src/engines/intent-log-session';
-import { createDocument } from '../../../src/engines/intent-log/document.js';
+} from '../../../../src/engines/intent-log-session';
+import { createDocument } from '../../../../src/engines/intent-log/document.js';
 
 /*
- * Known defect.
- *
- * An open WebSocket has no queue. An edit is written to the socket once
- * (sendUpdate in src/providers/websocket/websocket-manager.ts). If the
- * socket closes before the server reads the edit, nothing sends it again:
- * the fallback to polling starts with an empty queue, and so does the
- * next socket. The edit stays on the person's screen but never reaches
- * the server or anyone else.
+ * An open WebSocket has no queue. An edit is written to the socket once.
+ * If the socket closes before the server reads the edit, the session
+ * still holds it as unanswered, is told the connection was lost, and
+ * hands it out again to whichever route serves the room next.
  */
 
 // The token request for the socket is the only call that goes through
 // api-fetch here. The polling requests go through the two mocks below.
 jest.mock( '@wordpress/api-fetch' );
-jest.mock( '../../../src/providers/http-polling/utils', () => ( {
+jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
 	...( jest.requireActual(
-		'../../../src/providers/http-polling/utils'
+		'../../../../src/providers/http-polling/utils'
 	) as object ),
 	postSyncUpdate: jest.fn(),
 	postSyncUpdateNonBlocking: jest.fn(),
@@ -136,7 +132,7 @@ function latestSocket(): FakeWebSocket {
 	return socket;
 }
 
-describe( 'known defect: an edit sent on a WebSocket that dies before the server reads it', () => {
+describe( 'an edit sent on a WebSocket that dies before the server reads it', () => {
 	beforeEach( () => {
 		jest.useFakeTimers();
 		Object.assign( window, {
@@ -167,86 +163,83 @@ describe( 'known defect: an edit sent on a WebSocket that dies before the server
 		jest.useRealTimers();
 	} );
 
-	it.failing(
-		'sends an unanswered edit again after the socket closes (known defect, to be fixed by keeping unsent edits in one place)',
-		async () => {
-			const session = createIntentLogSession( {
-				userId: 1,
-				clientId: 11,
-			} );
-			websocketManager.registerRoom( {
-				room: ROOM,
-				session,
-				onStatusChange: jest.fn(),
-			} );
-			await jest.advanceTimersByTimeAsync( 0 );
+	it( 'is sent again after the socket closes', async () => {
+		const session = createIntentLogSession( {
+			userId: 1,
+			clientId: 11,
+		} );
+		websocketManager.registerRoom( {
+			room: ROOM,
+			session,
+			onStatusChange: jest.fn(),
+		} );
+		await jest.advanceTimersByTimeAsync( 0 );
 
-			// The socket opens and the server sends the document.
-			const firstSocket = latestSocket();
-			firstSocket.open();
-			firstSocket.receive( {
-				type: 'sync',
-				rooms: [
-					{
-						room: ROOM,
-						awareness: {},
-						updates: [
-							{
-								data: JSON.stringify( {
-									doc: createDocument( [
-										{
-											syncId: 'p1',
-											blockType: 'core/paragraph',
-											text: 'Hello',
-										},
-									] ),
-								} ),
-								type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
-							},
-						],
-						end_cursor: 1,
-					},
-				],
-			} );
+		// The socket opens and the server sends the document.
+		const firstSocket = latestSocket();
+		firstSocket.open();
+		firstSocket.receive( {
+			type: 'sync',
+			rooms: [
+				{
+					room: ROOM,
+					awareness: {},
+					updates: [
+						{
+							data: JSON.stringify( {
+								doc: createDocument( [
+									{
+										syncId: 'p1',
+										blockType: 'core/paragraph',
+										text: 'Hello',
+									},
+								] ),
+							} ),
+							type: INTENT_LOG_UPDATE_TYPES.SNAPSHOT,
+						},
+					],
+					end_cursor: 1,
+				},
+			],
+		} );
 
-			// The person types. The edit is written to the open socket.
-			const edit = session.author( 'insert_text', {
-				syncId: 'p1',
-				field: 'content',
-				offset: 5,
-				text: ' world',
-			} );
-			const carriesTheEdit = ( update: SyncUpdate ) =>
-				update.data.includes( edit.intentId );
-			expect( updatesSentOn( firstSocket ).some( carriesTheEdit ) ).toBe(
-				true
-			);
+		// The person types. The edit is written to the open socket.
+		const edit = session.author( 'insert_text', {
+			syncId: 'p1',
+			field: 'content',
+			offset: 5,
+			text: ' world',
+		} );
+		const carriesTheEdit = ( update: SyncUpdate ) =>
+			update.data.includes( edit.intentId );
+		expect( updatesSentOn( firstSocket ).some( carriesTheEdit ) ).toBe(
+			true
+		);
 
-			// The socket dies before the server reads the edit, so no
-			// answer ever arrives. Polling takes the room over at once.
-			firstSocket.close();
-			await jest.advanceTimersByTimeAsync( 900 );
-			expect( session.getPendingCount() ).toBe( 1 );
+		// The socket dies before the server reads the edit, so no
+		// answer ever arrives. Polling takes the room over at once.
+		firstSocket.close();
+		await jest.advanceTimersByTimeAsync( 900 );
+		expect( session.getPendingCount() ).toBe( 1 );
 
-			// One second after the close, the socket comes back and takes
-			// the room back from polling.
-			await jest.advanceTimersByTimeAsync( 100 );
-			const secondSocket = latestSocket();
-			expect( secondSocket ).not.toBe( firstSocket );
-			secondSocket.open();
-			await jest.advanceTimersByTimeAsync( 30000 );
+		// One second after the close, the socket comes back and takes
+		// the room back from polling.
+		await jest.advanceTimersByTimeAsync( 100 );
+		const secondSocket = latestSocket();
+		expect( secondSocket ).not.toBe( firstSocket );
+		secondSocket.open();
+		await jest.advanceTimersByTimeAsync( 30000 );
 
-			// Both routes were used after the close, and one of them
-			// carried the edit again.
-			const sentAfterTheClose = [
-				...mockPostSyncUpdate.mock.calls.flatMap( ( [ payload ] ) =>
-					payload.rooms.flatMap( ( room ) => room.updates )
-				),
-				...updatesSentOn( secondSocket ),
-			];
-			expect( mockPostSyncUpdate ).toHaveBeenCalled();
-			expect( secondSocket.sent.length ).toBeGreaterThan( 0 );
-			expect( sentAfterTheClose.some( carriesTheEdit ) ).toBe( true );
-		}
-	);
+		// Both routes were used after the close, and one of them
+		// carried the edit again.
+		const sentAfterTheClose = [
+			...mockPostSyncUpdate.mock.calls.flatMap( ( [ payload ] ) =>
+				payload.rooms.flatMap( ( room ) => room.updates )
+			),
+			...updatesSentOn( secondSocket ),
+		];
+		expect( mockPostSyncUpdate ).toHaveBeenCalled();
+		expect( secondSocket.sent.length ).toBeGreaterThan( 0 );
+		expect( sentAfterTheClose.some( carriesTheEdit ) ).toBe( true );
+	} );
 } );

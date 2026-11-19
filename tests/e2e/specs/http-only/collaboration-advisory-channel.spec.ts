@@ -116,7 +116,7 @@ test.describe( 'Collaboration - advisory channel', () => {
 		await collaborationUtils.teardown();
 	} );
 
-	test( 'a tab editing alone polls slowly, holds its typing, and flushes it before a save', async ( {
+	test( 'a tab editing alone polls slowly, still sends its typing, and sends the rest before a save', async ( {
 		collaborationUtils,
 		requestUtils,
 		page,
@@ -130,8 +130,8 @@ test.describe( 'Collaboration - advisory channel', () => {
 		await collaborationUtils.openPost( post.id );
 
 		// A lone tab keeps the 4 s solo cadence for 30 s after load (the
-		// discovery window), far below the 1 s company cadence, and its
-		// typing is held: no request carries an update.
+		// discovery window), far below the 1 s company cadence. Its
+		// typing still reaches the room, on those few requests.
 		await page.waitForTimeout( 2000 );
 		const requests = collectSyncRequests( page );
 		await editor.canvas
@@ -143,12 +143,10 @@ test.describe( 'Collaboration - advisory channel', () => {
 		await page.waitForTimeout( 8000 );
 		const seen = requests.stop();
 		expect( seen.length ).toBeLessThanOrEqual( 3 );
-		expect( seen.every( ( body ) => ! carriesUpdates( body ) ) ).toBe(
-			true
-		);
+		expect( seen.some( ( body ) => carriesUpdates( body ) ) ).toBe( true );
 
-		// A save flushes the held work through the room first, so a
-		// reload bootstraps from a room that saw it.
+		// A save sends what is still unsent through the room first, so
+		// a reload starts from a room that saw it.
 		const held = countSyncRequests( page, 8000 );
 		await editor.saveDraft();
 		expect( await held ).toBeGreaterThanOrEqual( 1 );

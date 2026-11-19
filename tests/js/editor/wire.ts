@@ -187,7 +187,10 @@ export function connectToWire(
 	const queue: EngineUpdate[] = [];
 	let cursor = 0;
 
-	session.onLocalUpdate( ( update ) => queue.push( update ) );
+	// What a transport does when the session has something to send.
+	session.onWorkWaiting( () =>
+		queue.push( ...session.takeUpdatesToSend( { maxBytes: Infinity } ) )
+	);
 
 	return {
 		poll() {
@@ -197,9 +200,7 @@ export function connectToWire(
 
 			cursor = wire.rowCount();
 
-			for ( const update of updates ) {
-				session.receiveUpdate( update );
-			}
+			session.receiveUpdates( updates );
 
 			if ( dispositions ) {
 				session.receiveDispositions?.( dispositions );

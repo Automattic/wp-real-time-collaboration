@@ -141,11 +141,11 @@ for this plugin.
    into the Yjs document and queues the binary update. Intent-log
    compares the editor's blocks with the version they show, turns the
    difference into typed edits, and applies them locally.
-3. The edit travels. The experiment and intent-log send
-   the queue on the next poll. Under this plugin the queue is kept in
-   the browser while
-   the tab is alone and sent when another person joins, on save, or
-   when the tab is hidden.
+3. The edit travels. The experiment sends its queue on the next
+   poll. Intent-log keeps every edit the server has not answered in
+   one list, and the transport asks for what to send: on the next poll,
+   or at once over an open socket. A tab that is alone sends at most
+   once per polling interval.
 4. A peer receives. The experiment merges the update into its Yjs
    document.
    Intent-log adds the rows to its local history and recomputes its

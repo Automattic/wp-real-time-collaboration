@@ -116,7 +116,9 @@ function connect(
 	session: IntentLogSession
 ) {
 	const queue: EngineUpdate[] = [];
-	session.onLocalUpdate( ( update ) => queue.push( update ) );
+	session.onWorkWaiting( () =>
+		queue.push( ...session.takeUpdatesToSend( { maxBytes: Infinity } ) )
+	);
 
 	return {
 		poll() {
@@ -320,13 +322,17 @@ describe( 'intent-log session codec', () => {
 		);
 	} );
 
-	it( 'authors optimistically and emits wire updates with byte sizes', () => {
+	it( 'shows an edit at once and hands it to the transport with its byte size', () => {
 		const wire = makeWireServer();
 		const session = makeSession( 1, 11 );
 		const emitted: Array< { update: EngineUpdate; size: number } > = [];
-		session.onLocalUpdate( ( update, size ) =>
-			emitted.push( { update, size } )
-		);
+		session.onWorkWaiting( ( size ) => {
+			for ( const update of session.takeUpdatesToSend( {
+				maxBytes: Infinity,
+			} ) ) {
+				emitted.push( { update, size } );
+			}
+		} );
 		session.receiveUpdate( wire.rowsAfter( 0 )[ 0 ] );
 
 		const intent = session.author( 'insert_text', {
@@ -773,12 +779,8 @@ describe( 'intent-log session codec', () => {
 		);
 	} );
 
-	it( 'implements the codec edges: no announcements, no client-side compaction, awareness passthrough', () => {
+	it( 'passes presence through', () => {
 		const session = makeSession( 1, 11 );
-		expect( session.getInitialUpdates() ).toEqual( [] );
-		// No client-side compaction: the optional members are absent.
-		expect( session.createCompactionUpdate ).toBeUndefined();
-		expect( session.createCompactionFromUpdates ).toBeUndefined();
 
 		session.setLocalAwareness( { user: 'alice' } );
 		expect( session.getLocalAwareness() ).toEqual( { user: 'alice' } );
@@ -786,18 +788,28 @@ describe( 'intent-log session codec', () => {
 		expect( session.getPeers() ).toEqual( { 22: { user: 'bob' } } );
 	} );
 
-	it( 'relays transport discards to onDiscard listeners', () => {
+	it( 'tells the onDiscard listeners which updates a transport gave up', () => {
+		const wire = makeWireServer();
 		const session = makeSession( 1, 11 );
 
+		session.receiveUpdate( wire.rowsAfter( 0 )[ 0 ] );
+
+		const intent = session.author( 'insert_text', {
+			syncId: 'p1',
+			offset: 5,
+			text: '!',
+		} );
 		const listener = jest.fn();
+
 		session.onDiscard( listener );
-		const discarded = [ { type: 'intent', data: '{}' } ];
-		session.onUpdatesDiscarded( discarded );
-		expect( listener ).toHaveBeenCalledWith( discarded );
+		session.onUpdatesDiscarded();
+		expect( listener ).toHaveBeenCalledWith( [
+			{ type: 'intent', data: JSON.stringify( intent ) },
+		] );
 
 		// destroy() detaches listeners; later discards are no-ops.
 		session.destroy();
-		session.onUpdatesDiscarded( discarded );
+		session.onUpdatesDiscarded();
 		expect( listener ).toHaveBeenCalledTimes( 1 );
 	} );
 
