@@ -35,7 +35,9 @@ shared editing session.
   (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds
   `build/sync-engines.js`: `engines/` (the intent-log core, its session,
-  and the comparison of two documents), `shared/`,
+  and the comparison of two documents), `replica/` (one room's state in
+  the browser: the documents and the one list of everything the server
+  has not answered), `shared/`,
   `registry/` (the plugin's own transport and engine registries,
   connection errors, and the types an engine and a transport share),
   `providers/{http-polling,websocket,advisory}/`,

@@ -1,30 +1,20 @@
 /**
  * Internal dependencies
  */
+import { serverDocAt } from './intent-log/rebase.js';
+import type { EngineDocument, IntentEnvelope } from './intent-log/engine-types';
 import {
-	authorIntent,
-	clientReceive,
-	createClient,
-	predictedDisposition,
-	replanClient,
-} from './intent-log/client.js';
-import {
-	ESCALATION_REASONS,
-	groupUnits,
-	planBatch,
-	serverDocAt,
-} from './intent-log/rebase.js';
-import { createIntent } from './intent-log/intents.js';
-import type {
-	EngineDocument,
-	IntentDisposition,
-	IntentEnvelope,
-} from './intent-log/engine-types';
+	createReplica,
+	INTENT_LOG_UPDATE_TYPES,
+	type IntentLogProposal,
+	type ReplicaState,
+	type SettledDisposition,
+	type StaleBaseRecovery,
+} from '../replica/replica';
 import { applyServerAwarenessStates } from '../shared/awareness-sync';
 import type { PresenceObject } from '../editor/gutenberg-contract';
 import type {
 	AwarenessState,
-	EngineDisposition,
 	EngineSessionCodec,
 	EngineLocalUpdateListener,
 	EngineUpdate,
@@ -32,34 +22,29 @@ import type {
 } from '../registry/types';
 
 /*
- * The intent-log engine's client half behind the transport-facing
- * EngineSessionCodec seam — the counterpart of WP_Intent_Log_Engine on the
- * server. This file lives OUTSIDE the tsc-excluded engine-core directory so
- * it is fully type-checked; the core's surface is typed by hand-written
- * declaration files (engine-types.d.ts and siblings).
+ * The intent-log engine's session for one room: what a transport and the
+ * editor code talk to. The counterpart of WP_Intent_Log_Engine on the
+ * server.
+ *
+ * The room's state lives in the replica (src/replica/replica.ts): the
+ * documents, the history, and the one list of everything the server has
+ * not answered. This file adds what surrounds it: presence, the listeners,
+ * and the names the transports and the editor code call.
  *
  * Wire protocol (see the server class for authority):
- * - receive `snapshot` → bootstrap the local replica from the genesis doc;
- * - receive `intent`   → append the server's authoritative (transformed)
- *   form to the replica's log copy, replanning pending work over it;
- * - receive `parked`   → record an escalated intent for the review lane;
- * - receive `voided`   → informational marker (the ack path settles ours);
- * - send `intent` rows authored locally, optimistically applied;
- * - `dispositions` in the poll response are the ack, delivered AFTER the
- *   same response's rows (the transport guarantees this ordering): rows
- *   already settle what they supersede — an accepted intent's
- *   authoritative form, an escalation's proposal — so the ack covers the
- *   remainder and the document never regresses mid-response.
- *
- * Sessions surface documents/dispositions/proposals through callbacks; the
- * entity bridge (Phase 2c) subscribes to them. Until then the extended
- * surface doubles as the dev/test API.
+ * - receive `snapshot`: start the replica from a whole copy of the document;
+ * - receive `intent`: an accepted edit, in the form the server stored;
+ * - receive `parked`: an edit set aside for review;
+ * - receive `voided`: a marker for an edit that was thrown away;
+ * - send `intent` rows for local edits, which are applied here at once;
+ * - `dispositions` in the response are the answers, delivered AFTER the
+ *   same response's rows (the transport guarantees this order), so the
+ *   document never goes backwards inside one response.
  */
 
 /**
  * Slug of the intent-log engine. Must match WP_Intent_Log_Engine::SLUG on the
- * PHP side. Defined here (rather than in engines.ts, which re-exports it) so
- * the codec can stamp its own identity without an import cycle.
+ * PHP side.
  */
 export const INTENT_LOG_ENGINE_SLUG = 'intent-log';
 
@@ -69,93 +54,12 @@ export const INTENT_LOG_ENGINE_SLUG = 'intent-log';
  */
 export const INTENT_LOG_ENGINE_PROTOCOL = 3;
 
-/**
- * Wire kinds, matching WP_Intent_Log_Engine::UPDATE_TYPE_*.
- */
-export const INTENT_LOG_UPDATE_TYPES = {
-	INTENT: 'intent',
-	PARKED: 'parked',
-	RESOLVED: 'resolved',
-	SNAPSHOT: 'snapshot',
-	VOIDED: 'voided',
-	// Client-sent only, never stored: cancels still-queued intents
-	// (the pre-settle undo lane).
-	CANCEL: 'cancel',
-} as const;
-
-/**
- * An escalated intent parked in the proposal lane, as received. The engine
- * enriches rows with the settlement seq, a server timestamp, and a short
- * excerpt of the target field at escalation time (context for review).
- */
-export interface IntentLogProposal {
-	intent: IntentEnvelope;
-	actorId: string;
-	reason: string;
-	/** Log index of the entry that settled it (planner escalations). */
-	atSeq?: number;
-	at?: number;
-	time?: number;
-	context?: { excerpt?: string };
-}
-
-/** A proposal's terminal state, as received. */
-export interface IntentLogResolution {
-	proposalId: string;
-	resolution: 'restored' | 'dismissed';
-	resolvedBy?: string;
-	time?: number;
-}
-
-/**
- * An accepted edit as the server stores and relays it: the edit, plus the
- * room's position after it. The first edit of a room has 1.
- */
-interface StoredIntent extends IntentEnvelope {
-	seq?: number;
-}
-
-/**
- * The server's answer for an update it could read an id from. Every
- * update this session sends has one.
- */
-interface IdentifiedDisposition extends EngineDisposition {
-	intentId: string;
-}
-
-/**
- * Whether an answer names its update by id. The server answers an update
- * with no readable id by its place in the request, and this session
- * never sends such an update.
- *
- * @param disposition The server's answer for one update.
- */
-function hasIntentId(
-	disposition: EngineDisposition
-): disposition is IdentifiedDisposition {
-	return typeof disposition.intentId === 'string';
-}
-
-/**
- * A settled outcome surfaced to disposition listeners, joined with the
- * planner's local prediction when one existed.
- */
-export interface SettledDisposition extends IdentifiedDisposition {
-	predicted?: IntentDisposition | null;
-}
-
-/**
- * The local effect lost when the server refuses edits because it no longer
- * holds the history they were made against (stale-base acks).
- */
-interface StaleBaseRecovery {
-	/** The document without the refused edits. */
-	base: EngineDocument;
-	/** The same document with them. */
-	target: EngineDocument;
-	/** The log position to author the difference at. */
-	seq: number;
-}
+export { INTENT_LOG_UPDATE_TYPES };
+export type {
+	IntentLogProposal,
+	IntentLogResolution,
+	SettledDisposition,
+} from '../replica/replica';
 
 export interface IntentLogSessionOptions {
 	/** WordPress user id (the authenticated half of the actor id). */
@@ -185,13 +89,41 @@ export interface IntentLogSession extends EngineSessionCodec {
 	/** The server-verifiable actor id this session authors as. */
 	actorId: string;
 
+	/** Takes one received row. The same as `receiveUpdates` with one. */
+	receiveUpdate: ( update: EngineUpdate ) => void;
+
 	/**
-	 * Transport capability: flush queued updates even with no collaborator
-	 * present. Intent ingest is idempotent by intentId and rows are tiny,
-	 * so sending while solo is safe — and it shrinks the window in which a
-	 * terminal transport error can destroy unsent local work from the whole
-	 * solo session down to one poll interval.
+	 * Takes the rows of one answer, in order. A run of accepted edits is
+	 * handled in one step, so the person's unanswered edits are planned
+	 * again once per run, not once per row.
 	 */
+	receiveUpdates: ( updates: EngineUpdate[] ) => void;
+
+	/**
+	 * The updates to send now, oldest first, within a size budget: the
+	 * sum of each update's JSON form plus one byte. They count as on
+	 * their way from this call on. Nothing else holds unsent work.
+	 */
+	takeUpdatesToSend: ( limit: { maxBytes: number } ) => EngineUpdate[];
+
+	/** Whether `takeUpdatesToSend` would return anything. */
+	hasUpdatesToSend: () => boolean;
+
+	/**
+	 * The connection that carried the updates on their way is gone: a
+	 * request failed, a socket closed, or another transport takes the
+	 * room. They are handed out again by `takeUpdatesToSend`.
+	 */
+	connectionLost: () => void;
+
+	/**
+	 * Subscribes to "an update can be sent now". The listener gets the
+	 * byte length of the update's data.
+	 */
+	onWorkWaiting: ( listener: ( dataSize: number ) => void ) => void;
+
+	/** Where the room's replica stands (see src/replica/replica.ts). */
+	getState: () => ReplicaState;
 
 	/**
 	 * Authors one intent against the optimistic document, applies it
@@ -331,8 +263,8 @@ export interface IntentLogSession extends EngineSessionCodec {
 	getSeq: () => number;
 
 	/**
-	 * Whether a horizon-reset snapshot is deferred behind un-settled
-	 * local work (see deferredResetBuffer in the factory).
+	 * Whether a newer whole copy of the document waits for the answers to
+	 * edits that were sent (the `reset-waiting` state).
 	 */
 	hasDeferredReset: () => boolean;
 
@@ -385,16 +317,16 @@ export interface IntentLogSession extends EngineSessionCodec {
 	 * replica never observed and re-bootstrapped it from a checkpoint.
 	 * Also fires when the server restarted the room (see onRoomRestart).
 	 *
-	 * A horizon reset is applied only when none of this session's edits is
-	 * unanswered (one that arrives earlier waits). The session's document
-	 * is then the checkpoint. The listener must bring the editor to it
+	 * A horizon reset is applied only when no edit that was sent is without
+	 * an answer. One that arrives earlier waits, for a limited time (see
+	 * RESET_WAIT_LIMIT_MS). The session's document is then the checkpoint. The listener must bring the editor to it
 	 * before the editor's next edit is authored: the rows between the old
 	 * shown seq and the checkpoint are gone, so an edit made against the
 	 * old view cannot be rebased over them.
 	 *
-	 * An edit the server refused while the reset waited is not in the
-	 * checkpoint. It is handed to the onStaleBaseRecovery listeners right
-	 * after the reset.
+	 * An edit made before the reset is not in the checkpoint, unless the
+	 * server answered that it stored it. What such edits had changed is
+	 * handed to the onStaleBaseRecovery listeners right after the reset.
 	 */
 	onReset: ( listener: () => void ) => void;
 
@@ -434,7 +366,7 @@ export function randomClientId(): number {
 }
 
 /**
- * Creates an intent-log session codec.
+ * Creates an intent-log session.
  *
  * @param options Session options.
  * @return The session.
@@ -445,40 +377,11 @@ export function createIntentLogSession(
 	const clientId = options.clientId ?? randomClientId();
 	const actorId = `u${ options.userId }c${ clientId }`;
 
-	let replica: ReturnType< typeof createClient > | null = null;
-	let bootstrapSeq: number | null = null;
-	/*
-	 * The log position of the document the editor shows (see
-	 * setShownSeq). It equals the cursor whenever the editor is caught
-	 * up; it lags while updates have reached this replica but not the
-	 * editor.
-	 */
-	let shownSeq = 0;
-	/*
-	 * Log rows this replica has absorbed, by intentId. The replica's log is
-	 * positional — clientReceive() appends every entry at the cursor — so a
-	 * transport that redelivers a row (e.g. overlapping delivery windows)
-	 * would have it counted as a NEW log entry, pushing the local head past
-	 * the server's and voiding every later local intent as invalid-payload.
-	 * IntentIds are unique per log entry (the server settles duplicates),
-	 * so they identify rows exactly.
-	 */
-	let appliedIntentIds = new Set< string >();
 	let localUpdateListener: EngineLocalUpdateListener | null = null;
 	let localAwareness: LocalAwarenessState = {};
 	let peers: AwarenessState = {};
-	const proposals: IntentLogProposal[] = [];
-	// Conflicts found while recovering stale edits exist only in this tab.
-	// The server discarded their priors, so it cannot create these proposals.
-	const localProposalIds = new Set< string >();
-	const resolvedIds = new Set< string >();
+	const workWaitingListeners = new Set< ( dataSize: number ) => void >();
 	const proposalsChangeListeners = new Set< () => void >();
-	const notifyProposalsChange = () => {
-		// An opened or closed proposal moves the retention floor (see
-		// applyRetention).
-		applyRetention();
-		proposalsChangeListeners.forEach( ( listener ) => listener() );
-	};
 	const changeListeners = new Set< () => void >();
 	const dispositionListeners = new Set<
 		( settled: SettledDisposition ) => void
@@ -494,219 +397,46 @@ export function createIntentLogSession(
 	const acceptedRowListeners = new Set<
 		( rows: Array< { seq: number; entry: IntentEnvelope } > ) => void
 	>();
-	/*
-	 * The undo stack's retention pin (see setUndoRetainSeq). Kept separate
-	 * from shownSeq. The document the editor shows and the undo stack's
-	 * oldest invertible row each keep their own rows, so neither can make
-	 * the session drop rows the other still needs.
-	 */
-	let undoRetainSeq: number | null = null;
 
-	const notifyChange = () => {
-		changeListeners.forEach( ( listener ) => listener() );
-	};
+	const textEncoder = new TextEncoder();
 
-	/**
-	 * Clamps a shown seq into the replica's authorable range and skips
-	 * the contiguous run of own entries above it (see setShownSeq).
-	 *
-	 * @param seq Candidate shown seq.
-	 * @return The seq to record.
-	 */
-	const resolveShownSeq = ( seq: number ): number => {
-		if ( ! replica ) {
-			return seq;
-		}
-		let resolved = Math.min(
-			Math.max( seq, replica.firstSeq ),
-			replica.cursor
-		);
-		while (
-			resolved < replica.cursor &&
-			replica.log[ resolved - replica.firstSeq ]?.actorId === actorId
-		) {
-			resolved++;
-		}
-		return resolved;
-	};
-
-	/**
-	 * The settling seq of one of this actor's own planner escalations, or
-	 * null when the proposal is not one (a security hold is not a frame
-	 * phantom) or carries no seq. Rows written before the seq was recorded
-	 * fall back to the head at parking, the conservative choice.
-	 *
-	 * @param proposal A parked proposal.
-	 * @return The settling seq, or null.
-	 */
-	const ownParkedAtSeq = ( proposal: IntentLogProposal ): number | null => {
-		if (
-			proposal.actorId !== actorId ||
-			! ESCALATION_REASONS.has( proposal.reason )
-		) {
-			return null;
-		}
-		if ( 'number' === typeof proposal.atSeq ) {
-			return proposal.atSeq;
-		}
-		return 'number' === typeof proposal.at ? proposal.at - 1 : null;
-	};
-
-	/**
-	 * This actor's set-aside intents with their settling seqs, the frame
-	 * seed a fresh replica's replans start from (see client.js `parked`).
-	 *
-	 * @return The parks.
-	 */
-	const ownParked = (): Array< { intent: IntentEnvelope; atSeq: number } > =>
-		proposals.flatMap( ( proposal ) => {
-			const atSeq = ownParkedAtSeq( proposal );
-			return null === atSeq ? [] : [ { intent: proposal.intent, atSeq } ];
-		} );
-
-	/**
-	 * Recomputes the replica's retention floor: the log must stay sliceable
-	 * from the shown seq (the editor's next edit is authored at it), the undo
-	 * pin (inverse derivation reads documents at retained seqs), AND the
-	 * base of every open proposal (conflict review rebuilds what the
-	 * author started from. A parked intent is no longer pending, so the
-	 * outbox floor alone would let its base be trimmed away). A proposal
-	 * whose base is already below the replica's first seq (parked before
-	 * this session joined) cannot pull the floor back. Its record has no
-	 * base side.
-	 */
-	const applyRetention = (): void => {
-		if ( ! replica ) {
-			return;
-		}
-		let floor =
-			null === undoRetainSeq
-				? shownSeq
-				: Math.min( shownSeq, undoRetainSeq );
-		for ( const proposal of proposals ) {
-			if ( resolvedIds.has( proposal.intent.intentId ) ) {
-				continue;
-			}
-			const baseSeq = Number( proposal.intent.baseSeq );
-			if ( Number.isFinite( baseSeq ) && baseSeq >= replica.firstSeq ) {
-				floor = Math.min( floor, baseSeq );
-			}
-		}
-		replica.retainFrom = floor;
-	};
-
-	/**
-	 * Records the shown seq and keeps the replica's log sliceable from
-	 * there (the editor's next edit is authored at it, and the planner
-	 * needs the slice (shownSeq, head] to rebase).
-	 *
-	 * @param seq Candidate shown seq.
-	 */
-	const applyShownSeq = ( seq: number ): void => {
-		shownSeq = resolveShownSeq( seq );
-		applyRetention();
-	};
-
-	/**
-	 * Emits one authored intent to the transport.
-	 *
-	 * @param intent Intent envelope.
-	 */
-	const emitIntent = ( intent: IntentEnvelope ): void => {
-		const data = JSON.stringify( intent );
-		if ( localUpdateListener ) {
-			localUpdateListener(
-				{ data, type: INTENT_LOG_UPDATE_TYPES.INTENT },
-				new TextEncoder().encode( data ).length
+	const replica = createReplica( actorId, {
+		change: () => changeListeners.forEach( ( listener ) => listener() ),
+		workWaiting: ( dataSize ) => {
+			workWaitingListeners.forEach( ( listener ) =>
+				listener( dataSize )
 			);
-		}
-	};
 
-	/**
-	 * Removes a settled intent from the pending outbox. The replica's
-	 * predictions rebuild on the next replan; removal just stops the intent
-	 * from being replanned as pending.
-	 *
-	 * @param intentId Intent id to settle.
-	 * @return Whether the intent was pending.
-	 */
-	const settlePending = ( intentId: string ): boolean => {
-		if ( ! replica ) {
-			return false;
-		}
-		const before = replica.outbox.length;
-		replica.outbox = replica.outbox.filter(
-			( intent ) => intent.intentId !== intentId
-		);
-		return replica.outbox.length !== before;
-	};
-
-	/*
-	 * A horizon-reset snapshot that arrives while LOCAL WORK is still
-	 * un-settled (outbox non-empty: authored intents, sent or not) is
-	 * DEFERRED, along with every row behind it, until the outbox drains.
-	 * Applying the reset mid-burst mixes authoring frames inside one
-	 * transport batch: the pre-reset intents void as stale while the
-	 * SAME burst's later keystrokes land at the new frame with offsets
-	 * that assumed the voided prefix — a torn, spliced document on the
-	 * server (A2/A12's e2e finding). Deferring means every intent the
-	 * server sees stays in ONE coherent frame; once the burst settles
-	 * (all dispositions in), the reset applies, and the edits the server
-	 * refused meanwhile are recovered against the checkpoint (see
-	 * deferredRecoveries).
-	 */
-	let deferredResetBuffer: EngineUpdate[] | null = null;
-
-	/*
-	 * Set when a stored row turns out to be missing. The transport asks
-	 * for it after each answer (takeRestartRequest) and starts the room
-	 * over from its first row, the same way as after a server restart of
-	 * the room.
-	 */
-	let restartWanted = false;
-	/*
-	 * What the edits refused while a reset waited had changed: for each
-	 * answer from the server, the document without them and with them.
-	 * Handed to the stale-base recovery listeners once the reset is in.
-	 */
-	let deferredRecoveries: Array< {
-		base: EngineDocument;
-		target: EngineDocument;
-	} > = [];
-
-	const maybeReleaseDeferredReset = (): void => {
-		if (
-			null === deferredResetBuffer ||
-			! replica ||
-			replica.outbox.length > 0
-		) {
-			return;
-		}
-		const buffered = deferredResetBuffer;
-		const recoveries = deferredRecoveries;
-
-		deferredResetBuffer = null;
-		deferredRecoveries = [];
-
-		for ( const update of buffered ) {
-			session.receiveUpdate( update );
-		}
-
-		if ( 0 === recoveries.length || ! replica ) {
-			return;
-		}
-
-		const seq = replica.cursor;
-
-		for ( const { base, target } of recoveries ) {
+			/*
+			 * A transport that still wants each update handed to it gets
+			 * everything that can be sent, at once. It keeps its own queue
+			 * from there on.
+			 */
+			if ( localUpdateListener ) {
+				for ( const update of replica.takeToSend( {
+					maxBytes: Infinity,
+				} ) ) {
+					localUpdateListener(
+						update,
+						textEncoder.encode( update.data ).length
+					);
+				}
+			}
+		},
+		acceptedRows: ( rows ) =>
+			acceptedRowListeners.forEach( ( listener ) => listener( rows ) ),
+		settled: ( settled ) =>
+			dispositionListeners.forEach( ( listener ) => listener( settled ) ),
+		proposal: ( proposal ) =>
+			proposalListeners.forEach( ( listener ) => listener( proposal ) ),
+		proposalsChange: () =>
+			proposalsChangeListeners.forEach( ( listener ) => listener() ),
+		reset: () => resetListeners.forEach( ( listener ) => listener() ),
+		recovery: ( recovery ) =>
 			staleBaseRecoveryListeners.forEach( ( listener ) =>
-				listener( { base, target, seq } )
-			);
-		}
-
-		// The listeners authored against the checkpoint.
-		notifyChange();
-	};
+				listener( recovery )
+			),
+	} );
 
 	const session: IntentLogSession = {
 		actorId,
@@ -714,350 +444,54 @@ export function createIntentLogSession(
 		engineSlug: INTENT_LOG_ENGINE_SLUG,
 		engineProtocol: INTENT_LOG_ENGINE_PROTOCOL,
 
-		// ---- EngineSessionCodec (transport-facing) ----
+		// ---- What a transport calls ----
 
 		getInitialUpdates: () => {
-			// Nothing to announce: the server pushes the snapshot row.
+			// Nothing to announce: the server sends the first document.
 			return [];
 		},
 
-		receiveUpdate: ( update: EngineUpdate ): void => {
-			// A row is missing (see the intent case). Nothing more is
-			// applied until the transport starts the room over.
-			if ( restartWanted ) {
-				return;
-			}
-			// Everything behind a deferred reset stays ordered behind it.
-			if ( null !== deferredResetBuffer ) {
-				deferredResetBuffer.push( update );
-				return;
-			}
-			const decoded = JSON.parse( update.data );
-			switch ( update.type ) {
-				case INTENT_LOG_UPDATE_TYPES.SNAPSHOT: {
-					const snapshotSeq = ( decoded.seq as number ) ?? 0;
-					if ( ! replica ) {
-						// First snapshot wins; genesis carries seq 0 and a
-						// compaction checkpoint carries its engine seq.
-						bootstrapSeq = snapshotSeq;
-						replica = createClient(
-							actorId,
-							decoded.doc as EngineDocument,
-							snapshotSeq
-						);
-						replica.parked = ownParked();
-						shownSeq = snapshotSeq;
-						notifyChange();
-						return;
-					}
-					if (
-						snapshotSeq > replica.cursor &&
-						replica.outbox.length > 0
-					) {
-						// Local work is still un-settled: defer (see
-						// deferredResetBuffer above).
-						deferredResetBuffer = [ update ];
-						return;
-					}
-					if ( snapshotSeq > replica.cursor ) {
-						/*
-						 * Horizon reset: the server trimmed history between
-						 * our cursor and this checkpoint — one-sided
-						 * transforms over the gap are impossible, so the
-						 * replica re-bootstraps. Nothing of this session
-						 * is unanswered here (see the deferral above), and
-						 * the reset listeners bring the editor to the
-						 * checkpoint.
-						 */
-						bootstrapSeq = snapshotSeq;
-						replica = createClient(
-							actorId,
-							decoded.doc as EngineDocument,
-							snapshotSeq
-						);
-						replica.parked = ownParked();
-						shownSeq = snapshotSeq;
-						// New epoch: rows after the checkpoint are new to
-						// this replica even if their ids were seen before.
-						appliedIntentIds = new Set();
-						resetListeners.forEach( ( listener ) => listener() );
-						notifyChange();
-					}
-					// Stale/duplicate snapshots (seq <= cursor) are ignored
-					// (mirrors the server's first-snapshot-wins genesis).
-					return;
-				}
-				case INTENT_LOG_UPDATE_TYPES.INTENT: {
-					if ( ! replica ) {
-						throw new Error(
-							'Received an intent before the room snapshot.'
-						);
-					}
-					const intent = decoded as StoredIntent;
-					// Redelivered row (see appliedIntentIds): already
-					// absorbed at its true log position; skip.
-					if ( appliedIntentIds.has( intent.intentId ) ) {
-						return;
-					}
-					/*
-					 * The server stores each edit with the room's position
-					 * after it. This replica holds the edits up to
-					 * `cursor`, so the next row must carry `cursor + 1`.
-					 * A lower number is a row it has already. A higher
-					 * one means a row never arrived: applying this one
-					 * would put it, and every edit after it, at the wrong
-					 * position. The room is started over instead.
-					 */
-					if ( typeof intent.seq === 'number' ) {
-						if ( intent.seq <= replica.cursor ) {
-							return;
-						}
-						if ( intent.seq > replica.cursor + 1 ) {
-							restartWanted = true;
-							return;
-						}
-					}
-					/*
-					 * Normally our own accepted intents were settled by the
-					 * dispositions ack in the same response. If that ack was
-					 * lost (reconnect), settle here so the pending original
-					 * and its authoritative form never coexist.
-					 */
-					settlePending( intent.intentId );
-					const landingSeq = replica.cursor;
-					clientReceive( replica, [ intent ], replica.cursor );
-					appliedIntentIds.add( intent.intentId );
-					acceptedRowListeners.forEach( ( listener ) =>
-						listener( [ { seq: landingSeq, entry: intent } ] )
-					);
-					notifyChange();
-					return;
-				}
-				case INTENT_LOG_UPDATE_TYPES.PARKED: {
-					const proposal = decoded as IntentLogProposal;
-					// Same redelivery guard as intents: a duplicate row
-					// would double-list the proposal for review.
-					if (
-						proposals.some(
-							( existing ) =>
-								existing.intent.intentId ===
-								proposal.intent.intentId
-						)
-					) {
-						return;
-					}
-					/*
-					 * An escalated intent leaves the outbox here WITHOUT
-					 * passing through clientReceive, so the optimistic
-					 * document must be replanned explicitly: the last
-					 * replan ran while this intent was still pending, and
-					 * its predicted-applied effect would otherwise sit on
-					 * the canvas until the next accepted row, which may
-					 * never come (the fuzzer's one-keystroke divergence).
-					 * One of our own escalations also seeds every later
-					 * replan: a pending intent that still counts the
-					 * set-aside text (same old baseSeq) is predicted as the
-					 * dependent the server will make of it, so the
-					 * optimistic document never shows it misplaced.
-					 */
-					const atSeq = ownParkedAtSeq( proposal );
-					if ( replica && null !== atSeq ) {
-						replica.parked.push( {
-							intent: proposal.intent,
-							atSeq,
-						} );
-					}
-					if (
-						( settlePending( proposal.intent.intentId ) ||
-							null !== atSeq ) &&
-						replica
-					) {
-						replanClient( replica );
-					}
-					proposals.push( proposal );
-					proposalListeners.forEach( ( listener ) =>
-						listener( proposal )
-					);
-					notifyProposalsChange();
-					notifyChange();
-					return;
-				}
-				case INTENT_LOG_UPDATE_TYPES.RESOLVED: {
-					const resolution = decoded as IntentLogResolution;
-					if ( ! resolvedIds.has( resolution.proposalId ) ) {
-						resolvedIds.add( resolution.proposalId );
-						notifyProposalsChange();
-					}
-					return;
-				}
-				case INTENT_LOG_UPDATE_TYPES.VOIDED: {
-					// Another client's voided marker (ours settle through
-					// the ack); relevant only on ack loss. Same replan
-					// contract as the proposal path: a settle that
-					// bypasses clientReceive must not leave a stale
-					// optimistic effect behind.
-					if ( settlePending( decoded.intentId ) && replica ) {
-						replanClient( replica );
-						notifyChange();
-					}
-					return;
-				}
-				default:
-					throw new Error(
-						`Unknown intent-log update type: ${ update.type }`
-					);
-			}
+		receiveUpdate: ( update ) => {
+			replica.receive( [ update ] );
 		},
 
-		receiveHeadSeq: ( seq: number ) => {
-			// The room's newest position, sent with the answer to a
-			// request that stored edits. The rows of that answer came
-			// first, so a replica that is still behind is missing one.
-			if (
-				replica &&
-				null === deferredResetBuffer &&
-				seq > replica.cursor
-			) {
-				restartWanted = true;
-			}
+		receiveUpdates: ( updates ) => {
+			replica.receive( updates );
 		},
 
-		takeRestartRequest: () => {
-			const wanted = restartWanted;
-			restartWanted = false;
-			return wanted;
+		receiveDispositions: ( answers ) => {
+			replica.receiveAnswers( answers );
 		},
 
-		receiveDispositions: ( answers: EngineDisposition[] ) => {
-			const dispositions = answers.filter( hasIntentId );
-			let recoveryTarget: EngineDocument | null = null;
-			const recoveryProposals: IntentLogProposal[] = [];
-			if ( replica ) {
-				const staleIds = new Set(
-					dispositions
-						.filter(
-							( entry ) =>
-								entry.status === 'voided' &&
-								entry.reason === 'stale-base'
-						)
-						.map( ( entry ) => entry.intentId )
-				);
-				if (
-					replica.outbox.some( ( entry ) =>
-						staleIds.has( entry.intentId )
-					)
-				) {
-					// The server no longer has these priors, but a caught-up
-					// replica does. Recover their merged effect, never a diff
-					// from an editor tree that may lack other authors' edits.
-					// Exclude other settled outcomes: a rejected conflict in
-					// this same response must not be silently retried.
-					const settledIds = new Set(
-						dispositions.map( ( entry ) => entry.intentId )
-					);
-					const pending = replica.outbox.filter(
-						( entry ) =>
-							! settledIds.has( entry.intentId ) ||
-							staleIds.has( entry.intentId )
-					);
-					const plan = planBatch(
-						groupUnits( pending ),
-						replica.log,
-						( seq ) => serverDocAt( replica!, seq ),
-						replica.firstSeq
-					);
-					recoveryTarget = plan.headDoc;
-					for ( const row of plan.rows ) {
-						if (
-							row.proposal &&
-							staleIds.has( row.intent.intentId )
-						) {
-							recoveryProposals.push( row.proposal );
-						}
-					}
-				}
-			}
-			let settled = false;
-			for ( const disposition of dispositions ) {
-				if ( 'refused' === disposition.status ) {
-					/*
-					 * The answer to a review decision this tab sent, not
-					 * to an edit: the person may not decide that item.
-					 * The decision was taken as made when it was sent, so
-					 * the item is open again here, as it is on the server.
-					 */
-					if ( resolvedIds.delete( disposition.intentId ) ) {
-						notifyProposalsChange();
-					}
-					continue;
-				}
-				/*
-				 * Best-effort: the row-processing that precedes this ack
-				 * usually settled the intent already (predicted is then
-				 * null). Prediction parity as an INVARIANT only holds for
-				 * caught-up clients and is asserted by the engine's
-				 * simulator, not here — a client that authored while behind
-				 * the log can mispredict legitimately.
-				 */
-				const predicted = replica
-					? predictedDisposition( replica, disposition.intentId )
-					: null;
-				settled = settlePending( disposition.intentId ) || settled;
-				dispositionListeners.forEach( ( listener ) =>
-					listener( { ...disposition, predicted } )
-				);
-			}
-			/*
-			 * Any intent settled HERE (escalated/voided without a proposal
-			 * row, or an ack that outran its accepted row) left the outbox
-			 * without a clientReceive replan — recompute the optimistic
-			 * document so a mispredicted effect cannot linger on the canvas.
-			 */
-			if ( settled && replica ) {
-				replanClient( replica );
-			}
-			if ( recoveryTarget && replica && deferredResetBuffer ) {
-				// The reset that waits replaces this document. Recover
-				// against the checkpoint, once it is in.
-				deferredRecoveries.push( {
-					base: replica.doc,
-					target: recoveryTarget,
-				} );
-			} else if ( recoveryTarget && replica ) {
-				const recovery = {
-					base: replica.doc,
-					target: recoveryTarget,
-					seq: replica.cursor,
-				};
-				staleBaseRecoveryListeners.forEach( ( listener ) =>
-					listener( recovery )
-				);
-			}
-			// A stale-base ack did not run the server planner. Keep local
-			// conflicts available for review instead of losing their content
-			// when only the clean part of the recovery is re-authored.
-			for ( const proposal of recoveryProposals ) {
-				localProposalIds.add( proposal.intent.intentId );
-				proposals.push( proposal );
-				proposalListeners.forEach( ( listener ) =>
-					listener( proposal )
-				);
-			}
-			if ( recoveryProposals.length ) {
-				notifyProposalsChange();
-			}
-			notifyChange();
-			// A drained outbox releases any deferred horizon reset.
-			maybeReleaseDeferredReset();
+		receiveHeadSeq: ( seq ) => {
+			replica.receiveHeadSeq( seq );
 		},
 
-		getLocalAwareness: () =>
-			options.awareness
-				? options.awareness.getLocalState() ?? {}
-				: localAwareness,
+		takeRestartRequest: () => replica.takeRestartRequest(),
 
-		applyRemoteAwareness: ( state: AwarenessState ) => {
+		takeUpdatesToSend: ( limit ) => replica.takeToSend( limit ),
+
+		hasUpdatesToSend: () => replica.hasWorkToSend(),
+
+		connectionLost: () => {
+			replica.connectionLost();
+		},
+
+		onWorkWaiting: ( listener ) => {
+			workWaitingListeners.add( listener );
+		},
+
+		getLocalAwareness: () => {
+			if ( options.awareness ) {
+				return options.awareness.getLocalState() ?? {};
+			}
+
+			return localAwareness;
+		},
+
+		applyRemoteAwareness: ( state ) => {
 			peers = state;
+
 			if ( options.awareness ) {
 				applyServerAwarenessStates(
 					state,
@@ -1067,15 +501,14 @@ export function createIntentLogSession(
 			}
 		},
 
-		// No client-side compaction: snapshotting is a server concern for
-		// this engine, so the codec omits the optional compaction members.
-
-		onLocalUpdate: ( listener: EngineLocalUpdateListener ) => {
+		onLocalUpdate: ( listener ) => {
 			localUpdateListener = listener;
 		},
 
 		destroy: () => {
+			replica.destroy();
 			localUpdateListener = null;
+			workWaitingListeners.clear();
 			changeListeners.clear();
 			dispositionListeners.clear();
 			proposalListeners.clear();
@@ -1090,190 +523,76 @@ export function createIntentLogSession(
 		},
 
 		onRoomRestart: () => {
-			restartWanted = false;
-			replica = null;
-			bootstrapSeq = null;
-			shownSeq = 0;
-			appliedIntentIds = new Set();
-			deferredResetBuffer = null;
-			deferredRecoveries = [];
-			resetListeners.forEach( ( listener ) => listener() );
-			notifyChange();
+			replica.restart();
+
 			return 'rebootstrap';
 		},
 
-		// ---- Bridge/dev surface ----
+		// ---- What the editor code calls ----
 
-		author: ( type, payload, authorOptions = {} ) => {
-			if ( ! replica ) {
-				throw new Error(
-					'Cannot author intents before the room snapshot arrives.'
-				);
-			}
-			const intent = createIntent( type, payload, {
-				actorId,
-				baseSeq: replica.cursor,
-				txnId: authorOptions.txnId,
-			} );
-			authorIntent( replica, intent );
-			emitIntent( intent );
-			notifyChange();
-			return intent;
-		},
+		author: ( type, payload, authorOptions = {} ) =>
+			replica.author( type, payload, authorOptions ),
 
-		authorBatch: ( intents, batchOptions ) => {
-			if ( ! replica ) {
-				throw new Error(
-					'Cannot author intents before the room snapshot arrives.'
-				);
-			}
-			// The frame the intents were derived in, within the history
-			// the replica still holds.
-			const baseSeq = Math.min(
-				Math.max( batchOptions.baseSeq, replica.firstSeq ),
-				replica.cursor
-			);
-			const authored = intents.map( ( entry ) => {
-				const intent = createIntent( entry.type, entry.payload, {
-					actorId,
-					baseSeq,
-					txnId: batchOptions.txnId,
-				} );
-				authorIntent( replica!, intent );
-				emitIntent( intent );
-				return intent;
-			} );
-			if ( 0 === authored.length ) {
-				return authored;
-			}
-			if ( baseSeq < replica.cursor ) {
-				/*
-				 * The payloads are expressed in the frame at baseSeq, not the
-				 * head's: only a replan (the planner the server also runs)
-				 * turns them into the correct optimistic document — rebased
-				 * over everything that landed since baseSeq, with the
-				 * dispositions the server will report predicted.
-				 */
-				replanClient( replica );
-			}
-			notifyChange();
-			return authored;
-		},
+		authorBatch: ( intents, batchOptions ) =>
+			replica.authorBatch( intents, batchOptions ),
 
 		setShownSeq: ( seq ) => {
-			applyShownSeq( seq );
+			replica.setShownSeq( seq );
 		},
 
 		setUndoRetainSeq: ( seq ) => {
-			undoRetainSeq = seq;
-			applyRetention();
+			replica.setUndoRetainSeq( seq );
 		},
 
 		getDocumentAt: ( seq ) => {
-			if ( ! replica || seq < replica.firstSeq || seq > replica.cursor ) {
+			const client = replica.getClient();
+
+			if ( ! client || seq < client.firstSeq || seq > client.cursor ) {
 				return null;
 			}
-			// serverDocAt reads only { firstSeq, log, docCache }, a shape the
-			// client replica shares with the server by design (client.js
-			// docblock); the declared parameter type is just narrower.
-			return serverDocAt(
-				replica as never,
-				seq
-			) as EngineDocument | null;
+
+			return serverDocAt( client, seq );
 		},
 
 		getLogSince: ( seq ) => {
-			if ( ! replica || seq < replica.firstSeq ) {
+			const client = replica.getClient();
+
+			if ( ! client || seq < client.firstSeq ) {
 				return [];
 			}
-			const { firstSeq } = replica;
-			return replica.log
-				.slice( seq - firstSeq )
+
+			return client.log
+				.slice( seq - client.firstSeq )
 				.map( ( intent, offset ) => ( {
 					seq: seq + offset + 1,
-					intent: intent as IntentEnvelope,
+					intent,
 				} ) );
 		},
 
-		getRetainedFloor: () => replica?.firstSeq ?? 0,
+		getRetainedFloor: () => replica.getClient()?.firstSeq ?? 0,
 
 		onAcceptedRows: ( listener ) => {
 			acceptedRowListeners.add( listener );
 		},
 
-		getDocument: () => replica?.doc ?? null,
-		getProposals: () => [ ...proposals ],
-		getOpenProposals: () =>
-			proposals.filter(
-				( proposal ) => ! resolvedIds.has( proposal.intent.intentId )
-			),
+		getDocument: () => replica.getClient()?.doc ?? null,
+		getProposals: () => replica.getProposals(),
+		getOpenProposals: () => replica.getOpenProposals(),
 		resolveProposal: ( proposalId, resolution ) => {
-			const data = JSON.stringify( { proposalId, resolution } );
-			if ( localUpdateListener && ! localProposalIds.has( proposalId ) ) {
-				localUpdateListener(
-					{ data, type: INTENT_LOG_UPDATE_TYPES.RESOLVED },
-					new TextEncoder().encode( data ).length
-				);
-			}
-			// Optimistic: the list shrinks immediately; the relayed row (or
-			// the idempotent ack) confirms.
-			if ( ! resolvedIds.has( proposalId ) ) {
-				resolvedIds.add( proposalId );
-				notifyProposalsChange();
-			}
+			replica.resolveProposal( proposalId, resolution );
 		},
 		onProposalsChange: ( listener ) => {
 			proposalsChangeListeners.add( listener );
 		},
-		getPendingCount: () => replica?.outbox.length ?? 0,
-		getPredictedSetAside: () => {
-			if ( ! replica ) {
-				return [];
-			}
-
-			const { predictions } = replica;
-
-			return replica.outbox.filter(
-				( intent ) =>
-					'escalated' === predictions.get( intent.intentId )?.status
-			);
-		},
-
-		cancelPendingIntents: ( intentIds: string[] ) => {
-			if ( ! replica || 0 === intentIds.length ) {
-				return false;
-			}
-			const pending = new Set(
-				replica.outbox.map(
-					( intent: IntentEnvelope ) => intent.intentId
-				)
-			);
-			if ( ! intentIds.every( ( id ) => pending.has( id ) ) ) {
-				return false; // Partially acked: not cancelable, arm at settle.
-			}
-			const ids = new Set( intentIds );
-			replica.outbox = replica.outbox.filter(
-				( intent: IntentEnvelope ) => ! ids.has( intent.intentId )
-			);
-			replanClient( replica );
-			if ( localUpdateListener ) {
-				const data = JSON.stringify( {
-					cancelId: `cancel-${ intentIds[ 0 ] }`,
-					intentIds,
-				} );
-				localUpdateListener(
-					{ type: INTENT_LOG_UPDATE_TYPES.CANCEL, data },
-					data.length
-				);
-			}
-			notifyChange();
-			return true;
-		},
-		getSeq: () => replica?.cursor ?? 0,
-		isInitialized: () => null !== replica,
-		getBootstrapSeq: () => bootstrapSeq,
+		getPendingCount: () => replica.getUnansweredCount(),
+		getPredictedSetAside: () => replica.getPredictedSetAside(),
+		cancelPendingIntents: ( intentIds ) => replica.cancel( intentIds ),
+		getSeq: () => replica.getClient()?.cursor ?? 0,
+		getState: () => replica.getState(),
+		isInitialized: () => null !== replica.getClient(),
+		getBootstrapSeq: () => replica.getBootstrapSeq(),
 		getPeers: () => peers,
-		setLocalAwareness: ( state: LocalAwarenessState ) => {
+		setLocalAwareness: ( state ) => {
 			localAwareness = state;
 		},
 		onChange: ( listener ) => {
@@ -1295,7 +614,7 @@ export function createIntentLogSession(
 			discardListeners.add( listener );
 		},
 
-		hasDeferredReset: () => null !== deferredResetBuffer,
+		hasDeferredReset: () => 'reset-waiting' === replica.getState(),
 	};
 
 	return session;

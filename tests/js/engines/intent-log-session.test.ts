@@ -251,6 +251,10 @@ describe( 'intent-log session codec', () => {
 			text: 'pending',
 		} );
 		expect( session.getPendingCount() ).toBe( 1 );
+		// The transport takes the edit, so the server may have it.
+		expect(
+			session.takeUpdatesToSend( { maxBytes: Infinity } )
+		).toHaveLength( 1 );
 
 		const checkpointDoc = createDocument( [
 			{
@@ -265,10 +269,8 @@ describe( 'intent-log session codec', () => {
 		} );
 
 		/*
-		 * DEFERRED: applying a horizon reset while local work is
-		 * un-settled would mix authoring frames inside one transport
-		 * batch (the mid-burst tear A2's e2e runs found). The reset
-		 * waits for the outbox to drain.
+		 * The reset waits: only the answer says whether the new copy
+		 * holds the edit that was sent.
 		 */
 		expect( resets ).toBe( 0 );
 		expect( session.hasDeferredReset() ).toBe( true );
