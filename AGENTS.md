@@ -331,6 +331,15 @@ before a big change. A durable lesson from an issue goes here.
   uses it now). A defect that
   only a browser can show gets a Playwright test marked `test.fail`.
   A fix turns its test red. Remove the marker then, not the test.
+- **Stop a site before starting it again on its port.** `autoPort`
+  finds the port busy with the site's own container, so a second
+  `npm run env:tests start` (or `npm run env start`) leaves the
+  container on the old port and stores the next free one (8890) as the
+  site's address. Every page then redirects to a port nothing listens
+  on, and the browser suite's setup times out. PHPUnit still passes,
+  because it makes no HTTP request. Run `npm run env:tests:stop`, then
+  `WP_ENV_PORT=8889 npm run env:tests start`. A changed constant in the
+  config needs the same restart.
 - The WordPress Playwright helpers fall back to port 8889 and to this
   suite's saved login. A second Playwright setup in this repo must set
   `WP_BASE_URL` and `STORAGE_STATE_PATH` itself, as
