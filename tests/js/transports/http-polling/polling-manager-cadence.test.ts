@@ -638,7 +638,7 @@ describe( 'polling-manager cadence', () => {
 		mockCallbacks.engine.forEach( ( cb ) => cb( 'intent-log' ) );
 		await jest.advanceTimersByTimeAsync( 1000 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
-		mockCallbacks.engine.forEach( ( cb ) => cb( 'yjs-server' ) );
+		mockCallbacks.engine.forEach( ( cb ) => cb( 'other-engine' ) );
 		await jest.advanceTimersByTimeAsync( 0 );
 		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 	} );

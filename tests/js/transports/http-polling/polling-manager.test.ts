@@ -1780,11 +1780,11 @@ describe( 'polling-manager', () => {
 	describe( 'engine mismatch handling', () => {
 		const engineMismatchError = ( room?: string ) => ( {
 			code: 'rest_sync_engine_mismatch',
-			message: `Sync engine mismatch for room ${ room }: the room requires engine yjs-server v1.`,
+			message: `Sync engine mismatch for room ${ room }: the room requires engine other-engine v1.`,
 			data: {
 				status: 409,
 				...( room ? { room } : {} ),
-				engine: 'yjs-server',
+				engine: 'other-engine',
 				engine_protocol: 1,
 			},
 		} );

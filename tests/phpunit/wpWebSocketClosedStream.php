@@ -6,7 +6,7 @@
  * the write happened. The daemon's next pass handed that closed stream to
  * stream_select(), which throws a TypeError on it: the daemon exited and
  * every websocket user lost their connection. Found by the
- * de-rtc/websocket fuzzer, which crashed the daemon on every sweep.
+ * websocket fuzzer, which crashed the daemon on every sweep.
  *
  * @package Gutenberg
  *

@@ -110,9 +110,7 @@ class Tests_Collaboration_WpSyncEngineRegistry extends WP_Test_REST_TestCase {
 		$registry = new WP_RTC_Engine_Registry( new WP_RTC_Table_Storage() );
 
 		// A configured-but-unregistered slug degrades to the FIRST
-		// registered engine. That used to be yjs-server. It is intent-log
-		// now that the plugin registers intent-log alone (an intended
-		// change in behavior from removing the other engines).
+		// registered engine, which is intent-log.
 		$this->assertSame( WP_Intent_Log_Engine::SLUG, $registry->get_engine_slug_for_room( 'postType/post:1' ) );
 		delete_option( 'wp_rtc_engine' );
 	}

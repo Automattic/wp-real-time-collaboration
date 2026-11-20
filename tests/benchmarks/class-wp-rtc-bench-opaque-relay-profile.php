@@ -104,7 +104,7 @@ if ( ! class_exists( 'WP_RTC_Bench_Opaque_Relay_Profile' ) ) {
 		/**
 		 * An opaque client-computed update of comparable size (a real yjs
 		 * update for a few inserted chars). The literal 'update'/'compaction'
-		 * types are the retired yjs-relay engine's convention.
+		 * types are the opaque relay fixture's convention.
 		 *
 		 * @param int   $client      Authoring client index (unused).
 		 * @param array $edit        Workload edit.

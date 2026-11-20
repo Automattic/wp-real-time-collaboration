@@ -82,7 +82,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$row_id = (int) $wpdb->insert_id;
 		$this->assertGreaterThan( 0, $row_id );
 
-		$storage->set_room_engine( $room, 'yjs-server' );
+		$storage->set_room_engine( $room, 'other-engine' );
 		$storage->set_room_meta( $room, 'wrappers', array( 'w' ) );
 		$storage->set_room_meta( $room, 'wrappers', array( 'w', 'w2' ) );
 		$storage->set_awareness_state( $room, array( array( 'client_id' => 1 ) ) );
@@ -141,7 +141,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$this->assertNull( $storage->peek_room_engine( $room ) );
 
 		$this->assertTrue( $storage->set_room_engine( $room, 'intent-log' ) );
-		$this->assertTrue( $storage->set_room_engine( $room, 'yjs-server' ), 'A second stamp is a harmless no-op.' );
+		$this->assertTrue( $storage->set_room_engine( $room, 'other-engine' ), 'A second stamp is a harmless no-op.' );
 
 		$this->assertSame( 'intent-log', $storage->get_room_engine( $room ) );
 		$this->assertSame( 'intent-log', ( new WP_RTC_Table_Storage() )->peek_room_engine( $room ) );
@@ -344,11 +344,11 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$storage = $this->storage();
 		$room    = $this->room();
 
-		$storage->set_room_engine( $room, 'de-rtc' );
+		$storage->set_room_engine( $room, 'other-engine' );
 		$storage->set_awareness_state( $room, array( array( 'client_id' => 1 ) ) );
 
-		$this->assertSame( 1, $this->count_queries( fn() => $this->assertSame( 'de-rtc', $storage->get_room_engine( $room ) ) ) );
-		$this->assertSame( 1, $this->count_queries( fn() => $this->assertSame( 'de-rtc', $storage->get_room_engine( $room ) ) ) );
+		$this->assertSame( 1, $this->count_queries( fn() => $this->assertSame( 'other-engine', $storage->get_room_engine( $room ) ) ) );
+		$this->assertSame( 1, $this->count_queries( fn() => $this->assertSame( 'other-engine', $storage->get_room_engine( $room ) ) ) );
 		$this->assertSame( 1, $this->count_queries( fn() => $this->assertCount( 1, $storage->get_awareness_state( $room ) ) ) );
 		$this->assertSame( 1, $this->count_queries( fn() => $this->assertCount( 1, $storage->get_awareness_state( $room ) ) ) );
 	}
@@ -415,7 +415,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$storage->set_awareness_state( $room, array( array( 'client_id' => 1 ) ) );
 		$storage->set_room_meta( $room, 'checkpoint', 1 );
 		$storage->add_update( $other, 'other row' );
-		$storage->set_room_engine( $other, 'de-rtc' );
+		$storage->set_room_engine( $other, 'other-engine' );
 		$storage->get_updates_after_cursor( $room, 0 );
 
 		$this->assertTrue( $storage->reset_room( $room ) );
@@ -428,7 +428,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$this->assertFalse( $storage->get_room_size( $room )['found'] );
 
 		$this->assertSame( array( 'other row' ), $storage->get_updates_after_cursor( $other, 0 ) );
-		$this->assertSame( 'de-rtc', $storage->get_room_engine( $other ) );
+		$this->assertSame( 'other-engine', $storage->get_room_engine( $other ) );
 
 		$this->assertTrue( $storage->reset_room( $room ), 'A room with nothing stored is already reset.' );
 	}
@@ -437,7 +437,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 		$storage = $this->storage();
 		$room    = $this->room();
 
-		$storage->set_room_engine( $room, 'yjs-server' );
+		$storage->set_room_engine( $room, 'other-engine' );
 		$storage->add_update(
 			$room,
 			array(
@@ -456,7 +456,7 @@ class Tests_Collaboration_WpSyncTableStorage extends WP_UnitTestCase {
 
 		$listed = array_values( array_filter( $storage->list_rooms(), static fn( $r ) => $r['room'] === $room ) );
 		$this->assertCount( 1, $listed );
-		$this->assertSame( 'yjs-server', $listed[0]['engine'] );
+		$this->assertSame( 'other-engine', $listed[0]['engine'] );
 		$this->assertSame( 2, $listed[0]['rows'] );
 		$this->assertSame( $storage->get_cursor( $room ), $listed[0]['cursor'] );
 		$this->assertNotSame( '', $listed[0]['last_update_gmt'] );

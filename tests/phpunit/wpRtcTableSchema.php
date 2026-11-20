@@ -134,7 +134,7 @@ class Tests_Collaboration_WpSyncTableSchema extends WP_UnitTestCase {
 		global $wpdb;
 		$storage = new WP_RTC_Table_Storage();
 		$storage->add_update( 'postType/post:1', 'a' );
-		$storage->set_room_engine( 'postType/post:2', 'de-rtc' );
+		$storage->set_room_engine( 'postType/post:2', 'other-engine' );
 
 		$this->assertTrue( WP_RTC_Table_Schema::delete_all_rows() );
 

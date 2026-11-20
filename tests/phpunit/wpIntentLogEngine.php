@@ -1114,8 +1114,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		/*
 		 * Write under intent-log, then flip the site to another engine.
 		 * The plugin ships intent-log alone, so the other engine is the
-		 * opaque-relay TEST FIXTURE (this case used yjs-server before the
-		 * other engines were removed).
+		 * opaque-relay TEST FIXTURE.
 		 */
 		add_filter(
 			'wp_rtc_engines',

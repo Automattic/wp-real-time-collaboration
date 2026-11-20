@@ -534,8 +534,7 @@ class Tests_Collaboration_WpRtcAdvisoryPresence extends WP_UnitTestCase {
 		$this->assertSame( 'intent-log', $answer['engine'] );
 		// The answer names whichever engine the site has selected. The
 		// plugin ships intent-log alone, so the second engine is the
-		// opaque-relay TEST FIXTURE (this used yjs-server before the other
-		// engines were removed).
+		// opaque-relay TEST FIXTURE.
 		add_filter(
 			'wp_rtc_engines',
 			static function ( array $engines, WP_RTC_Storage $storage ): array {

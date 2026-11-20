@@ -22,7 +22,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	 *
 	 * These tests exercise the transport's engine-agnostic store-and-forward
 	 * mechanics with arbitrary opaque payloads, which a real engine
-	 * (yjs-server, intent-log) would validate and reject. Re-added at the
+	 * (intent-log) would validate and reject. Re-added at the
 	 * top of every set_up — see the comment there for the hook-snapshot
 	 * timing this dances around.
 	 *

@@ -14,7 +14,7 @@
  * Compare engines by running the slugs over the same scenario/seed. The
  * intent log reports full cost AND policy-correct quality (applied /
  * escalated-for-review / lost). An engine that merges on
- * the client (like the retired yjs-relay) reports cost only — the server
+ * the client reports cost only — the server
  * cannot score quality (shown as unobservable, never faked). See README.md.
  *
  * @package gutenberg

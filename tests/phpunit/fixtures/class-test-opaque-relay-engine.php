@@ -10,13 +10,12 @@ if ( ! class_exists( 'Test_Opaque_Relay_Engine' ) ) {
 	/**
 	 * TEST FIXTURE: a naive opaque-relay sync engine.
 	 *
-	 * This is the retired production yjs-relay engine, preserved verbatim
-	 * (renamed, new slug) as the reference "dumbest possible engine" for
-	 * exercising engine-AGNOSTIC machinery: the transport's row
+	 * It stores and returns bytes without reading them. It is the
+	 * reference "dumbest possible engine" for exercising engine-AGNOSTIC machinery: the transport's row
 	 * store-and-forward mechanics and the registry's lineage
 	 * stamping/fencing. Those tests need an engine that accepts arbitrary
-	 * opaque bytes without validating them — a real engine (yjs-server,
-	 * intent-log) inspects payloads and would conflate engine behavior with
+	 * opaque bytes without validating them — a real engine
+	 * (intent-log) inspects payloads and would conflate engine behavior with
 	 * the machinery under test.
 	 *
 	 * Behavior summary: stores opaque payloads (sync_step1/sync_step2/

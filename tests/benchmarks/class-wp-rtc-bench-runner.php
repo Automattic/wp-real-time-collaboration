@@ -27,7 +27,7 @@
  * and asserts NO edit was lost. That inverts an older harness's
  * "silent-merge retention" score, which rewarded exactly the
  * last-write-wins behaviour this project rejects. An engine that merges on
- * the client (the retired yjs-relay did; the opaque fallback profile
+ * the client (the opaque fallback profile
  * models one) gives the server nothing to observe — quality is reported
  * honestly as unavailable, not faked.
  *
