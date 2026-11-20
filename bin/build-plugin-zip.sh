@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds wp-real-time-collaboration.zip: a self-contained, ready-to-install
 # WordPress plugin. The zip bundles the pinned Gutenberg plugin (built from
-# the gutenberg/ subtree) so the collaborative-editing framework is present
+# the gutenberg/ folder) so the collaborative-editing framework is present
 # on any WordPress installation — the plugin entry loads the bundled copy
 # when no other Gutenberg is active.
 #
@@ -15,7 +15,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 if [ ! -d gutenberg/build ]; then
-	echo "error: gutenberg/build is missing. Build the subtree first:" >&2
+	echo "error: gutenberg/build is missing. Build the bundled Gutenberg first:" >&2
 	echo "  cd gutenberg && npm ci --ignore-scripts && npm run build" >&2
 	exit 1
 fi

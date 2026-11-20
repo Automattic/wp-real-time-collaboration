@@ -31,13 +31,13 @@ shared editing session.
   permissions, routes, the settings printed for the browser, the on/off
   setting, the fallback storage), `engines/intent-log/` (the one
   engine), `shared/`, `transports/` (polling and `websocket/`),
-  `admin/` (the settings screen), `storage/`, `diagnostics/`
-  (dev-only).
+  `admin/` (the settings screen), `storage/` (tables, room lock),
+  `presence/` (who is here, the advisory channel), `diagnostics/`.
 - `src/` — client TypeScript; `src/index.ts` builds
   `build/wp-rtc.js`: `engines/` (the intent-log core, its session,
   and the comparison of two documents), `replica/` (one room's state in
   the browser: the documents and the one list of everything the server
-  has not answered), `shared/`,
+  has not answered; see `docs/room-state.md`),
   `registry/` (the plugin's own transport and engine registries,
   connection errors, and the types an engine and a transport share),
   `transports/{http-polling,websocket,advisory}/`,
@@ -53,7 +53,8 @@ shared editing session.
   `post-fields.ts` syncs the title, terms and meta, `block-types.ts`
   reads block type definitions, `undo-history.ts`,
   `review-decisions.ts` and `collections.ts` hold undo, review
-  decisions and the list rooms), `debug/inspector.ts`.
+  decisions and the list rooms), `debug/inspector.ts`. A lint rule
+  limits `@wordpress/*` imports outside `editor/` (`.eslintrc.js`).
 - `gutenberg/` — a copy of Gutenberg's `try/sync-engines-intent` branch,
   source only, pinned by `gutenberg-pin.json` (`commit`, `trunk`, and
   `tree`, which must equal `git rev-parse HEAD:gutenberg`). The plugin
@@ -146,7 +147,7 @@ Iterate at the cheapest layer that can catch the change, fast to slow:
 1. `node tests/tools/sweep.js [seeds] [steps] [clients]` (defaults
    60/400/3; no WordPress): the first check for any intent-log planner
    or merge change. `npm run test:sweep` runs it with the defaults.
-2. `npm run test:js` (needs only the built subtree).
+2. `npm run test:js` (needs only the built Gutenberg copy).
 3. `npm run test:php`.
 4. `npm run test:e2e` (minutes).
 5. `npm run fuzz:quick` as a post-change smoke; the full `npm run fuzz`
@@ -169,7 +170,7 @@ Test traps:
   registered wp command.` Reactivate both first (this plugin requires
   the Presence API, so activating it alone fails):
   `npx @wordpress/env --config .wp-env.tests.json run cli wp plugin activate presence-api wp-real-time-collaboration`.
-- `test:php` and `test:e2e` need the running TESTS env with the subtree
+- `test:php` and `test:e2e` need the running TESTS env with the Gutenberg copy
   built, and e2e needs `npx playwright install chromium` once. If the
   tests site is not on `:8889`, pass `WP_BASE_URL`. If ANOTHER
   project's wp-env holds `:8889`, Playwright silently reuses that site
@@ -357,7 +358,7 @@ before a big change. A durable lesson from an issue goes here.
   `WP_BASE_URL` and `STORAGE_STATE_PATH` itself, as
   `tests/tools/edit-batch-recorder/playwright.config.mjs` does.
 - `jest.config.js` sets `roots: [src, tests]`; without it Jest recurses
-  into the subtree's ~1030 suites. `phpcs.xml.dist` excludes
+  into the Gutenberg copy's ~1030 suites. `phpcs.xml.dist` excludes
   `/gutenberg/*`.
 - `@wordpress/scripts` does NOT bundle wp-env; it is pinned to
   `@wordpress/env@^11` with an `overrides` entry that clears the
@@ -367,7 +368,7 @@ before a big change. A durable lesson from an issue goes here.
   then the test fixtures on `plugins_loaded` at priority 20. The
   fixtures need the plugin's own classes, which load when it boots on
   that hook.
-- e2e must load a single `@playwright/test`: the subtree's `npm install`
+- e2e must load a single `@playwright/test`: the Gutenberg copy's `npm install`
   re-creates its own copy, and `pretest:e2e` removes it. The runner is
   `playwright test` directly, NOT `wp-scripts test-e2e`.
 - `tests/e2e/config/global-setup.ts` activates the plugin by file path
@@ -379,7 +380,7 @@ before a big change. A durable lesson from an issue goes here.
   no say while the plugin is active. Activation turns the option on.
   The client flag is `window.__experimentalEnableRealTimeCollaboration`,
   which Gutenberg prints (false in the site editor).
-- Built subtree JS lands at `gutenberg/build/scripts/<pkg>/`.
+- The built Gutenberg copy's JS lands at `gutenberg/build/scripts/<pkg>/`.
 - A checkout in a folder with any name other than
   `wp-real-time-collaboration` (a git worktree, for example) is mounted
   twice: `.wp-env.json` lists `.` in `plugins`, which mounts it under

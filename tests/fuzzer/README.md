@@ -56,8 +56,8 @@ summary's replay commands include it). Replay commands also keep the user
 count, fault and burst rates, lifecycle switches, and any CPU slowdown.
 
 `--help` lists everything. Prerequisites are the standard repo setup
-(README/AGENTS.md): plugin `npm install` + `npm run build`, the subtree
-built once, and `npx playwright install chromium`.
+(README/AGENTS.md): plugin `npm install` + `npm run build`, the bundled
+Gutenberg built once, and `npx playwright install chromium`.
 
 ## Strategy: what we adopted, what we changed, what we dropped
 
@@ -89,7 +89,7 @@ few durable invariants instead of many brittle UI details.*
   inverse must transform over the peer's rows).
 - **Durable invariants.**
   - *Convergence*: after every step all participants expose the same
-    normalized title + block tree (`waitForConvergence` from the subtree's
+    normalized title + block tree (`waitForConvergence` from the bundled Gutenberg's
     collaboration fixtures).
   - *Structural validity*: no block may become an invalid-content recovery
     block (`isValid: false`) — the classic engine-genesis failure mode.

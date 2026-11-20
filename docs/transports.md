@@ -28,11 +28,10 @@ connection (`sync.pollingProvider.maxClientsPerRoom`). The websocket
 transport falls back to polling when its connection fails, and comes
 back when it can. Every setting is explained on the Settings → Collaboration screen
 itself. The options are plain WordPress options, so WP-CLI and the REST
-settings endpoint can set them: the on/off switch is `wp_rtc_enabled`,
-the engine is `wp_rtc_engine`, the
-transport `wp_rtc_transport`, the advisory channel
-`wp_rtc_advisory_channel`, and the rest start with
-`wp_rtc_`. `WP_COLLABORATION_TRANSPORT` (constant or
+settings endpoint can set them. Every one starts with `wp_rtc_`: the
+on/off switch is `wp_rtc_enabled`, the engine `wp_rtc_engine`, the
+transport `wp_rtc_transport`, and the advisory channel
+`wp_rtc_advisory_channel`. `WP_COLLABORATION_TRANSPORT` (constant or
 environment variable) takes priority over the stored transport choice,
 and the `wp_rtc_websocket_url` filter over the daemon address.
 

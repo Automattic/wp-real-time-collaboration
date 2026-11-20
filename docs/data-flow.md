@@ -96,7 +96,7 @@ sequenceDiagram
     participant WP as WordPress
     participant DB as Room storage
     participant B as Bob's editor
-    A->>A: Compare blocks before and after,<br/>describe the change
+    A->>A: Take the editor's list of changes,<br/>describe each as an edit
     A->>WP: Send: Edit + base sequence
     WP->>WP: Authorize the user
     WP->>WP: Lock the room
@@ -132,26 +132,30 @@ The first and last steps are the same for the Gutenberg experiment and
 for this plugin.
 
 1. The user types. Rich text updates the block's `content` attribute,
-   `useBlockSync` passes the new block tree to core-data, and
-   `editEntityRecord` hands the edit to the sync manager right before
+   `useBlockSync` passes the change to core-data, and
+   `editEntityRecord` hands the edit to the sync provider right before
    it stores it. (This ordering is the trap in
    the Traps section of `AGENTS.md`: a push made from inside that call is
    overwritten.)
 2. The engine records the edit. The experiment writes it
-   into the Yjs document and queues the binary update. Intent-log
-   compares the editor's blocks with the version they show, turns the
-   difference into typed edits, and applies them locally.
+   into the Yjs document and queues the binary update. For this plugin,
+   core-data hands over an ordered list of what changed: this block
+   was inserted here, this attribute went from one value to another.
+   Intent-log turns each entry into a typed edit
+   (`src/editor/capture.ts`) and applies it locally. It does not
+   compare block trees to find out what changed.
 3. The edit travels. The experiment sends its queue on the next
    poll. Intent-log keeps every edit the server has not answered in
    one list, and the transport asks for what to send: on the next poll,
    or at once over an open socket. A tab that is alone sends at most
-   once per polling interval.
+   once per polling interval. [room-state.md](room-state.md) has the
+   list and its rules.
 4. A peer receives. The experiment merges the update into its Yjs
    document.
    Intent-log adds the rows to its local history and recomputes its
    own pending edits on top, then pushes the merged block list once
    typing pauses.
 5. The merged blocks reach the editor as a local `EDIT_ENTITY_RECORD`
-   that skips the sync manager, so it is not sent back and stays out of
+   that skips the sync provider, so it is not sent back and stays out of
    the peer's undo history. `useBlockSync` replaces the blocks and rich
    text updates the page.

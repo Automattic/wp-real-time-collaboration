@@ -12,6 +12,9 @@ About an hour's reading, in this order.
   what a host must provide.
 - [protocol.md](protocol.md) — the routes, the room envelope, the row
   types, who may do what, and how to add an engine.
+- [room-state.md](room-state.md) — what one tab keeps for a room: the
+  documents, the one list of unanswered work, the four states, and
+  what a transport asks the engine.
 - [storage.md](storage.md) — the two tables, the keys the engine
   writes, the object cache, presence, and the lifecycle commands.
 - [conflict-review.md](conflict-review.md) — how a set-aside change is

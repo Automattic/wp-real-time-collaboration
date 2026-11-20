@@ -662,7 +662,7 @@ request a live deployment mostly serves.
 
 The fastest way to the whole picture is the one-command runner
 (needs the tests wp-env running — `npm run env:tests start` — with the
-subtree built; it activates the plugins itself):
+bundled Gutenberg built; it activates the plugins itself):
 
 ```bash
 npm run bench -- --suite=engines     # intent-log x the scenario matrix
