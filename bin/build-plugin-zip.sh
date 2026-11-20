@@ -28,7 +28,7 @@ rm -rf dist wp-real-time-collaboration.zip
 mkdir -p "$DIST"
 
 echo "Staging plugin files..."
-cp wp-real-time-collaboration.php README.md CHANGELOG.md LICENSE "$DIST/"
+cp wp-real-time-collaboration.php uninstall.php README.md CHANGELOG.md LICENSE "$DIST/"
 rsync -a build/ "$DIST/build/"
 # Server PHP. Dev-only artifacts (composer vendor dirs, node_modules)
 # are excluded.
