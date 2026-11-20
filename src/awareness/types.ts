@@ -5,9 +5,8 @@
  * identity of the block their selection is in, or null.
  *
  * Blocks are named by durable identity when they have one
- * (`metadata.syncId`, which the intent-log and de-rtc engines stamp on
- * every block) and by the editor clientId otherwise (the yjs-server engine
- * shares clientIds through the Y.Doc, so they are cross-peer there). A
+ * (`metadata.syncId`, which the intent-log engine stamps on every block)
+ * and by the editor clientId otherwise. A
  * receiver that does not hold the named block shows nothing until it does;
  * awareness and content may travel on different channels, so this is
  * expected, not an error.

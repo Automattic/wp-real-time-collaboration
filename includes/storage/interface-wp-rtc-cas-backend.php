@@ -19,8 +19,8 @@ if ( ! interface_exists( 'WP_RTC_CAS_Backend' ) ) {
 	 *   with the EXPECTED value (pre-existing state starts claimable at
 	 *   its current value); `swap_prefixed` seeds with the NEXT value
 	 *   (the first chained write of state that predates the chain).
-	 * - Values can be large — de-rtc's chained canonical row carries the
-	 *   whole document. A backend with small item limits or eviction
+	 * - Values can be large: a row may carry a whole
+	 *   document. A backend with small item limits or eviction
 	 *   under memory pressure (memcached) must NOT hold these rows;
 	 *   losing one silently discards canonical content.
 	 * - `reset` (delete + seed) must be idempotent under racing

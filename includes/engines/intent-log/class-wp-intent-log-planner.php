@@ -53,8 +53,8 @@ if ( ! class_exists( 'WP_Intent_Log_Planner' ) ) {
 		 * Deterministic genesis syncId:
 		 * base64url( sha256( "postId:revisionId:path.join('.')" )[0..16) ).
 		 *
-		 * The scheme is shared with de-rtc, so it lives in the base
-		 * (WP_RTC_Block_Identity); this is its intent-log name.
+		 * The scheme is not tied to this engine, so it lives in
+		 * WP_RTC_Block_Identity; this is its intent-log name.
 		 *
 		 * @since 7.2.0
 		 *

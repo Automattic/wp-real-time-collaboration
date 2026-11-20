@@ -34,7 +34,7 @@ if ( ! class_exists( 'WP_RTC_Table_Storage' ) ) {
 	 *
 	 * Engines read `$wpdb->insert_id` after `add_update()` for the new
 	 * row's cursor — sometimes only after stamping lineage or writing room
-	 * meta in between (the yjs-server genesis path). The post-meta default
+	 * meta in between. The post-meta default
 	 * tolerated that because every write shared one `meta_id` sequence;
 	 * here the meta table has its own, and its counter races ahead (an
 	 * upsert consumes a value even when it updates). So every write other

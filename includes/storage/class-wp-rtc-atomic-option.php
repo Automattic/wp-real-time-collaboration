@@ -12,9 +12,8 @@ if ( ! class_exists( 'WP_RTC_Atomic_Option' ) ) {
 	 * This is the optimistic-concurrency counterpart to WP_RTC_Room_Lock:
 	 * instead of excluding writers, a writer CLAIMS a state transition
 	 * (`swap( name, expected, next )`) and loses gracefully when someone
-	 * else got there first. The de-rtc engine uses it to claim canonical
-	 * version advancement — restoring upstream DE-RTC's lock-free,
-	 * validate-and-retry model.
+	 * else got there first. The advisory channel uses it for each tab's
+	 * mailbox.
 	 *
 	 * Same topology rationale as the lock: options-row UPDATEs are writes
 	 * (always routed to the primary), the pattern works on SQLite, and all

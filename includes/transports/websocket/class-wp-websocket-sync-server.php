@@ -89,9 +89,9 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 
 		/**
 		 * Interval (in seconds) between out-of-band room scans. Rows can land
-		 * in a room WITHOUT a socket message touching it — de-rtc sessions
-		 * commit through the ordinary autosave endpoint (a web request), and
-		 * healing/unaware-writer lanes append rows from web requests too. A
+		 * in a room WITHOUT a socket message touching it: a tab that fell
+		 * back to polling, a script save, or a room reset all write through
+		 * ordinary web requests. A
 		 * push-only-on-message daemon never delivers those rows to its
 		 * subscribers, so the scan re-reads each subscribed room on the
 		 * polling transports' cadence and broadcasts when new rows exist.
@@ -1543,7 +1543,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 * room's engine. The registry holds ONE engine instance for this
 		 * process's lifetime, and engines cache room state per "request";
 		 * in this long-lived process that cache goes stale the moment
-		 * another process (a web request — e.g. a de-rtc autosave commit)
+		 * another process (a web request, for example a tab on polling)
 		 * advances the room. Called before every message-driven
 		 * process_room_request and every broadcast read.
 		 *
@@ -1627,10 +1627,8 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			/*
 			 * Out-of-band room scan (see ROOM_SCAN_INTERVAL_S): deliver rows
 			 * that landed through web requests rather than socket messages.
-			 * Without this, a de-rtc session's accepted commit (which rides
-			 * the autosave endpoint) stores its announce row but no peer on
-			 * this transport ever hears about it — the whole lane silently
-			 * fails to converge (found by the post-inversion websocket fuzz).
+			 * Without this, an edit stored by a tab on polling reaches no
+			 * peer on a socket, and the two never show the same document.
 			 */
 			if ( $now - $this->last_room_scan_at >= self::ROOM_SCAN_INTERVAL_S ) {
 				$this->last_room_scan_at = $now;

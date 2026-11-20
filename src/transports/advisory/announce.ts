@@ -1,7 +1,6 @@
 /**
  * The notice "I just wrote rows", decoupled from the channel that
- * carries it. Anything that lands rows on the server outside the polling
- * manager (de-rtc's commits ride the autosave endpoint) calls
+ * carries it. Whatever lands rows on the server calls
  * `announceLocalWrite`; the advisory channel subscribes and tells the
  * peers to poll. A notice is a rumor: it carries a room name (or `*` for
  * "some room") and nothing else. Receivers poll and find out.

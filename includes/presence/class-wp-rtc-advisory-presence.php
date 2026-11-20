@@ -789,8 +789,8 @@ if ( ! class_exists( 'WP_RTC_Advisory_Presence' ) ) {
 
 				/**
 				 * Fires after a per-post room was reset because nobody was in
-				 * it. Engines that keep state outside the room's rows (de-rtc's
-				 * canonical options row) forget it here.
+				 * it. An engine that keeps state outside the room's rows
+				 * forgets it here.
 				 *
 				 * @since 0.0.1
 				 *

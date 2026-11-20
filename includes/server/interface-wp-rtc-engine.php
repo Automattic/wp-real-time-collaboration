@@ -12,8 +12,8 @@ if ( ! interface_exists( 'WP_RTC_Engine' ) ) {
 	 *
 	 * An engine owns the MEANING of sync update payloads for a room: how
 	 * updates are validated, stored, merged, and returned to catching-up
-	 * clients. Transports (HTTP short-polling today; long-polling and
-	 * WebSockets later) own the MOVEMENT of updates — rooms, cursors,
+	 * clients. Transports (polling and the WebSocket daemon)
+	 * own the MOVEMENT of updates — rooms, cursors,
 	 * authentication, awareness — and treat update payloads as opaque.
 	 *
 	 * Implementations are registered with WP_RTC_Engine_Registry. Selecting a
@@ -30,7 +30,7 @@ if ( ! interface_exists( 'WP_RTC_Engine' ) ) {
 	 */
 	interface WP_RTC_Engine {
 		/**
-		 * Returns the unique engine slug, e.g. 'yjs-relay' or 'intent-log'.
+		 * Returns the unique engine slug, e.g. 'intent-log'.
 		 *
 		 * The slug is part of the client handshake: clients refuse to join
 		 * rooms whose engine they cannot provide, and rooms are stamped with

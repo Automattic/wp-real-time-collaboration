@@ -9,7 +9,7 @@ if ( ! class_exists( 'WP_RTC_Request_Log' ) ) {
 
 	/**
 	 * Per-request server-side metrics for tagged `/wp-rtc/` REST requests
-	 * (plus tagged autosave requests — de-rtc commits travel there),
+	 * (plus tagged autosave requests),
 	 * following the conventions of the community RTC performance harness
 	 * (WordPress/distributed-rtc-performance-testing) so numbers line up with
 	 * community-published tables:
@@ -577,11 +577,9 @@ if ( ! class_exists( 'WP_RTC_Request_Log' ) ) {
 		 */
 		public function pre_dispatch( $result, $server, $request ) {
 			$route = $request->get_route();
-			// Tagged autosave requests are measured too: de-rtc sessions
-			// commit through the ordinary autosave endpoint (the Save/Sync
-			// inversion), so its merge cost lives on that route. Only a
-			// client that explicitly tags an autosave (the host benchmark
-			// tags commit-shaped ones) opts it into the log.
+			// Tagged autosave requests are measured too, so a benchmark can
+			// count what a save costs. Only a client that tags an autosave
+			// (the host benchmark does) opts it into the log.
 			if ( ! $this->is_tagged( $request ) || ( false === strpos( $route, '/wp-rtc/' ) && false === strpos( $route, '/autosaves' ) ) ) {
 				return $result;
 			}

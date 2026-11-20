@@ -18,9 +18,8 @@ if ( ! class_exists( 'WP_RTC_Post_Genesis_Props' ) ) {
 	 * post dirty) the moment a client joins. Reads only the post row and its
 	 * derived state, so racing initializers build identical documents.
 	 *
-	 * Extracted verbatim from the intent-log engine's genesis so yjs-server
-	 * and de-rtc genesis seed the identical property set — field parity
-	 * starts at the seed.
+	 * Kept apart from the intent-log engine so that another engine can
+	 * start its rooms from the same set of fields.
 	 *
 	 * @since 0.4.0
 	 */
