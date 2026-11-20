@@ -38,9 +38,10 @@ environments and both Playground blueprints install it.
 
 1. Install and activate the Presence API.
 2. Install the plugin zip and activate it. Build the zip with
-   `npm run plugin-zip`, or take one from the repository's releases
-   page (`TODO-REPOSITORY-URL/releases/latest`). Activation creates the
-   storage tables and switches real-time collaboration on.
+   `npm run plugin-zip`, or take one from the
+   [releases page](https://github.com/Automattic/wp-real-time-collaboration/releases/latest).
+   Activation creates the storage tables and switches real-time
+   collaboration on.
 3. Open the same post in two browsers as two users and type. Changes
    appear in the other window within seconds, each window shows the
    other person's avatar, and when both change the same paragraph at

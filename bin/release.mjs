@@ -52,17 +52,16 @@ const repoUrl = ( () => {
 	} catch {
 		// No origin remote — fall through.
 	}
-	// TODO: set the new repository address.
-	return 'TODO-REPOSITORY-URL';
+	return 'https://github.com/Automattic/wp-real-time-collaboration';
 } )();
 
 /**
  * Lists the commits merged since the last release tag as changelog lines.
  *
- * Trunk is squash-merged, so each commit's subject is its pull request's
+ * The main branch is squash-merged, so each commit's subject is its pull request's
  * title and ends with "(#NN)". That number becomes a link to the PR; any
  * other "#NN" in the title (an issue reference) is linked too. A commit
- * that reached trunk without a PR is listed without a link, and a plain
+ * that reached main without a PR is listed without a link, and a plain
  * merge commit ("Merge pull request #NN ...") is listed under its body's
  * first line.
  *

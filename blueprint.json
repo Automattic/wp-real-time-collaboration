@@ -17,7 +17,7 @@
       "step": "installPlugin",
       "pluginData": {
         "resource": "url",
-        "url": "TODO-REPOSITORY-URL/releases/latest/download/wp-real-time-collaboration.zip",
+        "url": "https://github.com/Automattic/wp-real-time-collaboration/releases/latest/download/wp-real-time-collaboration.zip",
         "caption": "Downloading WP Real-Time Collaboration (latest release, bundles Gutenberg)"
       },
       "options": {

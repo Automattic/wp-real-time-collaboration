@@ -1,6 +1,6 @@
 name: Release
 
-# Publishes a GitHub release whenever the plugin version changes on trunk
+# Publishes a GitHub release whenever the plugin version changes on main
 # (normally by merging the PR the "Create release PR" workflow opens). The
 # release asset is wp-real-time-collaboration.zip: a self-contained plugin that
 # bundles the pinned, built Gutenberg framework, ready to install on any
@@ -9,7 +9,7 @@ name: Release
 on:
   push:
     branches:
-      - trunk
+      - main
 
 permissions:
   contents: write

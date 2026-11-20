@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       WP Real-Time Collaboration
- * Plugin URI:        TODO-REPOSITORY-URL (TODO: set the new repository address)
+ * Plugin URI:        https://github.com/Automattic/wp-real-time-collaboration
  * Description:       Pluggable real-time collaboration engines and transports for the Gutenberg collaborative-editing framework. Without this plugin active, real-time collaboration is effectively disabled.
  * Requires at least: 7.0
  * Requires PHP:      7.4
