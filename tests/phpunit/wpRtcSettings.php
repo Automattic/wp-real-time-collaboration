@@ -32,16 +32,13 @@ class Tests_Collaboration_WpRtcSettings extends WP_UnitTestCase {
 		$cases = array(
 			array( 'http-polling', '', WP_RTC_Settings::DELIVERY_POLLING ),
 			array( 'http-polling', 'webrtc-advisory', WP_RTC_Settings::DELIVERY_POLLING_WEBRTC ),
-			array( 'http-polling', 'web-rtc', WP_RTC_Settings::DELIVERY_POLLING_WEBRTC ),
 			array( 'http-polling', 'websocket-advisory', WP_RTC_Settings::DELIVERY_POLLING_WEBSOCKET ),
 			// A preferred transport maps to its entry whatever fallback
 			// channel is stored.
 			array( 'websocket', '', WP_RTC_Settings::DELIVERY_WEBSOCKET ),
-			// The retired long-polling transport and the removed SSE
-			// transport both read as polling, with the stored channel.
-			// (They read as the SSE entry before SSE was removed.)
-			array( 'http-long-polling', 'websocket-advisory', WP_RTC_Settings::DELIVERY_POLLING_WEBSOCKET ),
-			array( 'sse', 'websocket-advisory', WP_RTC_Settings::DELIVERY_POLLING_WEBSOCKET ),
+			// A transport the site does not offer reads as polling, with
+			// the stored channel.
+			array( 'no-such-transport', 'websocket-advisory', WP_RTC_Settings::DELIVERY_POLLING_WEBSOCKET ),
 		);
 		foreach ( $cases as list( $transport, $advisory, $expected ) ) {
 			update_option( WP_RTC_Settings::TRANSPORT_OPTION, $transport );
@@ -95,22 +92,14 @@ class Tests_Collaboration_WpRtcSettings extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The retired long-polling choice used to become SSE. SSE was removed
-	 * from this plugin, so it becomes polling, and so does a stored SSE
-	 * choice.
+	 * A stored transport the site does not offer, such as one a removed
+	 * plugin registered, becomes polling.
 	 */
-	public function test_a_stored_long_polling_or_sse_choice_becomes_polling() {
+	public function test_a_stored_transport_that_is_not_offered_becomes_polling() {
 		$settings = new WP_RTC_Settings();
-		update_option( WP_RTC_Settings::TRANSPORT_OPTION, 'http-long-polling' );
-		$this->assertSame( 'http-polling', WP_RTC_Settings::stored_transport() );
+		update_option( WP_RTC_Settings::TRANSPORT_OPTION, 'no-such-transport' );
 		$this->assertSame( 'http-polling', wp_rtc_get_transport_registry()->get_active_slug() );
-		$this->assertSame( 'http-polling', $settings->sanitize_transport( 'http-long-polling' ) );
-
-		foreach ( array( 'sse', 'sse-daemon' ) as $removed ) {
-			update_option( WP_RTC_Settings::TRANSPORT_OPTION, $removed );
-			$this->assertSame( 'http-polling', wp_rtc_get_transport_registry()->get_active_slug(), $removed );
-			$this->assertSame( 'http-polling', $settings->sanitize_transport( $removed ), $removed );
-		}
+		$this->assertSame( 'http-polling', $settings->sanitize_transport( 'no-such-transport' ) );
 	}
 
 	public function test_the_advisory_server_url_falls_back_to_the_transport_server() {

@@ -103,17 +103,15 @@ if ( ! class_exists( 'WP_RTC_Settings' ) ) {
 		 * Option holding the advisory channel choice: `webrtc-advisory` (the
 		 * default browser-to-browser link), `websocket-advisory` (one socket
 		 * per tab to a WebSocket server, which relays between the tabs in a
-		 * room) or the empty string for off. `web-rtc`, the slug the first
-		 * release stored, still reads as `webrtc-advisory`.
+		 * room) or the empty string for off.
 		 *
 		 * @since 0.0.1
 		 * @var string
 		 */
-		const ADVISORY_OPTION        = 'wp_rtc_advisory_channel';
-		const ADVISORY_WEBRTC        = 'webrtc-advisory';
-		const ADVISORY_WEBSOCKET     = 'websocket-advisory';
-		const ADVISORY_LEGACY_WEBRTC = 'web-rtc';
-		const ADVISORY_DEFAULT       = self::ADVISORY_WEBRTC;
+		const ADVISORY_OPTION    = 'wp_rtc_advisory_channel';
+		const ADVISORY_WEBRTC    = 'webrtc-advisory';
+		const ADVISORY_WEBSOCKET = 'websocket-advisory';
+		const ADVISORY_DEFAULT   = self::ADVISORY_WEBRTC;
 
 		/**
 		 * Option: the WebSocket URL editor tabs connect to for the
@@ -224,16 +222,14 @@ if ( ! class_exists( 'WP_RTC_Settings' ) ) {
 		}
 
 		/**
-		 * The stored transport slug, with the retired long-polling transport
-		 * read as polling.
+		 * The stored transport slug.
 		 *
 		 * @since 0.0.2
 		 *
 		 * @return string The transport slug, or '' when none is stored.
 		 */
 		public static function stored_transport(): string {
-			$stored = (string) get_option( self::TRANSPORT_OPTION, '' );
-			return 'http-long-polling' === $stored ? 'http-polling' : $stored;
+			return (string) get_option( self::TRANSPORT_OPTION, '' );
 		}
 
 		/**
@@ -723,14 +719,10 @@ if ( ! class_exists( 'WP_RTC_Settings' ) ) {
 		 * @return string Transport slug.
 		 */
 		public function sanitize_transport( $value ): string {
-			$value = sanitize_key( (string) $value );
-			if ( 'http-long-polling' === $value ) {
-				// The retired transport; polling replaces it.
-				$value = 'http-polling';
-			}
+			$value   = sanitize_key( (string) $value );
 			$choices = self::transport_choices();
-			// A slug that is not offered, such as a removed transport,
-			// becomes polling, which needs nothing beside WordPress.
+			// A slug that is not offered becomes polling, which needs
+			// nothing beside WordPress.
 			return isset( $choices[ $value ] ) ? $value : 'http-polling';
 		}
 
@@ -951,8 +943,7 @@ if ( ! class_exists( 'WP_RTC_Settings' ) ) {
 		}
 
 		/**
-		 * Maps a stored advisory value (including the legacy `web-rtc`) to
-		 * a current slug.
+		 * Maps a stored advisory value to a known slug.
 		 *
 		 * @since 0.0.1
 		 *
@@ -962,9 +953,6 @@ if ( ! class_exists( 'WP_RTC_Settings' ) ) {
 		 */
 		public static function normalize_advisory( $value ): string {
 			$value = (string) $value;
-			if ( self::ADVISORY_LEGACY_WEBRTC === $value ) {
-				return self::ADVISORY_WEBRTC;
-			}
 			return in_array( $value, array( self::ADVISORY_WEBRTC, self::ADVISORY_WEBSOCKET ), true ) ? $value : '';
 		}
 

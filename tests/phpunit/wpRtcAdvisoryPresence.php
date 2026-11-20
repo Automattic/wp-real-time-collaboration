@@ -980,11 +980,6 @@ class Tests_Collaboration_WpRtcAdvisoryPresence extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'iceServers', $settings );
 		$this->assertTrue( WP_RTC_Advisory_Presence::is_enabled() );
 
-		// The first release stored `web-rtc`: it still reads as WebRTC.
-		update_option( WP_RTC_Settings::ADVISORY_OPTION, 'web-rtc' );
-		$this->assertSame( 'webrtc-advisory', WP_RTC_Settings::advisory_channel() );
-		$this->assertSame( 'webrtc-advisory', $this->presence->editor_settings( get_post( self::$post_id ) )['channel'] );
-
 		// Anything else is off.
 		$this->assertSame( '', WP_RTC_Settings::normalize_advisory( 'carrier-pigeon' ) );
 		delete_option( WP_RTC_Settings::ADVISORY_OPTION );
