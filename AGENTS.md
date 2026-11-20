@@ -240,6 +240,12 @@ before a big change. A durable lesson from an issue goes here.
   so everything inside a dialog is wrapped in `ReviewSurface` or the
   cards render inside it. The rules and the engine's part:
   `docs/conflict-review.md`.
+- **Unsent work lives in one place: the replica's outgoing list**
+  (`src/replica/replica.ts`). A transport keeps no queue. It asks the
+  session what to send (`takeUpdatesToSend`) and tells it when a
+  request or a socket was lost (`connectionLost`), and the session
+  hands the same updates out again. A second copy of unsent work in a
+  transport is how an edit sent on a dying socket used to be lost.
 - **A change made inside `gutenberg/` is listed under `local_changes`
   in `gutenberg-pin.json`** until the Gutenberg branch has it too, and
   must be applied again when the folder is replaced. The list is empty
@@ -342,6 +348,10 @@ before a big change. A durable lesson from an issue goes here.
   because it makes no HTTP request. Run `npm run env:tests:stop`, then
   `WP_ENV_PORT=8889 npm run env:tests start`. A changed constant in the
   config needs the same restart.
+- **A benchmark needs the machine awake.** A laptop that sleeps in the
+  middle of `npm run bench` gives wrong per-minute numbers and no
+  error. The sign is a run that took far longer than its settings say.
+  On macOS, start it with `caffeinate -i -s`.
 - The WordPress Playwright helpers fall back to port 8889 and to this
   suite's saved login. A second Playwright setup in this repo must set
   `WP_BASE_URL` and `STORAGE_STATE_PATH` itself, as
