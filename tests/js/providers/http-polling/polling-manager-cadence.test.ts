@@ -155,6 +155,7 @@ function createMockSession( clientId = 1 ) {
 describe( 'polling-manager cadence', () => {
 	let pollingManager: Manager[ 'pollingManager' ];
 	let flushUpdatesNow: Manager[ 'flushUpdatesNow' ];
+	let mockApplyAnswer: jest.Mock;
 	let mockPostSyncUpdate: jest.Mock<
 		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdate
 	>;
@@ -179,6 +180,10 @@ describe( 'polling-manager cadence', () => {
 			flushUpdatesNow = managerModule.flushUpdatesNow;
 			mockPostSyncUpdate =
 				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdate;
+			// The manager's own copy of the signaling module.
+			mockApplyAnswer =
+				require( '../../../../src/providers/advisory/signaling' ).applyAnswer;
+			mockApplyAnswer.mockReset();
 		} );
 	} );
 
@@ -300,6 +305,30 @@ describe( 'polling-manager cadence', () => {
 		expect(
 			mockPostSyncUpdate.mock.calls[ quiet + 1 ][ 0 ].rooms[ 0 ].updates
 		).toHaveLength( 1 );
+	} );
+
+	it( 'a lone tab that types without a pause makes one request per polling interval, not two', async () => {
+		// The server takes 150 ms to answer, so keys are typed while a
+		// request is on its way.
+		mockPostSyncUpdate.mockImplementation(
+			() =>
+				new Promise( ( resolve ) => {
+					setTimeout( () => resolve( response( [ 1 ] ) ), 150 );
+				} )
+		);
+		const session = register();
+		await jest.advanceTimersByTimeAsync( 60000 );
+		const quiet = mockPostSyncUpdate.mock.calls.length;
+
+		// A key every 100 ms for 20 seconds.
+		for ( let key = 0; key < 200; key++ ) {
+			session.addUpdate( { type: 'update', data: 'AA==' }, 1 );
+			await jest.advanceTimersByTimeAsync( 100 );
+		}
+
+		const made = mockPostSyncUpdate.mock.calls.length - quiet;
+		expect( made ).toBeGreaterThanOrEqual( 5 );
+		expect( made ).toBeLessThanOrEqual( 6 );
 	} );
 
 	it( 'a flush that lands while a poll is in flight waits for the successor that carries the work', async () => {
@@ -566,6 +595,38 @@ describe( 'polling-manager cadence', () => {
 		expect( mockPostSyncUpdate.mock.calls[ 1 ][ 0 ].rooms[ 0 ].after ).toBe(
 			7
 		);
+	} );
+
+	it( 'the answer that rides a poll and names the rows that same poll brought does not cause a second poll', async () => {
+		mockOthers = true;
+		mockCoverage = true;
+		// The server stored this tab's edit as row 9, and says so twice:
+		// in the room's answer and in the signaling answer beside it.
+		mockApplyAnswer.mockImplementation( () =>
+			mockCallbacks.cursor.forEach( ( cb ) => cb( 9 ) )
+		);
+		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ], 9 ) );
+		register();
+		await jest.advanceTimersByTimeAsync( 0 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+		await jest.advanceTimersByTimeAsync( 1000 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	it( 'the answer that rides a poll and names a row that poll did not bring causes another poll', async () => {
+		mockOthers = true;
+		mockCoverage = true;
+		// Row 12 was stored right after the server read the rows for
+		// this answer, which end at row 9.
+		mockApplyAnswer.mockImplementationOnce( () =>
+			mockCallbacks.cursor.forEach( ( cb ) => cb( 12 ) )
+		);
+		mockPostSyncUpdate.mockResolvedValue( response( [ 1, 2 ], 9 ) );
+		register();
+		await jest.advanceTimersByTimeAsync( 0 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 1 );
+		await jest.advanceTimersByTimeAsync( 500 );
+		expect( mockPostSyncUpdate ).toHaveBeenCalledTimes( 2 );
 	} );
 
 	it( 'a heartbeat answer naming a different engine polls into the fence; the same engine stays quiet', async () => {

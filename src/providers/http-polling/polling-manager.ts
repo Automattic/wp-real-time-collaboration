@@ -656,9 +656,20 @@ function pollSoonForLocalUpdate(): void {
 	localUpdatePollTimer = setTimeout( () => {
 		localUpdatePollTimer = null;
 		// Another poll may have carried the work in the meantime.
-		if ( hasQueuedUpdates() ) {
-			pollNow();
+		if ( ! hasQueuedUpdates() ) {
+			return;
 		}
+		// Or carried older work, a moment ago. Alone, what was made
+		// since waits its own interval.
+		if (
+			isAlone() &&
+			Date.now() - lastPollStartedAt <
+				POLLING_INTERVAL_IN_MS - LOCAL_UPDATE_POLL_DELAY_MS
+		) {
+			pollSoonForLocalUpdate();
+			return;
+		}
+		pollNow();
 	}, localWorkDelay() );
 }
 
@@ -735,6 +746,27 @@ function basePresence( state: unknown ): unknown {
 	return picked;
 }
 
+/*
+ * Set while the signaling answer that rode a poll is applied, and the
+ * newest row of the room that answer named (see onRoomCursor below).
+ */
+let applyingPollAnswer = false;
+let roomCursorToCheck: number | null = null;
+
+/**
+ * Rows were stored that no peer announced (a writer off the channel): the
+ * primary room's cursor is behind the newest row the server reported.
+ *
+ * @param cursor The newest row the server reported for the room.
+ */
+function pollIfRoomIsAhead( cursor: number ): void {
+	roomStates.forEach( ( state ) => {
+		if ( state.isPrimaryRoom && cursor > state.endCursor ) {
+			pollSoonForAnnounce();
+		}
+	} );
+}
+
 function installAdvisoryHooks(): void {
 	if ( advisoryHooksInstalled ) {
 		return;
@@ -761,13 +793,14 @@ function installAdvisoryHooks(): void {
 	onAdvisoryCoverageChanged( reschedule );
 	onAdvisoryAnnounce( pollSoonForAnnounce );
 	onRoomCursor( ( cursor ) => {
-		// Rows landed that no nudge announced (a writer off the channel):
-		// the primary room's cursor is behind the head the beat reported.
-		roomStates.forEach( ( state ) => {
-			if ( state.isPrimaryRoom && cursor > state.endCursor ) {
-				pollSoonForAnnounce();
-			}
-		} );
+		if ( applyingPollAnswer ) {
+			// The answer rode a poll whose rows are not applied yet. The
+			// newest row it names is very likely one of them, so the
+			// comparison waits until they are.
+			roomCursorToCheck = cursor;
+			return;
+		}
+		pollIfRoomIsAhead( cursor );
 	} );
 	onRoomEngine( ( engine ) => {
 		// The site's engine changed under this session: poll so the
@@ -1442,10 +1475,24 @@ function poll(): void {
 		try {
 			const { rooms, advisory } = await postSyncUpdate( payload );
 			// The signaling answer rode this poll: company, peers, mailbox.
-			applyAnswer( advisory, payload.advisory?.seq );
+			applyingPollAnswer = true;
+			try {
+				applyAnswer( advisory, payload.advisory?.seq );
+			} finally {
+				applyingPollAnswer = false;
+			}
 
 			markConnected( roomsInRequest );
 			applyResponseRooms( rooms, payload, pollStarted );
+
+			if ( null !== roomCursorToCheck ) {
+				// Without this wait, every poll that stored this tab's
+				// own edits was followed by a second, empty one.
+				const reported = roomCursorToCheck;
+
+				roomCursorToCheck = null;
+				pollIfRoomIsAhead( reported );
+			}
 
 			// The first successful poll brings the document. From here on
 			// the cadence rules decide the timer.
