@@ -62,13 +62,13 @@ export interface PresenceObject {
 	 * The plugin writes other tabs' states straight into the map that
 	 * `getStates()` returns, and deletes from it. The class has no public
 	 * way to set another client's state from plain data.
-	 * Used in: src/shared/awareness-sync.ts.
+	 * Used in: src/awareness/awareness-sync.ts.
 	 */
 
 	/**
 	 * A clock per client id. The plugin moves this tab's own clock forward
 	 * when the server's list drops this tab, as the class does itself.
-	 * Used in: src/shared/awareness-sync.ts.
+	 * Used in: src/awareness/awareness-sync.ts.
 	 */
 	meta: Map< number, { clock: number; lastUpdated: number } >;
 
@@ -76,7 +76,7 @@ export interface PresenceObject {
 	 * The event method the class inherits. The plugin calls it after it
 	 * has changed the map by hand, so the editor's presence display
 	 * updates. `change` is for a visible change, `update` for any.
-	 * Used in: src/shared/awareness-sync.ts.
+	 * Used in: src/awareness/awareness-sync.ts.
 	 */
 	emit: (
 		name: 'change' | 'update',
@@ -366,7 +366,7 @@ export interface EntitySyncServices {
 export interface EntitySyncConfig {
 	/**
 	 * Builds the presence object for a record, over a stand-in for the
-	 * Yjs document (see src/shared/awareness-sync.ts).
+	 * Yjs document (see src/awareness/awareness-sync.ts).
 	 */
 	createAwareness?: (
 		doc: { clientID: number; on: () => void; off: () => void },

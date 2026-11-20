@@ -18,9 +18,9 @@ import apiFetch from '@wordpress/api-fetch';
 /**
  * Internal dependencies
  */
-import * as channel from '../../../../src/providers/advisory/channel';
-import * as signaling from '../../../../src/providers/advisory/signaling';
-import * as announce from '../../../../src/providers/advisory/announce';
+import * as channel from '../../../../src/transports/advisory/channel';
+import * as signaling from '../../../../src/transports/advisory/signaling';
+import * as announce from '../../../../src/transports/advisory/announce';
 
 /**
  * The advisory channel over its WebSocket link: one socket to the sync

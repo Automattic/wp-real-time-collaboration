@@ -65,7 +65,7 @@ export interface SyncPayload {
 	rooms: SyncEnvelopeFromClient[];
 	/**
 	 * The advisory channel's signaling probe (per-tab token and queued
-	 * handshake messages; see providers/advisory/signaling.ts). Answered
+	 * handshake messages; see transports/advisory/signaling.ts). Answered
 	 * alongside the rooms: an active poll loop is a faster carrier than
 	 * the heartbeat.
 	 */

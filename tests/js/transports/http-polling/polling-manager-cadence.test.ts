@@ -45,7 +45,7 @@ jest.mock( '@wordpress/hooks', () => ( {
 	),
 } ) );
 
-jest.mock( '../../../../src/providers/advisory/signaling', () => ( {
+jest.mock( '../../../../src/transports/advisory/signaling', () => ( {
 	applyAnswer: jest.fn(),
 	buildProbe: () => ( { seq: 1, room: 'postType/post:1', token: 'tok' } ),
 	getPresenceRoom: () => 'postType/post:1',
@@ -65,7 +65,7 @@ jest.mock( '../../../../src/providers/advisory/signaling', () => ( {
 	setSyncClientId: jest.fn(),
 } ) );
 
-jest.mock( '../../../../src/providers/advisory/channel', () => ( {
+jest.mock( '../../../../src/transports/advisory/channel', () => ( {
 	advisoryCoversClients: () => mockCoverage,
 	getChannelPresence: () => mockChannelPresence,
 	onAdvisoryAnnounce: ( cb: ( room: string ) => void ) =>
@@ -79,20 +79,20 @@ jest.mock( '../../../../src/providers/advisory/channel', () => ( {
 	stopAdvisoryChannel: jest.fn(),
 } ) );
 
-jest.mock( '../../../../src/providers/advisory/announce', () => ( {
+jest.mock( '../../../../src/transports/advisory/announce', () => ( {
 	announceLocalWrite: mockAnnounceLocalWrite,
 } ) );
 
-jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
+jest.mock( '../../../../src/transports/http-polling/utils', () => ( {
 	...( jest.requireActual(
-		'../../../../src/providers/http-polling/utils'
+		'../../../../src/transports/http-polling/utils'
 	) as object ),
 	postSyncUpdate: jest.fn(),
 	postSyncUpdateNonBlocking: jest.fn(),
 } ) );
 
 type Manager =
-	typeof import('../../../../src/providers/http-polling/polling-manager');
+	typeof import('../../../../src/transports/http-polling/polling-manager');
 
 function response( clients: number[], cursor = 1 ) {
 	const awareness: Record< number, object > = {};
@@ -157,7 +157,7 @@ describe( 'polling-manager cadence', () => {
 	let flushUpdatesNow: Manager[ 'flushUpdatesNow' ];
 	let mockApplyAnswer: jest.Mock;
 	let mockPostSyncUpdate: jest.Mock<
-		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdate
+		typeof import('../../../../src/transports/http-polling/utils').postSyncUpdate
 	>;
 
 	beforeEach( () => {
@@ -175,14 +175,14 @@ describe( 'polling-manager cadence', () => {
 		mockSetSignalCarrier.mockClear();
 		mockAnnounceLocalWrite.mockClear();
 		jest.isolateModules( () => {
-			const managerModule: Manager = require( '../../../../src/providers/http-polling/polling-manager' );
+			const managerModule: Manager = require( '../../../../src/transports/http-polling/polling-manager' );
 			pollingManager = managerModule.pollingManager;
 			flushUpdatesNow = managerModule.flushUpdatesNow;
 			mockPostSyncUpdate =
-				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdate;
+				require( '../../../../src/transports/http-polling/utils' ).postSyncUpdate;
 			// The manager's own copy of the signaling module.
 			mockApplyAnswer =
-				require( '../../../../src/providers/advisory/signaling' ).applyAnswer;
+				require( '../../../../src/transports/advisory/signaling' ).applyAnswer;
 			mockApplyAnswer.mockReset();
 		} );
 	} );

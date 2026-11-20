@@ -28,7 +28,7 @@ jest.mock( '@wordpress/hooks', () => ( {
 	),
 } ) );
 
-type Signaling = typeof import('../../../../src/providers/advisory/signaling');
+type Signaling = typeof import('../../../../src/transports/advisory/signaling');
 
 function setSettings( advisory: Record< string, unknown > | null ): void {
 	( window as { _wpRtcSettings?: unknown } )._wpRtcSettings = advisory
@@ -57,7 +57,7 @@ describe( 'advisory signaling', () => {
 			delete hooks[ key ];
 		}
 		jest.isolateModules( () => {
-			signaling = require( '../../../../src/providers/advisory/signaling' );
+			signaling = require( '../../../../src/transports/advisory/signaling' );
 		} );
 	} );
 

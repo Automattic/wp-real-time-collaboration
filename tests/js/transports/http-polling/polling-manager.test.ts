@@ -13,7 +13,7 @@ import {
 	type SyncPayload,
 	type SyncResponse,
 	type SyncUpdate,
-} from '../../../../src/providers/http-polling/types';
+} from '../../../../src/transports/http-polling/types';
 import { createIntentLogSession } from '../../../../src/engines/intent-log-session';
 
 // Mock all external dependencies before imports.
@@ -24,9 +24,9 @@ jest.mock( '@wordpress/hooks', () => ( {
 	),
 } ) );
 
-jest.mock( '../../../../src/providers/http-polling/config', () => ( {
+jest.mock( '../../../../src/transports/http-polling/config', () => ( {
 	...( jest.requireActual(
-		'../../../../src/providers/http-polling/config'
+		'../../../../src/transports/http-polling/config'
 	) as object ),
 	MAX_UPDATE_SIZE_IN_BYTES: 2048,
 	// Shrink the per-request room cap so rotation tests don't need 50+
@@ -39,9 +39,9 @@ jest.mock( '../../../../src/providers/http-polling/config', () => ( {
 	MIN_SYNC_REQUEST_BODY_SIZE_IN_BYTES: 100,
 } ) );
 
-jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
+jest.mock( '../../../../src/transports/http-polling/utils', () => ( {
 	...( jest.requireActual(
-		'../../../../src/providers/http-polling/utils'
+		'../../../../src/transports/http-polling/utils'
 	) as object ),
 	postSyncUpdate: jest.fn(),
 	postSyncUpdateNonBlocking: jest.fn(),
@@ -197,13 +197,13 @@ function getServerAwareness(
 describe( 'polling-manager', () => {
 	let pollingManager: PollingManager;
 	let mockPostSyncUpdate: jest.Mock<
-		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdate
+		typeof import('../../../../src/transports/http-polling/utils').postSyncUpdate
 	>;
 	let mockPostSyncUpdateNonBlocking: jest.Mock<
-		typeof import('../../../../src/providers/http-polling/utils').postSyncUpdateNonBlocking
+		typeof import('../../../../src/transports/http-polling/utils').postSyncUpdateNonBlocking
 	>;
 	let mockApplyFilters: jest.Mock;
-	let inspector: typeof import('../../../../src/providers/http-polling/../../../src/debug/inspector').syncDebugApi;
+	let inspector: typeof import('../../../../src/transports/http-polling/../../../src/debug/inspector').syncDebugApi;
 
 	beforeEach( () => {
 		jest.useFakeTimers();
@@ -211,12 +211,12 @@ describe( 'polling-manager', () => {
 		// Use isolateModules so each test gets fresh module-level state
 		// (isPolling, pollingTimeoutId, roomStates, etc.).
 		jest.isolateModules( () => {
-			const managerModule = require( '../../../../src/providers/http-polling/polling-manager' );
+			const managerModule = require( '../../../../src/transports/http-polling/polling-manager' );
 			pollingManager = managerModule.pollingManager;
 			mockPostSyncUpdate =
-				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdate;
+				require( '../../../../src/transports/http-polling/utils' ).postSyncUpdate;
 			mockPostSyncUpdateNonBlocking =
-				require( '../../../../src/providers/http-polling/utils' ).postSyncUpdateNonBlocking;
+				require( '../../../../src/transports/http-polling/utils' ).postSyncUpdateNonBlocking;
 			mockApplyFilters = require( '@wordpress/hooks' ).applyFilters;
 			// Same isolated registry as the polling manager: the inspector
 			// buffer must be the instance the tap writes to.

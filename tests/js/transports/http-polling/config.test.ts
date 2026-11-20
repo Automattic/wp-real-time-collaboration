@@ -4,7 +4,7 @@
 import { describe, expect, it, jest } from '@jest/globals';
 
 type SyncConfig =
-	typeof import('../../../../src/providers/http-polling/config');
+	typeof import('../../../../src/transports/http-polling/config');
 
 function loadConfigWithFilteredIntervals(
 	filteredIntervals: Record< string, unknown >,
@@ -32,7 +32,7 @@ function loadConfigWithFilteredIntervals(
 		delete ( window as any )._wpRtcSettings;
 	}
 
-	return require( '../../../../src/providers/http-polling/config' ) as SyncConfig;
+	return require( '../../../../src/transports/http-polling/config' ) as SyncConfig;
 }
 
 describe( 'http-polling config', () => {

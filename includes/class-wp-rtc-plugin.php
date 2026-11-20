@@ -105,17 +105,17 @@ if ( ! class_exists( 'WP_RTC_Plugin' ) ) {
 
 			// Shared concurrency primitives (Core-style lock + optimistic
 			// CAS), each with a filterable drop-in backend seam.
-			require_once WP_RTC_PATH . 'includes/interface-wp-rtc-lock-backend.php';
-			require_once WP_RTC_PATH . 'includes/interface-wp-rtc-cas-backend.php';
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-room-lock.php';
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-atomic-option.php';
+			require_once WP_RTC_PATH . 'includes/storage/interface-wp-rtc-lock-backend.php';
+			require_once WP_RTC_PATH . 'includes/storage/interface-wp-rtc-cas-backend.php';
+			require_once WP_RTC_PATH . 'includes/storage/class-wp-rtc-room-lock.php';
+			require_once WP_RTC_PATH . 'includes/storage/class-wp-rtc-atomic-option.php';
 
 			// Awareness and the tab list, behind the same kind of drop-in seam as the lock.
-			require_once WP_RTC_PATH . 'includes/interface-wp-rtc-awareness-backend.php';
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-awareness.php';
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-presence-api-awareness-backend.php';
-			require_once WP_RTC_PATH . 'includes/interface-wp-rtc-tab-list-backend.php';
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-presence-api-tab-list-backend.php';
+			require_once WP_RTC_PATH . 'includes/presence/interface-wp-rtc-awareness-backend.php';
+			require_once WP_RTC_PATH . 'includes/presence/class-wp-rtc-awareness.php';
+			require_once WP_RTC_PATH . 'includes/presence/class-wp-rtc-presence-api-awareness-backend.php';
+			require_once WP_RTC_PATH . 'includes/presence/interface-wp-rtc-tab-list-backend.php';
+			require_once WP_RTC_PATH . 'includes/presence/class-wp-rtc-presence-api-tab-list-backend.php';
 
 			// Code the base provides to more than one engine.
 			require_once WP_RTC_PATH . 'includes/shared/class-wp-rtc-block-identity.php';
@@ -139,7 +139,7 @@ if ( ! class_exists( 'WP_RTC_Plugin' ) ) {
 			if ( defined( 'WP_CLI' ) && WP_CLI ) {
 				require_once $transports . 'websocket/class-wp-rtc-server-cli-command.php';
 			}
-			require_once WP_RTC_PATH . 'includes/class-wp-rtc-advisory-presence.php';
+			require_once WP_RTC_PATH . 'includes/presence/class-wp-rtc-advisory-presence.php';
 
 			/*
 			 * Diagnostics are development tools, deliberately kept OUT of the

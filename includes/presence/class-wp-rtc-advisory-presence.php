@@ -44,7 +44,7 @@ if ( ! class_exists( 'WP_RTC_Advisory_Presence' ) ) {
 	final class WP_RTC_Advisory_Presence {
 		/**
 		 * Key used in both directions of the heartbeat payload. Mirrors
-		 * HEARTBEAT_DATA_KEY in src/providers/advisory/signaling.ts.
+		 * HEARTBEAT_DATA_KEY in src/transports/advisory/signaling.ts.
 		 *
 		 * @since 0.0.1
 		 * @var string

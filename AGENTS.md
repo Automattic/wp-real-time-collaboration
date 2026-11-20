@@ -40,7 +40,7 @@ shared editing session.
   has not answered), `shared/`,
   `registry/` (the plugin's own transport and engine registries,
   connection errors, and the types an engine and a transport share),
-  `providers/{http-polling,websocket,advisory}/`,
+  `transports/{http-polling,websocket,advisory}/`,
   `awareness/`, `review/` (the conflict review cards
   and dialogs; see `docs/conflict-review.md`),
   `editor/` (the only folder that talks to the editor.
@@ -181,7 +181,7 @@ Test traps:
     publishes the daemon on host port 8787, runs the example relay on
     8790, and restores the transport at teardown.
   - The polling cadence rules have Jest coverage in
-    `tests/js/providers/http-polling/polling-manager-cadence.test.ts`;
+    `tests/js/transports/http-polling/polling-manager-cadence.test.ts`;
     iterate there first. Playwright cannot hide a tab, so the specs
     override `document.visibilityState` in the page and fire
     `visibilitychange`.

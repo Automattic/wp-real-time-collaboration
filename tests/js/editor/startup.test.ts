@@ -68,13 +68,13 @@ jest.mock( '@wordpress/blocks', () => ( {
 } ) );
 // Each transport gives a function that connects one room.
 jest.mock(
-	'../../../src/providers/http-polling/http-polling-provider',
+	'../../../src/transports/http-polling/http-polling-provider',
 	() => ( { createHttpPollingProvider: () => async () => undefined } )
 );
-jest.mock( '../../../src/providers/websocket/websocket-provider', () => ( {
+jest.mock( '../../../src/transports/websocket/websocket-provider', () => ( {
 	createWebSocketProvider: () => async () => undefined,
 } ) );
-jest.mock( '../../../src/providers/http-polling/polling-manager', () => ( {
+jest.mock( '../../../src/transports/http-polling/polling-manager', () => ( {
 	flushHeldUpdates: jest.fn( async () => {} ),
 } ) );
 jest.mock( '../../../src/awareness', () => ( {

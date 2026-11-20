@@ -30,8 +30,8 @@ import {
 	INTENT_LOG_ENGINE_SLUG,
 } from './engines/intent-log-session';
 import { registerConflictSource } from './review';
-import { createHttpPollingProvider } from './providers/http-polling/http-polling-provider';
-import { createWebSocketProvider } from './providers/websocket/websocket-provider';
+import { createHttpPollingProvider } from './transports/http-polling/http-polling-provider';
+import { createWebSocketProvider } from './transports/websocket/websocket-provider';
 import { bootstrapSlowAwareness } from './awareness';
 import { registerSyncEngine } from './registry/engines';
 import { registerSyncTransport } from './registry/transports';

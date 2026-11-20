@@ -21,7 +21,7 @@ import {
 	intValueOrDefault,
 	postSyncUpdate,
 	rotateWindow,
-} from '../../../../src/providers/http-polling/utils';
+} from '../../../../src/transports/http-polling/utils';
 
 const mockApiFetch = jest.mocked( apiFetch );
 

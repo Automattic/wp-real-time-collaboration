@@ -27,8 +27,8 @@ import {
 	isSignalingAvailable,
 	onAnswer,
 	setProbeFields,
-} from '../../providers/advisory/signaling';
-import type { DiscoveredPeer } from '../../providers/advisory/signaling';
+} from '../../transports/advisory/signaling';
+import type { DiscoveredPeer } from '../../transports/advisory/signaling';
 import { focusedBlockId } from '../block-id';
 import type { BlockTreeReader } from '../block-id';
 import type { Channel, PeerRoster } from '../types';

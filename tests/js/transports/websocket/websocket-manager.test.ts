@@ -15,12 +15,12 @@ import { addFilter, removeFilter } from '@wordpress/hooks';
 import {
 	websocketManager,
 	resetWebSocketManagerForTesting,
-} from '../../../../src/providers/websocket/websocket-manager';
+} from '../../../../src/transports/websocket/websocket-manager';
 import type { EngineSessionCodec } from '../../../../src/registry/types';
 
 jest.mock( '@wordpress/api-fetch' );
 
-jest.mock( '../../../../src/providers/http-polling/polling-manager', () => ( {
+jest.mock( '../../../../src/transports/http-polling/polling-manager', () => ( {
 	pollingManager: {
 		registerRoom: jest.fn(),
 		releaseRoom: jest.fn( async () => ( { cursor: 0 } ) ),
@@ -29,7 +29,7 @@ jest.mock( '../../../../src/providers/http-polling/polling-manager', () => ( {
 } ) );
 // The mocked module (jest.mock is hoisted above the imports).
 const mockPolling = (
-	require( '../../../../src/providers/http-polling/polling-manager' ) as {
+	require( '../../../../src/transports/http-polling/polling-manager' ) as {
 		pollingManager: {
 			registerRoom: jest.Mock;
 			releaseRoom: jest.Mock;

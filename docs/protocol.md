@@ -27,7 +27,7 @@ to upgrade to a WebSocket.
 
 One request carries up to 50 rooms in at most 16 MB (the client packs
 to 15 MB and shrinks to a 2 MB floor on "too large"); one encoded update
-is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
+is at most 1 MB. Shapes: `src/transports/http-polling/types.ts`.
 
 ```json
 { "rooms": [ { "room": "postType/post:123", "client_id": 12345, "after": 987654,
@@ -145,6 +145,6 @@ A transport is a `WP_RTC_Transport` (`get_slug`,
 filter, plus a provider factory registered with
 `registerSyncTransport`. The websocket transport
 (`includes/transports/websocket/class-wp-websocket-sync-transport.php`
-and `src/providers/websocket/websocket-provider.ts`) is the model.
+and `src/transports/websocket/websocket-provider.ts`) is the model.
 Every filter and action the plugin offers:
 `grep -rn "apply_filters\|do_action" includes`.

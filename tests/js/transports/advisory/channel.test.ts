@@ -168,11 +168,11 @@ class FakePeerConnection extends EventTarget {
 }
 
 type SignalingModule =
-	typeof import('../../../../src/providers/advisory/signaling');
+	typeof import('../../../../src/transports/advisory/signaling');
 type ChannelModule =
-	typeof import('../../../../src/providers/advisory/channel');
+	typeof import('../../../../src/transports/advisory/channel');
 type AnnounceModule =
-	typeof import('../../../../src/providers/advisory/announce');
+	typeof import('../../../../src/transports/advisory/announce');
 
 interface Tab {
 	token: string;
@@ -191,9 +191,9 @@ const mailboxes: Map< string, Array< Record< string, string > > > = new Map();
 function createTab( token: string, clientId: number, maxPeers = 8 ): Tab {
 	let tab: Tab | null = null;
 	jest.isolateModules( () => {
-		const signaling: SignalingModule = require( '../../../../src/providers/advisory/signaling' );
-		const channel: ChannelModule = require( '../../../../src/providers/advisory/channel' );
-		const announce: AnnounceModule = require( '../../../../src/providers/advisory/announce' );
+		const signaling: SignalingModule = require( '../../../../src/transports/advisory/signaling' );
+		const channel: ChannelModule = require( '../../../../src/transports/advisory/channel' );
+		const announce: AnnounceModule = require( '../../../../src/transports/advisory/announce' );
 		signaling.setAdvisorySettingsForTesting( {
 			room: ROOM,
 			token,

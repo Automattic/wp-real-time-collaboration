@@ -13,19 +13,19 @@ import {
 /**
  * Internal dependencies
  */
-import { pollingManager } from '../../../../src/providers/http-polling/polling-manager';
-import { POLLING_INTERVAL_IN_MS } from '../../../../src/providers/http-polling/config';
-import { postSyncUpdate } from '../../../../src/providers/http-polling/utils';
+import { pollingManager } from '../../../../src/transports/http-polling/polling-manager';
+import { POLLING_INTERVAL_IN_MS } from '../../../../src/transports/http-polling/config';
+import { postSyncUpdate } from '../../../../src/transports/http-polling/utils';
 import type {
 	SyncPayload,
 	SyncResponse,
 	SyncUpdate,
-} from '../../../../src/providers/http-polling/types';
+} from '../../../../src/transports/http-polling/types';
 import {
 	isSignalingAvailable,
 	othersPresent,
 	resetSignalingForTesting,
-} from '../../../../src/providers/advisory/signaling';
+} from '../../../../src/transports/advisory/signaling';
 import {
 	createIntentLogSession,
 	INTENT_LOG_UPDATE_TYPES,
@@ -38,9 +38,9 @@ import { createDocument } from '../../../../src/engines/intent-log/document.js';
  * loses one interval of typing at most.
  */
 
-jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
+jest.mock( '../../../../src/transports/http-polling/utils', () => ( {
 	...( jest.requireActual(
-		'../../../../src/providers/http-polling/utils'
+		'../../../../src/transports/http-polling/utils'
 	) as object ),
 	postSyncUpdate: jest.fn(),
 	postSyncUpdateNonBlocking: jest.fn(),

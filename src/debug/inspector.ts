@@ -28,7 +28,7 @@
 /**
  * Internal dependencies
  */
-import { getAdvisoryDebugState } from '../providers/advisory/channel';
+import { getAdvisoryDebugState } from '../transports/advisory/channel';
 
 const STORAGE_KEY = 'wp_rtc_debug';
 const BUFFER_LIMIT = 500;

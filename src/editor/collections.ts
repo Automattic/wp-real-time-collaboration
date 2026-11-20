@@ -8,7 +8,7 @@ import {
 } from '../engines/intent-log-session';
 import { getProviderCreators } from '../registry/transports';
 import type { ProviderCreatorResult } from '../registry/types';
-import { createAwarenessDoc } from '../shared/awareness-sync';
+import { createAwarenessDoc } from '../awareness/awareness-sync';
 import type {
 	EntitySyncCollectionHandlers,
 	EntitySyncContext,

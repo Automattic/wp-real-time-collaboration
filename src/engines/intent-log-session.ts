@@ -11,7 +11,7 @@ import {
 	type SettledDisposition,
 	type StaleBaseRecovery,
 } from '../replica/replica';
-import { applyServerAwarenessStates } from '../shared/awareness-sync';
+import { applyServerAwarenessStates } from '../awareness/awareness-sync';
 import type { PresenceObject } from '../editor/gutenberg-contract';
 import type {
 	AwarenessState,

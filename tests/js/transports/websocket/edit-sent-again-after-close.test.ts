@@ -21,13 +21,13 @@ import apiFetch from '@wordpress/api-fetch';
 import {
 	websocketManager,
 	resetWebSocketManagerForTesting,
-} from '../../../../src/providers/websocket/websocket-manager';
-import { postSyncUpdate } from '../../../../src/providers/http-polling/utils';
+} from '../../../../src/transports/websocket/websocket-manager';
+import { postSyncUpdate } from '../../../../src/transports/http-polling/utils';
 import type {
 	SyncPayload,
 	SyncResponse,
 	SyncUpdate,
-} from '../../../../src/providers/http-polling/types';
+} from '../../../../src/transports/http-polling/types';
 import {
 	createIntentLogSession,
 	INTENT_LOG_UPDATE_TYPES,
@@ -44,9 +44,9 @@ import { createDocument } from '../../../../src/engines/intent-log/document.js';
 // The token request for the socket is the only call that goes through
 // api-fetch here. The polling requests go through the two mocks below.
 jest.mock( '@wordpress/api-fetch' );
-jest.mock( '../../../../src/providers/http-polling/utils', () => ( {
+jest.mock( '../../../../src/transports/http-polling/utils', () => ( {
 	...( jest.requireActual(
-		'../../../../src/providers/http-polling/utils'
+		'../../../../src/transports/http-polling/utils'
 	) as object ),
 	postSyncUpdate: jest.fn(),
 	postSyncUpdateNonBlocking: jest.fn(),

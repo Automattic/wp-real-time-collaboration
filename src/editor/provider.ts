@@ -23,13 +23,13 @@ import {
 	randomClientId,
 	type IntentLogSession,
 } from '../engines/intent-log-session';
-import { flushUpdatesNow } from '../providers/http-polling/polling-manager';
+import { flushUpdatesNow } from '../transports/http-polling/polling-manager';
 import { getProviderCreators } from '../registry/transports';
 import type { ProviderCreatorResult } from '../registry/types';
 import { createEntityConflictSource } from '../review/entity-source';
 import { TYPING_HOLD_MAX_MS } from '../review/typing-hold';
 import type { SyncConflictSource } from '../review/types';
-import { createAwarenessDoc } from '../shared/awareness-sync';
+import { createAwarenessDoc } from '../awareness/awareness-sync';
 import {
 	createEditorBlockBuilder,
 	moveSelection,

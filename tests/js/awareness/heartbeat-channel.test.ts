@@ -41,7 +41,7 @@ import {
 	resetSignalingForTesting,
 	setAdvisorySettingsForTesting,
 	setSyncClientId,
-} from '../../../src/providers/advisory/signaling';
+} from '../../../src/transports/advisory/signaling';
 
 describe( 'heartbeat channel', () => {
 	let interval: jest.Mock;
