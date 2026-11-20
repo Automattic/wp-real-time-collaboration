@@ -151,17 +151,6 @@ repo: environments, the test ladder, diagnostics, and the traps.
 To type in a second window by yourself, see
 [tests/tools/README.md](tests/tools/README.md).
 
-## Maintainers
-
-This plugin is maintained by the WordPress Core team, with contributions from
-the community. The maintainers are:
-
-- Chris Zarate ([@chriszarate](https://github.com/chriszarate))
-- Alec Geatches ([@alecgeatches](https://github.com/alecgeatches))
-- Joe Fusco ([@josephfusco](https://github.com/josephfusco))
-
-## Feedback
-
 Open GitHub issues or discuss in `#feature-realtime-collaboration` channel in
 [WordPress Slack](https://make.wordpress.org/chat/). To contribute, see
 [CONTRIBUTING.md](CONTRIBUTING.md).

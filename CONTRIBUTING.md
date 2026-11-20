@@ -24,6 +24,27 @@ All code must follow the
   submitting a pull request, you are agreeing to release that
   contribution under the GPLv2+ license.
 
+## Filing and shaping issues
+
+Open work lives in GitHub Issues.
+
+- **To file an issue you need two things:** what happened, and what you
+  expected. The issue arrives with the label `agent:needs shaping`.
+- **Someone then investigates and rewrites it** into the shape in
+  `.github/ISSUE_TEMPLATE/shaped-issue.md`: what happens now, an
+  example with numbered steps, what should happen, how we will know it
+  is done, and notes. The label moves to `agent:ready`.
+- **One issue is one thing.** Split an issue that holds two problems.
+- **Write the title, the problem and the example in plain words.** They
+  are read by people who meet this project for the first time. A word
+  that `docs/glossary.md` defines is one of our own words: say what it
+  means, or move the sentence down into the notes. Code names in
+  backticks are always fine.
+- **Do not hard-wrap an issue's paragraphs.** GitHub shows every
+  newline, so one paragraph is one line.
+- `agent:in progress` means someone has claimed the issue.
+  `agent:parked` means it cannot move, and a comment says what it needs.
+
 ## Use of AI Tools
 
 You are free to use artificial intelligence (AI) tooling to contribute,
