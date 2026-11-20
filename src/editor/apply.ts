@@ -76,6 +76,13 @@ export interface EditorBlockBuilder {
 	 */
 	build: ( doc: EngineDocument ) => EditorBlock[];
 
+	/**
+	 * Forgets the ids of blocks that the document of the last `build`
+	 * call does not hold. Call it once the editor shows that document:
+	 * from then on the editor cannot name such a block.
+	 */
+	forgetBlocksThatLeft: () => void;
+
 	/** Forgets the blocks of earlier calls. */
 	reset: () => void;
 }
@@ -187,6 +194,10 @@ export function createEditorBlockBuilder(
 			built = next;
 
 			return blocks;
+		},
+
+		forgetBlocksThatLeft: () => {
+			ids.keepOnly( new Set( built.keys() ) );
 		},
 
 		reset: () => {

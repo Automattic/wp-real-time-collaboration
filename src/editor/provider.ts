@@ -597,6 +597,8 @@ export function createIntentLogProvider(
 		 * Only a post has blocks. Handing a block list to another kind of
 		 * record (a category, say) would leave it with unsaved changes.
 		 */
+		let builtBlocks = false;
+
 		if (
 			'postType' === state.kind &&
 			! state.seedBlocks &&
@@ -607,6 +609,9 @@ export function createIntentLogProvider(
 			const before =
 				doc === shown.doc ? null : state.builder.build( shown.doc );
 			const after = state.builder.build( doc );
+
+			builtBlocks = true;
+
 			const changed =
 				state.forcePush ||
 				! before ||
@@ -643,6 +648,12 @@ export function createIntentLogProvider(
 
 		if ( Object.keys( edits ).length > 0 ) {
 			state.handlers.editRecord( edits, { undoIgnore: true } );
+		}
+
+		if ( builtBlocks ) {
+			// The editor shows this document now, so it can no longer
+			// name a block that is not in it.
+			state.builder.forgetBlocksThatLeft();
 		}
 	};
 

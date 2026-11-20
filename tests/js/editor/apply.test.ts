@@ -136,6 +136,26 @@ describe( 'building editor blocks from the document', () => {
 		);
 	} );
 
+	it( 'forgets the ids of blocks that left the document, when asked', () => {
+		const { ids, builder } = setup();
+
+		builder.build( startingDocument() );
+		expect( ids.size() ).toBe( 3 );
+
+		// Someone else removed the group. The table keeps its ids until
+		// the editor shows the new document.
+		builder.build(
+			createDocument( [
+				{ syncId: 'p1', blockType: 'core/paragraph', text: 'One' },
+			] )
+		);
+		expect( ids.size() ).toBe( 3 );
+
+		builder.forgetBlocksThatLeft();
+		expect( ids.size() ).toBe( 1 );
+		expect( ids.getClientId( 'p1' ) ).toBe( 'c1' );
+	} );
+
 	it( 'hands over the same object for a block that did not change', () => {
 		const { builder } = setup();
 		const doc = startingDocument();

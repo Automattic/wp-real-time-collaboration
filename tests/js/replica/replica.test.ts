@@ -660,6 +660,116 @@ describe( 'the replica of one room', () => {
 		} );
 	} );
 
+	describe( 'the list of review items', () => {
+		/**
+		 * A row for an edit of another person that the server set aside.
+		 *
+		 * @param id The edit's id.
+		 * @return The row.
+		 */
+		const setAside = ( id: string ): EngineUpdate => ( {
+			data: JSON.stringify( {
+				intent: createIntent(
+					'insert_text',
+					{ syncId: 'p1', field: 'content', offset: 0, text: 'x' },
+					{ actorId: 'u2c22', baseSeq: 0, intentId: id }
+				),
+				actorId: 'u2c22',
+				reason: 'frame-conflict',
+			} ),
+			type: INTENT_LOG_UPDATE_TYPES.PARKED,
+		} );
+		const decided = ( id: string ): EngineUpdate => ( {
+			data: JSON.stringify( { proposalId: id, resolution: 'dismissed' } ),
+			type: INTENT_LOG_UPDATE_TYPES.RESOLVED,
+		} );
+
+		it( 'drops an item when its decision arrives, and a repeated row does not bring it back', () => {
+			const { replica } = setUp();
+
+			replica.receive( [ copy( 'Hello' ), setAside( 'item-1' ) ] );
+			expect( replica.getOpenProposals() ).toHaveLength( 1 );
+
+			replica.receive( [ decided( 'item-1' ) ] );
+			expect( replica.getProposals() ).toEqual( [] );
+
+			replica.receive( [ setAside( 'item-1' ) ] );
+			expect( replica.getProposals() ).toEqual( [] );
+		} );
+
+		it( 'keeps an item this tab decided until the server confirms, and opens it again when the server refuses', () => {
+			const { replica } = setUp();
+
+			replica.receive( [
+				copy( 'Hello' ),
+				setAside( 'item-1' ),
+				setAside( 'item-2' ),
+			] );
+			replica.resolveProposal( 'item-1', 'dismissed' );
+			replica.resolveProposal( 'item-2', 'dismissed' );
+			expect( replica.getOpenProposals() ).toEqual( [] );
+			expect( replica.getProposals() ).toHaveLength( 2 );
+
+			replica.receiveAnswers( [
+				{ intentId: 'item-1', status: 'resolved' },
+				{
+					intentId: 'item-2',
+					status: 'refused',
+					reason: 'not-allowed',
+				},
+			] );
+			expect(
+				replica
+					.getOpenProposals()
+					.map( ( proposal ) => proposal.intent.intentId )
+			).toEqual( [ 'item-2' ] );
+			expect( replica.getProposals() ).toHaveLength( 1 );
+		} );
+
+		it( 'is emptied when the room starts over, because the new room sends its own', () => {
+			const { replica } = setUp();
+
+			replica.receive( [ copy( 'Hello' ), setAside( 'item-1' ) ] );
+			replica.restart();
+			expect( replica.getProposals() ).toEqual( [] );
+
+			// The same room read again from its first row lists it again.
+			replica.receive( [ copy( 'Hello' ), setAside( 'item-1' ) ] );
+			expect( replica.getOpenProposals() ).toHaveLength( 1 );
+		} );
+	} );
+
+	describe( 'a row with no number', () => {
+		it( 'is taken as the next one, and skipped when the history holds it already', () => {
+			const { replica } = setUp();
+			const row: EngineUpdate = {
+				data: JSON.stringify(
+					createIntent(
+						'insert_text',
+						{
+							syncId: 'p1',
+							field: 'content',
+							offset: 0,
+							text: 'a ',
+						},
+						{ actorId: 'u2c22', baseSeq: 0, intentId: 'a' }
+					)
+				),
+				type: INTENT_LOG_UPDATE_TYPES.INTENT,
+			};
+
+			replica.receive( [ copy( 'Hello' ) ] );
+			// Something keeps the history: the editor still shows the
+			// first document.
+			replica.setShownSeq( 0 );
+			replica.receive( [ row, row ] );
+			replica.receive( [ row ] );
+
+			expect( shownText( replica ) ).toBe( 'a Hello' );
+			expect( replica.getClient()?.cursor ).toBe( 1 );
+		} );
+	} );
+
 	describe( 'a review decision', () => {
 		it( 'joins the list and leaves it with the server’s answer', () => {
 			const { replica } = setUp();

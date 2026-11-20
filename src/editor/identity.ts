@@ -29,6 +29,13 @@ export interface BlockIdentityTable {
 	/** Forgets a document block, for example after it was removed. */
 	unlinkSyncId: ( syncId: string ) => void;
 
+	/**
+	 * Forgets every document block that is not in the given set. The
+	 * table would otherwise keep a link for every block the post ever
+	 * held during the session.
+	 */
+	keepOnly: ( syncIds: ReadonlySet< string > ) => void;
+
 	/** Forgets every link. */
 	clear: () => void;
 
@@ -78,6 +85,15 @@ export function createBlockIdentityTable(): BlockIdentityTable {
 			}
 
 			clientIdBySyncId.delete( syncId );
+		},
+
+		keepOnly: ( syncIds ) => {
+			for ( const [ syncId, clientId ] of clientIdBySyncId ) {
+				if ( ! syncIds.has( syncId ) ) {
+					clientIdBySyncId.delete( syncId );
+					syncIdByClientId.delete( clientId );
+				}
+			}
 		},
 
 		clear: () => {

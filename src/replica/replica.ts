@@ -68,6 +68,9 @@ export const INTENT_LOG_UPDATE_TYPES = {
  */
 export const RESET_WAIT_LIMIT_MS = 10000;
 
+/** How many closed review items the replica remembers (see below). */
+const RECENTLY_CLOSED_LIMIT = 256;
+
 /**
  * An escalated intent parked in the proposal lane, as received. The engine
  * enriches rows with the settlement seq, a server timestamp, and a short
@@ -316,16 +319,22 @@ export function createReplica(
 	let undoRetainSeq: number | null = null;
 
 	/*
-	 * Edit rows this replica has taken, by id. The core's history is
-	 * positional, so a row delivered twice would be counted as a new one.
+	 * The review items that are open, and the ones this tab decided and
+	 * the server has not confirmed yet (`resolvedIds`). An item leaves
+	 * the list when its decision is confirmed.
 	 */
-	let appliedIntentIds = new Set< string >();
-
-	const proposals: IntentLogProposal[] = [];
+	let proposals: IntentLogProposal[] = [];
 	// Conflicts found while building refused edits again exist only in
 	// this tab. The server no longer holds what they clash with.
 	const localProposalIds = new Set< string >();
 	const resolvedIds = new Set< string >();
+	/*
+	 * The items closed last, newest at the end. A transport can deliver a
+	 * row twice within a short window, and the row of an item that was
+	 * closed must not open it again. Only that window needs covering, so
+	 * the memory is short.
+	 */
+	let recentlyClosed: string[] = [];
 
 	/*
 	 * A reset that waits for answers, the rows that arrived behind it, and
@@ -535,6 +544,32 @@ export function createReplica(
 		client.retainFrom = floor;
 	};
 
+	/**
+	 * Takes a decided review item off the list for good.
+	 *
+	 * @param proposalId The item's id.
+	 * @return Whether the item was still listed as open.
+	 */
+	const closeProposal = ( proposalId: string ): boolean => {
+		const wasOpen =
+			! resolvedIds.has( proposalId ) &&
+			proposals.some(
+				( proposal ) => proposal.intent.intentId === proposalId
+			);
+
+		proposals = proposals.filter(
+			( proposal ) => proposal.intent.intentId !== proposalId
+		);
+		resolvedIds.delete( proposalId );
+		localProposalIds.delete( proposalId );
+		recentlyClosed = [
+			...recentlyClosed.filter( ( id ) => id !== proposalId ),
+			proposalId,
+		].slice( -RECENTLY_CLOSED_LIMIT );
+
+		return wasOpen;
+	};
+
 	const notifyProposalsChange = (): void => {
 		// An opened or closed item moves the retention floor.
 		applyRetention();
@@ -590,9 +625,6 @@ export function createReplica(
 		}
 
 		bootstrap( doc, seq );
-		// Rows after the new copy are new to this replica, even when their
-		// ids were seen before.
-		appliedIntentIds = new Set();
 		events.reset();
 		events.change();
 	};
@@ -748,10 +780,6 @@ export function createReplica(
 
 					const intent: StoredIntent = decoded;
 
-					if ( appliedIntentIds.has( intent.intentId ) ) {
-						break;
-					}
-
 					/*
 					 * The server stores each edit with the room's position
 					 * after it, so the next row must carry the position
@@ -771,6 +799,14 @@ export function createReplica(
 							restartWanted = true;
 							break;
 						}
+					} else if (
+						[ ...client.log, ...run ].some(
+							( entry ) => entry.intentId === intent.intentId
+						)
+					) {
+						// Only a hand-written row has no number. One that
+						// is in the history already is a repeat.
+						break;
 					}
 
 					if ( givenUp.delete( intent.intentId ) ) {
@@ -779,7 +815,6 @@ export function createReplica(
 
 					// The row is the answer too, when the answer was lost.
 					removeEntry( 'intent', intent.intentId );
-					appliedIntentIds.add( intent.intentId );
 					run.push( intent );
 					break;
 				}
@@ -787,8 +822,10 @@ export function createReplica(
 				case INTENT_LOG_UPDATE_TYPES.PARKED: {
 					const proposal: IntentLogProposal = decoded;
 
-					// A row delivered twice must not list the item twice.
+					// A row delivered twice must not list the item twice,
+					// or open an item again that was closed.
 					if (
+						recentlyClosed.includes( proposal.intent.intentId ) ||
 						proposals.some(
 							( existing ) =>
 								existing.intent.intentId ===
@@ -836,9 +873,11 @@ export function createReplica(
 
 					removeEntry( 'resolved', resolution.proposalId );
 
-					if ( ! resolvedIds.has( resolution.proposalId ) ) {
-						resolvedIds.add( resolution.proposalId );
+					// Confirmed by the server: the item is done with.
+					if ( closeProposal( resolution.proposalId ) ) {
 						notifyProposalsChange();
+					} else {
+						applyRetention();
 					}
 
 					break;
@@ -1034,6 +1073,13 @@ export function createReplica(
 					continue;
 				}
 
+				if ( 'resolved' === status ) {
+					// Confirmed by the server: the item is done with.
+					if ( closeProposal( intentId ) ) {
+						notifyProposalsChange();
+					}
+				}
+
 				removeEntry( 'cancel', intentId );
 
 				if ( 'applied' === status && givenUp.delete( intentId ) ) {
@@ -1107,11 +1153,21 @@ export function createReplica(
 			client = null;
 			bootstrapSeq = null;
 			shownSeq = 0;
-			appliedIntentIds = new Set();
 			waitingReset = null;
 			recoveries = [];
 			outgoing = [];
 			givenUp = new Set();
+			// The new room sends its own review items. One that exists
+			// in this tab only stays: no row will bring it back.
+			proposals = proposals.filter( ( proposal ) =>
+				localProposalIds.has( proposal.intent.intentId )
+			);
+			for ( const id of resolvedIds ) {
+				if ( ! localProposalIds.has( id ) ) {
+					resolvedIds.delete( id );
+				}
+			}
+			recentlyClosed = [];
 			events.reset();
 			events.change();
 		},
@@ -1243,15 +1299,22 @@ export function createReplica(
 		},
 
 		resolveProposal: ( proposalId, resolution ) => {
-			// An item that exists in this tab only closes here only.
-			if ( ! localProposalIds.has( proposalId ) ) {
-				addEntry(
-					'resolved',
-					proposalId,
-					INTENT_LOG_UPDATE_TYPES.RESOLVED,
-					{ proposalId, resolution }
-				);
+			// An item that exists in this tab only closes here only, and
+			// nobody else will confirm it.
+			if ( localProposalIds.has( proposalId ) ) {
+				if ( closeProposal( proposalId ) ) {
+					notifyProposalsChange();
+				}
+
+				return;
 			}
+
+			addEntry(
+				'resolved',
+				proposalId,
+				INTENT_LOG_UPDATE_TYPES.RESOLVED,
+				{ proposalId, resolution }
+			);
 
 			// The list shrinks at once. The server's row or answer
 			// confirms it.

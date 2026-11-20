@@ -71,4 +71,18 @@ describe( 'the block id table', () => {
 		expect( ids.size() ).toBe( 0 );
 		expect( ids.getSyncId( 'client-1' ) ).toBeUndefined();
 	} );
+
+	it( 'forgets every block that is not in a given set', () => {
+		const ids = createBlockIdentityTable();
+
+		ids.link( 'c-1', 'p1' );
+		ids.link( 'c-2', 'p2' );
+		ids.link( 'c-3', 'p3' );
+		ids.keepOnly( new Set( [ 'p2' ] ) );
+
+		expect( ids.size() ).toBe( 1 );
+		expect( ids.getSyncId( 'c-2' ) ).toBe( 'p2' );
+		expect( ids.getSyncId( 'c-1' ) ).toBeUndefined();
+		expect( ids.getClientId( 'p3' ) ).toBeUndefined();
+	} );
 } );
