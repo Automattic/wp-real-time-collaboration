@@ -28,6 +28,72 @@ module.exports = {
 			parser: '@typescript-eslint/parser',
 		},
 		{
+			// The engine and the room state know nothing about the editor
+			// or WordPress, so they can run in Node and in tests alone.
+			files: [ 'src/engines/**', 'src/replica/**' ],
+			rules: {
+				'no-restricted-imports': [
+					'error',
+					{
+						patterns: [
+							{
+								group: [ '@wordpress/*' ],
+								message:
+									'The engine and the room state must not import WordPress packages. Code that talks to the editor belongs in src/editor/.',
+							},
+						],
+					},
+				],
+			},
+		},
+		{
+			// A transport only sends and receives. It may make requests
+			// and read the public filters, and nothing else.
+			files: [ 'src/transports/**', 'src/registry/**' ],
+			rules: {
+				'no-restricted-imports': [
+					'error',
+					{
+						patterns: [
+							{
+								group: [
+									'@wordpress/*',
+									'!@wordpress/api-fetch',
+									'!@wordpress/hooks',
+								],
+								message:
+									'Transports and the registries may import only @wordpress/api-fetch and @wordpress/hooks. Code that talks to the editor belongs in src/editor/.',
+							},
+						],
+					},
+				],
+			},
+		},
+		{
+			// Everything the plugin takes from Gutenberg that is not
+			// public goes through src/editor/gutenberg-contract.ts.
+			files: [
+				'src/awareness/**',
+				'src/review/**',
+				'src/debug/**',
+				'src/index.ts',
+			],
+			rules: {
+				'no-restricted-imports': [
+					'error',
+					{
+						paths: [
+							{
+								name: '@wordpress/private-apis',
+								message:
+									'Read private Gutenberg APIs through src/editor/ only.',
+							},
+						],
+					},
+				],
+			},
+		},
+		{
 			// The Jest setup files use the framework globals directly (the
 			// tests themselves import from @jest/globals instead).
 			files: [ 'tests/js/**/*.js' ],
