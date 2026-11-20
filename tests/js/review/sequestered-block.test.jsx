@@ -32,7 +32,7 @@ describe( 'SequesteredBlockBody', () => {
 	} );
 
 	it( 'offers no action when the plugin settings are missing', () => {
-		expect( window._gutenbergSyncEnginesSettings ).toBeUndefined();
+		expect( window._wpRtcSettings ).toBeUndefined();
 		render(
 			<SequesteredBlockBody
 				sequestration={ KSES_NEW }

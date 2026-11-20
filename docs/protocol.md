@@ -12,14 +12,14 @@ them meaning. The intent-log vocabulary itself is in
 
 | Route | Purpose |
 | --- | --- |
-| `POST /wp-sync/v1/updates` | Polling: one request carries every open room. |
-| `POST /wp-sync/v1/ws-token` | Mints the daemon credential: a one-time token, or a signed access token when a secret is configured. Answer `{ token, expires_in }`. |
-| `POST /gutenberg-sync-engines/v1/advisory/leave` | The leave beacon a tab sends on `pagehide`, so its presence goes at once. |
-| `rtc-test/v1/*` | The per-request benchmark log, dev-only (`GUTENBERG_SYNC_ENGINES_DIAGNOSTICS`). |
+| `POST /wp-rtc/v1/updates` | Polling: one request carries every open room. |
+| `POST /wp-rtc/v1/ws-token` | Mints the daemon credential: a one-time token, or a signed access token when a secret is configured. Answer `{ token, expires_in }`. |
+| `POST /wp-rtc/v1/advisory/leave` | The leave beacon a tab sends on `pagehide`, so its presence goes at once. |
+| `rtc-test/v1/*` | The per-request benchmark log, dev-only (`WP_RTC_DIAGNOSTICS`). |
 
 The sync daemon (`wp collaboration sync-server`, port 8787 by default)
 serves the WebSocket (the browser offers `Sec-WebSocket-Protocol:
-wp-sync, wp-sync-token.<token>`; the daemon echoes `wp-sync`) and
+wp-rtc, wp-rtc-token.<token>`; the daemon echoes `wp-rtc`) and
 `GET /health`. It answers 400 to any other request that does not ask
 to upgrade to a WebSocket.
 
@@ -63,7 +63,7 @@ is at most 1 MB. Shapes: `src/providers/http-polling/types.ts`.
 | `generation` | The id of the room's first row; it changes on every reset, and a tab that sees a new value starts again from the beginning. |
 | `presence_token` | The tab's per-tab token, sent on the post's own room; the first request carrying it is the tab's join. |
 | `advisory` | The advisory channel's discovery probe, answered beside the rooms. |
-| `debug` / `_debug` | Asks for the engine's diagnostics, served when the `wp_sync_debug_enabled` filter allows (default `SCRIPT_DEBUG`). |
+| `debug` / `_debug` | Asks for the engine's diagnostics, served when the `wp_rtc_debug_enabled` filter allows (default `SCRIPT_DEBUG`). |
 
 Other statuses: 403 `rest_cannot_edit`, 413 when a body or a room is
 too large, 503
@@ -113,7 +113,7 @@ edit's author may dismiss it.
 | --- | --- | --- |
 | Cookie + REST nonce | the REST routes | the WordPress session |
 | One-time token | the daemon's socket, in a header, never the URL; the daemon also requires the `logged_in` cookie and checks `Origin` against the site's own | two minutes, spent on first use |
-| Access token (when `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` is set) | the daemon and a host's own relay: a JWT signed with the shared secret, claims `user_id`, `blog_id`, `iss`, `rooms`, `iat`, `exp` | two minutes; anyone with the secret can mint one |
+| Access token (when `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` is set) | the daemon and a host's own relay: a JWT signed with the shared secret, claims `user_id`, `blog_id`, `iss`, `rooms`, `iat`, `exp` | two minutes; anyone with the secret can mint one |
 | Presence token | finding the other tabs on a post | five minutes after the last heartbeat |
 
 The daemon runs WordPress code and writes the room tables, so it is
@@ -125,11 +125,11 @@ cause extra polls or show false presence.
 
 An engine is two pieces, registered through one filter on each side:
 
-- A PHP class implementing `WP_Sync_Engine`
-  (`includes/server/interface-wp-sync-engine.php`):
+- A PHP class implementing `WP_RTC_Engine`
+  (`includes/server/interface-wp-rtc-engine.php`):
   `get_slug`, `get_protocol_version`, `get_update_types`,
   `handle_updates`, `get_updates_since`. Register it on the
-  `wp_sync_engines` filter.
+  `wp_rtc_engines` filter.
 - A JavaScript engine registration (`src/registry/engines.ts`): a
   slug, a protocol version, and `createProvider`, which returns the
   object core-data calls for loads, edits, saves and undo (its shape is
@@ -137,11 +137,11 @@ An engine is two pieces, registered through one filter on each side:
   `registerSyncEngine`, as `src/index.ts` does, or through the
   `sync.engines` filter.
 - Give a new room its starting field values from
-  `WP_Sync_Post_Genesis_Props`, and register a benchmark profile on
-  `wp_sync_bench_authoring_profiles` (`tests/benchmarks/README.md`).
+  `WP_RTC_Post_Genesis_Props`, and register a benchmark profile on
+  `wp_rtc_bench_authoring_profiles` (`tests/benchmarks/README.md`).
 
-A transport is a `WP_Sync_Transport` (`get_slug`,
-`get_protocol_version`, `register_routes`) on the `wp_sync_transports`
+A transport is a `WP_RTC_Transport` (`get_slug`,
+`get_protocol_version`, `register_routes`) on the `wp_rtc_transports`
 filter, plus a provider factory registered with
 `registerSyncTransport`. The websocket transport
 (`includes/transports/websocket/class-wp-websocket-sync-transport.php`

@@ -43,7 +43,7 @@ import {
  * like the polling transport.
  *
  * The socket is authenticated with a one-time token minted over REST
- * (`/wp-sync/v1/ws-token`); the daemon validates it against the logged-in
+ * (`/wp-rtc/v1/ws-token`); the daemon validates it against the logged-in
  * cookie on handshake.
  *
  * A PREFERRED TRANSPORT (docs/transports.md): the socket
@@ -61,7 +61,7 @@ import {
  * were on their way go out again on the next lane.
  */
 
-const WS_TOKEN_API_PATH = '/wp-sync/v1/ws-token';
+const WS_TOKEN_API_PATH = '/wp-rtc/v1/ws-token';
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 // A connection attempt that has not opened by then hands the rooms to
@@ -155,7 +155,7 @@ function socketUrl(): string {
  * @return The address, or an empty string.
  */
 function announcedSocketUrl(): string {
-	// Announced through the framework's `wp_sync_transport_client_config`
+	// Announced through the framework's `wp_rtc_transport_client_config`
 	// filter (hooked by this plugin's PHP half).
 	const transportConfig = (
 		window as Window & {
@@ -592,11 +592,11 @@ function connect(): void {
 	fetchToken()
 		.then( ( token ) => {
 			// The token rides the subprotocol offer list, never the URL:
-			// the daemon consumes the `wp-sync-token.<hex>` offer and
-			// echoes the base `wp-sync` protocol on accept.
+			// the daemon consumes the `wp-rtc-token.<hex>` offer and
+			// echoes the base `wp-rtc` protocol on accept.
 			socket = new window.WebSocket( socketUrl(), [
-				'wp-sync',
-				`wp-sync-token.${ token }`,
+				'wp-rtc',
+				`wp-rtc-token.${ token }`,
 			] );
 			socket.addEventListener( 'open', () => {
 				const opened = socket;

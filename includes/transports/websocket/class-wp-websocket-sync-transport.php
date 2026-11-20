@@ -24,7 +24,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 	 * @since 7.2.0
 	 * @access private
 	 */
-	class WP_WebSocket_Sync_Transport implements WP_Sync_Transport {
+	class WP_WebSocket_Sync_Transport implements WP_RTC_Transport {
 		/**
 		 * Transport slug (matches the client provider registration).
 		 *
@@ -56,10 +56,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 		 *
 		 * @since 7.2.0
 		 *
-		 * @param WP_RTC_Storage          $storage Storage backend (unused here).
-		 * @param WP_Sync_Engine_Registry $engines Engine registry (unused here).
+		 * @param WP_RTC_Storage         $storage Storage backend (unused here).
+		 * @param WP_RTC_Engine_Registry $engines Engine registry (unused here).
 		 */
-		public function __construct( WP_RTC_Storage $storage, WP_Sync_Engine_Registry $engines ) {
+		public function __construct( WP_RTC_Storage $storage, WP_RTC_Engine_Registry $engines ) {
 			unset( $storage, $engines );
 			$this->token_controller = new WP_WebSocket_Token_Controller();
 		}
@@ -100,7 +100,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 		/**
 		 * Whether the site says where its sync daemon is: the "WebSocket
 		 * transport server" setting holds an address, or the host or port
-		 * constant is defined, or code answers the `wp_sync_websocket_url`
+		 * constant is defined, or code answers the `wp_rtc_websocket_url`
 		 * filter.
 		 *
 		 * WebSocket is the default transport, and most sites run no
@@ -114,18 +114,18 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 		 * @return bool Whether a daemon address is set.
 		 */
 		public static function has_socket_address(): bool {
-			if ( class_exists( 'Gutenberg_Sync_Engines_Settings' ) && '' !== Gutenberg_Sync_Engines_Settings::websocket_url() ) {
+			if ( class_exists( 'WP_RTC_Settings' ) && '' !== WP_RTC_Settings::websocket_url() ) {
 				return true;
 			}
 
-			return defined( 'WP_SYNC_WEBSOCKET_HOST' ) || defined( 'WP_SYNC_WEBSOCKET_PORT' ) || (bool) has_filter( 'wp_sync_websocket_url' );
+			return defined( 'WP_RTC_WEBSOCKET_HOST' ) || defined( 'WP_RTC_WEBSOCKET_PORT' ) || (bool) has_filter( 'wp_rtc_websocket_url' );
 		}
 
 		/**
 		 * The socket URL the client should connect to: the "WebSocket URL"
 		 * setting (Settings → Collaboration) when one is entered, else a
 		 * `ws://` URL on the configured host/port. The
-		 * `wp_sync_websocket_url` filter applies last, for hosts that set
+		 * `wp_rtc_websocket_url` filter applies last, for hosts that set
 		 * it in code.
 		 *
 		 * @since 7.2.0
@@ -134,10 +134,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 		 * @return string WebSocket URL.
 		 */
 		public static function get_socket_url(): string {
-			$url = class_exists( 'Gutenberg_Sync_Engines_Settings' ) ? Gutenberg_Sync_Engines_Settings::websocket_url() : '';
+			$url = class_exists( 'WP_RTC_Settings' ) ? WP_RTC_Settings::websocket_url() : '';
 			if ( '' === $url ) {
-				$host = defined( 'WP_SYNC_WEBSOCKET_HOST' ) ? (string) WP_SYNC_WEBSOCKET_HOST : '127.0.0.1';
-				$port = defined( 'WP_SYNC_WEBSOCKET_PORT' ) ? (int) WP_SYNC_WEBSOCKET_PORT : 8787;
+				$host = defined( 'WP_RTC_WEBSOCKET_HOST' ) ? (string) WP_RTC_WEBSOCKET_HOST : '127.0.0.1';
+				$port = defined( 'WP_RTC_WEBSOCKET_PORT' ) ? (int) WP_RTC_WEBSOCKET_PORT : 8787;
 				$url  = sprintf( 'ws://%s:%d', $host, $port );
 			}
 
@@ -149,7 +149,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Transport' ) ) {
 			 *
 			 * @param string $url WebSocket URL.
 			 */
-			return (string) apply_filters( 'wp_sync_websocket_url', $url );
+			return (string) apply_filters( 'wp_rtc_websocket_url', $url );
 		}
 	}
 }

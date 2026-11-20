@@ -32,7 +32,7 @@ import { SECOND_USER } from '../config/collaboration-utils';
  *    while content syncs live.
  *
  * The whole suite runs once per engine: the describes flip the site's
- * `wp_sync_engine` option and restore the default when done. Every test
+ * `wp_rtc_engine` option and restore the default when done. Every test
  * creates a fresh post, so each room's engine lineage matches the flip.
  */
 
@@ -62,14 +62,14 @@ async function setSyncEngine(
 		const settings = await requestUtils.rest( {
 			path: '/wp/v2/settings',
 		} );
-		if ( ! ENGINES.includes( settings.wp_sync_engine ) ) {
+		if ( ! ENGINES.includes( settings.wp_rtc_engine ) ) {
 			return;
 		}
 	}
 	await requestUtils.rest( {
 		method: 'POST',
 		path: '/wp/v2/settings',
-		data: { wp_sync_engine: engine },
+		data: { wp_rtc_engine: engine },
 	} );
 }
 

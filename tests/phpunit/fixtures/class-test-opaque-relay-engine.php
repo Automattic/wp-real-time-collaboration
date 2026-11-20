@@ -26,10 +26,10 @@ if ( ! class_exists( 'Test_Opaque_Relay_Engine' ) ) {
 	 * threshold. Merge semantics live entirely in the clients; the server
 	 * relays and never interprets payload bytes.
 	 *
-	 * Registered per-test via the `wp_sync_engines` filter; never in
+	 * Registered per-test via the `wp_rtc_engines` filter; never in
 	 * production code.
 	 */
-	class Test_Opaque_Relay_Engine implements WP_Sync_Engine {
+	class Test_Opaque_Relay_Engine implements WP_RTC_Engine {
 		/**
 		 * Engine slug.
 		 *
@@ -156,7 +156,7 @@ if ( ! class_exists( 'Test_Opaque_Relay_Engine' ) ) {
 		 * @return array{dispositions: null}|WP_Error Ingest result. The relay produces no
 		 *                                            per-update dispositions.
 		 */
-		public function handle_updates( string $room, int $client_id, int $cursor, array $updates, array $context ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $context is part of the WP_Sync_Engine contract.
+		public function handle_updates( string $room, int $client_id, int $cursor, array $updates, array $context ) { // phpcs:ignore VariableAnalysis.CodeAnalysis.VariableAnalysis.UnusedVariable -- $context is part of the WP_RTC_Engine contract.
 			foreach ( $updates as $update ) {
 				$result = $this->process_sync_update( $room, $client_id, $cursor, $update );
 				if ( is_wp_error( $result ) ) {

@@ -20,7 +20,7 @@ import { createReduxStore, createSelector, register } from '@wordpress/data';
 import { getPeerColor } from './colors';
 import type { Peer, PeerReport } from './types';
 
-export const STORE_NAME = 'gutenberg-sync-engines/awareness';
+export const STORE_NAME = 'wp-rtc/awareness';
 
 interface State {
 	peers: Record< string, Peer >;

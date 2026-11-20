@@ -51,9 +51,9 @@ import process from 'node:process';
 import { parseArgs } from 'node:util';
 
 const REPO_ROOT = process.cwd();
-const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
-const ADVISORY_OPTION = 'gutenberg_sync_engines_advisory_channel';
-const DAEMON_CONTAINER_NAME = 'wp-sync-ws-daemon';
+const TRANSPORT_OPTION = 'wp_rtc_transport';
+const ADVISORY_OPTION = 'wp_rtc_advisory_channel';
+const DAEMON_CONTAINER_NAME = 'wp-rtc-ws-daemon';
 
 const { values: CLI } = parseArgs( {
 	options: {
@@ -68,12 +68,12 @@ const { values: CLI } = parseArgs( {
 
 const DEFAULT_PORT = 8787;
 const WS_PORT = Number.parseInt(
-	CLI.port || process.env.WP_SYNC_WEBSOCKET_PORT || '',
+	CLI.port || process.env.WP_RTC_WEBSOCKET_PORT || '',
 	10
 );
-// The announced socket URL (ws://<WP_SYNC_WEBSOCKET_HOST>:<WP_SYNC_WEBSOCKET_PORT>)
+// The announced socket URL (ws://<WP_RTC_WEBSOCKET_HOST>:<WP_RTC_WEBSOCKET_PORT>)
 // comes from wp-config constants, so a non-default port here must be
-// matched by WP_SYNC_WEBSOCKET_PORT in .wp-env.json's config.
+// matched by WP_RTC_WEBSOCKET_PORT in .wp-env.json's config.
 const PORT = Number.isNaN( WS_PORT ) ? DEFAULT_PORT : WS_PORT;
 
 function parseMode() {
@@ -358,7 +358,7 @@ async function ensurePluginsReady() {
 				'Run: cd gutenberg && npm install --ignore-scripts && npm run build'
 		);
 	}
-	if ( ! existsSync( path.join( REPO_ROOT, 'build/sync-engines.js' ) ) ) {
+	if ( ! existsSync( path.join( REPO_ROOT, 'build/wp-rtc.js' ) ) ) {
 		throw new Error(
 			"The plugin's client bundle is not built, so the editor has no engines or transports.\n" +
 				'Run: npm run build'
@@ -584,8 +584,8 @@ async function runDoctorMode() {
 	};
 
 	process.stdout.write( 'Builds:\n' );
-	if ( existsSync( path.join( REPO_ROOT, 'build/sync-engines.js' ) ) ) {
-		ok( 'plugin client bundle (build/sync-engines.js)' );
+	if ( existsSync( path.join( REPO_ROOT, 'build/wp-rtc.js' ) ) ) {
+		ok( 'plugin client bundle (build/wp-rtc.js)' );
 	} else {
 		fail(
 			'plugin client bundle missing — the editor has no engines or transports',
@@ -730,7 +730,7 @@ async function runDoctorMode() {
 			],
 			{ configFile, allowFailure: true }
 		);
-		const engine = await runWpCli( [ 'option', 'get', 'wp_sync_engine' ], {
+		const engine = await runWpCli( [ 'option', 'get', 'wp_rtc_engine' ], {
 			configFile,
 			allowFailure: true,
 		} );

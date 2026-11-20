@@ -42,13 +42,13 @@ interface BlockListBlockProps {
 type BlockListBlockComponent = ( props: BlockListBlockProps ) => JSX.Element;
 
 /** The class on a block wrapper a peer is in. */
-export const PRESENCE_CLASS = 'gse-presence';
+export const PRESENCE_CLASS = 'wp-rtc-presence';
 
 /**
  * The wrapper attribute listing the peers in the block, primary first,
  * as comma-joined keys. Read by the badge overlay.
  */
-export const PEERS_ATTRIBUTE = 'data-gse-peers';
+export const PEERS_ATTRIBUTE = 'data-wp-rtc-peers';
 
 /** The separator between keys in `PEERS_ATTRIBUTE`. */
 export const PEERS_SEPARATOR = ',';
@@ -76,7 +76,7 @@ const withPeerPresence = createHigherOrderComponent(
 				className,
 				style: {
 					...props.wrapperProps?.style,
-					'--gse-outline-color': primary.color,
+					'--wp-rtc-outline-color': primary.color,
 				},
 				[ PEERS_ATTRIBUTE ]: peers
 					.map( ( peer ) => peer.key )
@@ -101,7 +101,7 @@ export function registerBlockIndicator(): void {
 	registered = true;
 	addFilter(
 		'editor.BlockListBlock',
-		'gutenberg-sync-engines/peer-presence',
+		'wp-rtc/peer-presence',
 		withPeerPresence
 	);
 }

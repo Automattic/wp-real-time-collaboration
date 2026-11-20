@@ -20,7 +20,7 @@ import { useDecideConflict } from './review-data';
  * diff highlighting.
  */
 const CANVAS_CSS = `
-	.gse-review-conflict-block__preview {
+	.wp-rtc-review-conflict-block__preview {
 		background: #f0f0f0;
 		border-radius: 2px;
 		box-sizing: border-box;
@@ -30,37 +30,37 @@ const CANVAS_CSS = `
 		width: 100%;
 		word-break: break-word;
 	}
-	.gse-review-diff__added {
+	.wp-rtc-review-diff__added {
 		background: rgba(74, 184, 102, 0.25);
 		text-decoration: none;
 	}
-	.gse-review-diff__removed {
+	.wp-rtc-review-diff__removed {
 		background: rgba(204, 24, 24, 0.2);
 		text-decoration: line-through;
 	}
-	.gse-review-table-diff__wrapper {
+	.wp-rtc-review-table-diff__wrapper {
 		overflow-x: auto;
 		width: 100%;
 	}
-	.gse-review-table-diff {
+	.wp-rtc-review-table-diff {
 		border-collapse: collapse;
 		width: 100%;
 	}
-	.gse-review-table-diff__cell {
+	.wp-rtc-review-table-diff__cell {
 		border: 1px solid #ccc;
 		padding: 4px 8px;
 		text-align: left;
 		vertical-align: top;
 	}
-	.gse-review-table-diff--compact .gse-review-table-diff__cell {
+	.wp-rtc-review-table-diff--compact .wp-rtc-review-table-diff__cell {
 		font-size: 12px;
 		padding: 2px 6px;
 	}
-	.gse-review-table-diff__cell--added,
-	.gse-review-table-diff__cell--changed {
+	.wp-rtc-review-table-diff__cell--added,
+	.wp-rtc-review-table-diff__cell--changed {
 		background: rgba(74, 184, 102, 0.25);
 	}
-	.gse-review-table-diff__cell--contested {
+	.wp-rtc-review-table-diff__cell--contested {
 		background: rgba(240, 184, 73, 0.4);
 	}
 `;
@@ -156,7 +156,7 @@ export function ConflictBlockBody( {
 						</span>
 					</div>
 				</div>
-				<div className="gse-review-conflict-block__preview">
+				<div className="wp-rtc-review-conflict-block__preview">
 					{ preview }
 				</div>
 			</div>

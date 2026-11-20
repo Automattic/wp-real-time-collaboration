@@ -7,17 +7,17 @@
  * alone). On multisite every site's tables go, because the plugin may
  * have been active on any of them.
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-require_once __DIR__ . '/includes/storage/class-wp-sync-table-schema.php';
+require_once __DIR__ . '/includes/storage/class-wp-rtc-table-schema.php';
 
 if ( is_multisite() ) {
-	WP_Sync_Table_Schema::drop_network();
+	WP_RTC_Table_Schema::drop_network();
 } else {
-	WP_Sync_Table_Schema::drop();
+	WP_RTC_Table_Schema::drop();
 }

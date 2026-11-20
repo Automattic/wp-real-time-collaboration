@@ -50,7 +50,7 @@ release, which the release script generates from the commit history.
 - WebSocket, with polling as its backup, is the default transport. A
   site that has set no sync daemon address is taken to have no daemon:
   its tabs do not try the socket and poll, as before. A site that
-  defines `WP_SYNC_WEBSOCKET_HOST` or `WP_SYNC_WEBSOCKET_PORT`, or has
+  defines `WP_RTC_WEBSOCKET_HOST` or `WP_RTC_WEBSOCKET_PORT`, or has
   entered a daemon address, and has never chosen a transport, now uses
   the socket. Choose "Polling" on the settings screen to keep polling.
 - The intent-log protocol is version 3. Each stored edit carries the
@@ -60,6 +60,30 @@ release, which the release script generates from the commit history.
   until it is reloaded. A room that still holds edits from an older
   version is reset to the saved post when it is first opened, so edits
   in it that were never saved are lost.
+- Every name the plugin owns now starts with the plugin's own prefix.
+  The names from the plugin this one was created from, and the ones
+  taken over from Gutenberg's sync code, are gone. **The stored
+  settings reset**: choose the transport, the daemon address and the
+  other options again on the settings screen. Rooms kept by the fallback
+  storage start again from the saved post. What changed:
+  - Options, filters, actions and functions: `gutenberg_sync_engines_*`
+    and `wp_sync_*` are now `wp_rtc_*` (for example the `wp_rtc_engines`
+    and `wp_rtc_transports` filters and the `wp_rtc_engine` option).
+  - Classes and interfaces: `Gutenberg_Sync_Engines_*` and `WP_Sync_*`
+    are now `WP_RTC_*` (for example `WP_RTC_Engine` and
+    `WP_RTC_Transport`). The intent-log engine's `WP_Intent_Log_*` and
+    the `WP_WebSocket_*` classes keep their names.
+  - Constants: `WP_SYNC_WEBSOCKET_*` and `GUTENBERG_SYNC_ENGINES_*` are
+    now `WP_RTC_*` (for example `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET`).
+    A `wp-config.php` that defines the old ones must be updated.
+  - REST routes: `wp-sync/v1` and `gutenberg-sync-engines/v1` are now
+    `wp-rtc/v1`.
+  - The WebSocket subprotocol is `wp-rtc`, with the token sent as
+    `wp-rtc-token.<token>`. A relay copied from
+    `examples/advisory-relay/` must be updated.
+  - The text domain is `wp-real-time-collaboration`.
+  - `gutenberg_sync_engines_storage()` is gone. Call
+    `wp_rtc_get_storage()`.
 - Only a user who may publish unfiltered HTML can approve an edit held
   for that reason, and only such a user or the edit's author can dismiss
   it. The server refuses any other decision.

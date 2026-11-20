@@ -66,7 +66,7 @@ export default function MergedResultEditor( {
 	);
 
 	return (
-		<div className="gse-review-merge-dialog__merged-editor">
+		<div className="wp-rtc-review-merge-dialog__merged-editor">
 			<ReviewSurface>
 				<SlotFillProvider>
 					<BlockEditorProvider
@@ -76,10 +76,10 @@ export default function MergedResultEditor( {
 						settings={ settings }
 					>
 						<SelectMergedBlock clientId={ blocks[ 0 ]?.clientId } />
-						<div className="gse-review-merge-dialog__merged-toolbar">
+						<div className="wp-rtc-review-merge-dialog__merged-toolbar">
 							<BlockToolbar hideDragHandle />
 						</div>
-						<div className="gse-review-merge-dialog__merged-canvas">
+						<div className="wp-rtc-review-merge-dialog__merged-canvas">
 							<WritingFlow>
 								<BlockList />
 							</WritingFlow>

@@ -14,7 +14,7 @@
  * spacing is jittered so arrivals sample the transport's polling phase
  * rather than locking to it.
  *
- * Alongside latency it counts every `/wp-sync/v1/` request and WebSocket
+ * Alongside latency it counts every `/wp-rtc/v1/` request and WebSocket
  * frame per window (body bytes only — HTTP headers are not included), both
  * while editing and over a configurable idle phase. The idle numbers are the
  * per-collaborator carrying cost hosts care about.
@@ -42,11 +42,11 @@
  *   json=       write full results as JSON to this path
  *   headed=1    run with a visible browser (debugging)
  *
- * Every /wp-sync/ request the two windows make is tagged with the
+ * Every /wp-rtc/ request the two windows make is tagged with the
  * community RTC performance harness's headers (X-RTC-Test,
  * X-RTC-Scenario: editing|idle), so a site with this plugin's diagnostics
  * enabled (local/development wp-env, or the
- * GUTENBERG_SYNC_ENGINES_DIAGNOSTICS constant) records per-request
+ * WP_RTC_DIAGNOSTICS constant) records per-request
  * server-side metrics — dispatch ms, CPU ms, db_queries, db_time (needs
  * SAVEQUERIES), peak memory, concurrency — which this tool clears before
  * the run and folds into the summary afterwards (`serverSide`). Without
@@ -129,7 +129,7 @@ async function main() {
 	try {
 		const contextA = await browser.newContext();
 
-		// Tag all /wp-sync/ traffic with the current phase so the plugin's
+		// Tag all /wp-rtc/ traffic with the current phase so the plugin's
 		// diagnostics request log (when present) attributes rows to it.
 		const phase = { value: 'setup' };
 		await installScenarioTagging( contextA, phase );
@@ -185,7 +185,7 @@ async function main() {
 							? input
 							: input.url ?? String( input );
 					if (
-						! decodeURIComponent( url ).includes( '/wp-sync/v1/' )
+						! decodeURIComponent( url ).includes( '/wp-rtc/v1/' )
 					) {
 						return nativeFetch( input, init );
 					}
@@ -486,7 +486,7 @@ async function main() {
 							return false;
 						}
 						const url = decodeURIComponent( response.url() );
-						if ( ! url.includes( '/wp-sync/v1/updates' ) ) {
+						if ( ! url.includes( '/wp-rtc/v1/updates' ) ) {
 							return false;
 						}
 						const body = response.request().postDataJSON();
@@ -638,7 +638,7 @@ async function main() {
 			console.log(
 				'── no server-side metrics (site lacks the diagnostics request log; ' +
 					'run against a local/development env or define ' +
-					'GUTENBERG_SYNC_ENGINES_DIAGNOSTICS) ──'
+					'WP_RTC_DIAGNOSTICS) ──'
 			);
 		}
 		console.log(

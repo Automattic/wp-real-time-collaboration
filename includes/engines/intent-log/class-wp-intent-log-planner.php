@@ -54,7 +54,7 @@ if ( ! class_exists( 'WP_Intent_Log_Planner' ) ) {
 		 * base64url( sha256( "postId:revisionId:path.join('.')" )[0..16) ).
 		 *
 		 * The scheme is shared with de-rtc, so it lives in the base
-		 * (WP_Sync_Block_Identity); this is its intent-log name.
+		 * (WP_RTC_Block_Identity); this is its intent-log name.
 		 *
 		 * @since 7.2.0
 		 *
@@ -64,7 +64,7 @@ if ( ! class_exists( 'WP_Intent_Log_Planner' ) ) {
 		 * @return string 22-character base64url syncId.
 		 */
 		public static function genesis_sync_id( int $post_id, int $revision_id, array $path ): string {
-			return WP_Sync_Block_Identity::genesis_sync_id( $post_id, $revision_id, $path );
+			return WP_RTC_Block_Identity::genesis_sync_id( $post_id, $revision_id, $path );
 		}
 
 		/**

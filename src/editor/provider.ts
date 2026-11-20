@@ -300,7 +300,7 @@ function showEditorError( message: string ): void {
 	};
 
 	wp?.data?.dispatch?.( 'core/notices' )?.createErrorNotice?.( message, {
-		id: 'gutenberg-sync-engines-discarded-updates',
+		id: 'wp-rtc-discarded-updates',
 		isDismissible: true,
 	} );
 }

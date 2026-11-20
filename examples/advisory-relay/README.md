@@ -25,7 +25,7 @@ one).
 2. On the WordPress side, in `wp-config.php`:
 
     ```php
-    define( 'WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET', '<the secret>' );
+    define( 'WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET', '<the secret>' );
     ```
 
     With a secret configured, the plugin mints signed, two-minute access
@@ -42,13 +42,13 @@ one).
 
     ```bash
     npm install ws
-    WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET='<the secret>' \
+    WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET='<the secret>' \
     PORT=8790 node relay.mjs
     ```
 
     Terminate TLS in front of it. `GET /health` answers `200 OK`.
 
-Environment: `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` (required),
+Environment: `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` (required),
 `HOST` (`'localhost'`), and `PORT` (8790).
 
 ## One relay for several WordPress installs
@@ -88,9 +88,9 @@ work and writes rows, so it always needs the plugin's daemon.
 ### The access token
 
 Access-token mode is on when a secret is configured on the WordPress side:
-the `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` constant, else the environment
-variable of the same name, else the `wp_sync_websocket_access_token_secret`
-filter. With a secret, `POST /wp-sync/v1/ws-token` (the same route the
+the `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` constant, else the environment
+variable of the same name, else the `wp_rtc_websocket_access_token_secret`
+filter. With a secret, `POST /wp-rtc/v1/ws-token` (the same route the
 websocket transport uses) returns an access token instead of a one-time
 token; nothing about the client changes except that it names its
 post room in the request body (`{ "room": "postType/post:12" }`) so
@@ -150,10 +150,10 @@ shared secret — the shape every JWT library parses. Claims:
     allow 30 seconds of clock skew.
 
 The access token rides the handshake the way the one-time token did: the
-browser offers `Sec-WebSocket-Protocol: wp-sync, wp-sync-token.<token>`
-and the server must echo `wp-sync` alone. (Not the URL: query strings
+browser offers `Sec-WebSocket-Protocol: wp-rtc, wp-rtc-token.<token>`
+and the server must echo `wp-rtc` alone. (Not the URL: query strings
 end up in access logs.) A relay verifies, in this order: the
-offer carries `wp-sync` and a `wp-sync-token.` entry; the signature
+offer carries `wp-rtc` and a `wp-rtc-token.` entry; the signature
 checks against the secret with a constant-time comparison; the
 header's `alg` is exactly `HS256` (refuse `none` and everything else);
 `exp` has not passed (with leeway); the claims have the shapes above.
@@ -230,8 +230,8 @@ verifies an HS256 JWT with a shared secret and the same claim names
 (`user_id`, `blog_id`, `iat`, `exp`), so its token code is reusable.
 The differences to bridge: it reads the token from an `?auth=` query
 parameter (read the `Sec-WebSocket-Protocol` offer instead, and echo
-`wp-sync`); it names one room per token in `room_name` (read the
+`wp-rtc`); it names one room per token in `room_name` (read the
 `rooms` list and the `<kind>/*` rule); and it speaks Yjs, not these frames (an advisory mode is a
 new message handler; `relay.mjs` shows the whole of it). Set
-`WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` to the same value as its
+`WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` to the same value as its
 `VIP_RTC_WS_AUTH_SECRET`.

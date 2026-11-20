@@ -27,9 +27,9 @@ function loadConfigWithFilteredIntervals(
 	} ) );
 
 	if ( siteSettings ) {
-		( window as any )._gutenbergSyncEnginesSettings = siteSettings;
+		( window as any )._wpRtcSettings = siteSettings;
 	} else {
-		delete ( window as any )._gutenbergSyncEnginesSettings;
+		delete ( window as any )._wpRtcSettings;
 	}
 
 	return require( '../../../../src/providers/http-polling/config' ) as SyncConfig;

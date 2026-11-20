@@ -73,7 +73,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 
 		Commit_Path_Lock_Backend::$events = array();
 		Commit_Path_Lock_Backend::$busy   = false;
-		WP_Sync_Room_Lock::reset_backend_for_testing();
+		WP_RTC_Room_Lock::reset_backend_for_testing();
 
 		parent::tear_down();
 	}
@@ -88,7 +88,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 * @return WP_Intent_Log_Engine Engine.
 	 */
 	private static function engine(): WP_Intent_Log_Engine {
-		return new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		return new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 	}
 
 	/**
@@ -267,7 +267,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 */
 	private static function stored_rows( string $room, string $type ): array {
 		$rows = array();
-		foreach ( ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) as $row ) {
+		foreach ( ( new WP_RTC_Table_Storage() )->get_updates_after_cursor( $room, 0 ) as $row ) {
 			if ( $type === $row['type'] ) {
 				$rows[] = json_decode( $row['data'], true );
 			}
@@ -297,7 +297,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 */
 	private function daemon(): WP_WebSocket_Sync_Server {
 		return new WP_WebSocket_Sync_Server(
-			new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
+			new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() )
 		);
 	}
 
@@ -317,7 +317,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		$this->sockets[] = $pair[1];
 
 		$conn      = new WP_WebSocket_Connection( $pair[0] );
-		$mark_open = new ReflectionMethod( WP_Sync_Connection::class, 'mark_open' );
+		$mark_open = new ReflectionMethod( WP_RTC_Connection::class, 'mark_open' );
 		$mark_open->setAccessible( true );
 		$mark_open->invoke( $conn );
 
@@ -425,7 +425,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 * @return array|WP_Error The room's answer.
 	 */
 	private static function polling_request( array $room_request ) {
-		$server = new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
+		$server = new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() );
 
 		return $server->process_room_request(
 			array_merge(
@@ -657,7 +657,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		$this->tab_leaves( $daemon, $first_tab );
 		$this->assertSame(
 			array(),
-			( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ),
+			( new WP_RTC_Table_Storage() )->get_updates_after_cursor( $room, 0 ),
 			'The last tab leaving reset the room.'
 		);
 
@@ -717,7 +717,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 
 		// The tab closes. Its leave beacon reaches the web server first,
 		// which resets the room. Then the daemon notices the closed socket.
-		$web_presence = new Gutenberg_Sync_Engines_Advisory_Presence( new WP_Sync_Table_Storage() );
+		$web_presence = new WP_RTC_Advisory_Presence( new WP_RTC_Table_Storage() );
 		$this->assertTrue( $web_presence->leave( $room, 'tab-a', 101 ), 'The leave beacon reset the room.' );
 		$this->tab_leaves( $daemon, $first_tab );
 
@@ -744,7 +744,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 */
 	public function data_storages(): array {
 		return array(
-			'the table storage'    => array( WP_Sync_Table_Storage::class ),
+			'the table storage'    => array( WP_RTC_Table_Storage::class ),
 			'the fallback storage' => array( WP_RTC_Post_Meta_Storage::class ),
 		);
 	}
@@ -829,7 +829,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	private function type_three_edits_past_a_snapshot( string $room, string $block ): array {
 		// Hooks added in a test are removed again when it ends.
 		add_filter(
-			'wp_sync_intent_log_checkpoint_interval',
+			'wp_rtc_intent_log_checkpoint_interval',
 			static function () {
 				return 3;
 			}
@@ -1095,7 +1095,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 			$second['row'] = 1;
 		}
 		$this->assertSame( array( $refusal, $second ), $answer['dispositions'] );
-		$this->assertCount( 1, ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ), 'Only the first document is stored.' );
+		$this->assertCount( 1, ( new WP_RTC_Table_Storage() )->get_updates_after_cursor( $room, 0 ), 'Only the first document is stored.' );
 	}
 
 	/**
@@ -1602,12 +1602,12 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 */
 	private function recording_lock_and_storage(): Commit_Path_Recording_Storage {
 		add_filter(
-			'wp_sync_lock_backend',
+			'wp_rtc_lock_backend',
 			static function () {
 				return new Commit_Path_Lock_Backend();
 			}
 		);
-		WP_Sync_Room_Lock::reset_backend_for_testing();
+		WP_RTC_Room_Lock::reset_backend_for_testing();
 		Commit_Path_Lock_Backend::$events = array();
 
 		return new Commit_Path_Recording_Storage();
@@ -1622,7 +1622,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	public function test_first_document_made_by_a_read_is_stored_under_the_lock() {
 		list( , $room ) = $this->make_post();
 		$storage        = $this->recording_lock_and_storage();
-		$lock           = WP_Sync_Room_Lock::name_for_room( $room );
+		$lock           = WP_RTC_Room_Lock::name_for_room( $room );
 
 		$first = ( new WP_Intent_Log_Engine( $storage ) )->get_updates_since( $room, 101, 0, array() );
 
@@ -1657,7 +1657,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	public function test_commit_that_makes_the_first_document_takes_the_lock_once() {
 		list( , $room, $block ) = $this->make_post();
 		$storage                = $this->recording_lock_and_storage();
-		$lock                   = WP_Sync_Room_Lock::name_for_room( $room );
+		$lock                   = WP_RTC_Room_Lock::name_for_room( $room );
 
 		$answer = self::commit( new WP_Intent_Log_Engine( $storage ), $room, 101, array( self::text_edit( 'first-1', $block, 0, 'x', 0 ) ) );
 
@@ -1672,13 +1672,13 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	public function test_reset_of_an_empty_room_runs_under_the_lock() {
 		list( , $room ) = $this->make_room();
 		$storage        = $this->recording_lock_and_storage();
-		$lock           = WP_Sync_Room_Lock::name_for_room( $room );
+		$lock           = WP_RTC_Room_Lock::name_for_room( $room );
 
-		$presence = new Gutenberg_Sync_Engines_Advisory_Presence( $storage );
+		$presence = new WP_RTC_Advisory_Presence( $storage );
 		$this->assertTrue( $presence->leave( $room, 'tab-a', 101 ) );
 
 		$this->assertSame( array( "acquire $lock", 'reset_room', "release $lock" ), Commit_Path_Lock_Backend::$events );
-		$this->assertSame( array(), ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
+		$this->assertSame( array(), ( new WP_RTC_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
 	}
 
 	/**
@@ -1689,11 +1689,11 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		$storage                        = $this->recording_lock_and_storage();
 		Commit_Path_Lock_Backend::$busy = true;
 
-		$presence = new Gutenberg_Sync_Engines_Advisory_Presence( $storage );
+		$presence = new WP_RTC_Advisory_Presence( $storage );
 		$this->assertFalse( $presence->leave( $room, 'tab-a', 101 ) );
 
 		$this->assertNotContains( 'reset_room', Commit_Path_Lock_Backend::$events );
-		$this->assertCount( 1, ( new WP_Sync_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
+		$this->assertCount( 1, ( new WP_RTC_Table_Storage() )->get_updates_after_cursor( $room, 0 ) );
 	}
 
 	/*
@@ -1707,7 +1707,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	public function test_commit_stores_its_rows_in_one_batch() {
 		list( , $room, $block ) = $this->make_room();
 		$storage                = $this->recording_lock_and_storage();
-		$lock                   = WP_Sync_Room_Lock::name_for_room( $room );
+		$lock                   = WP_RTC_Room_Lock::name_for_room( $room );
 		add_filter( 'wp_rtc_commit_in_transaction', '__return_true', 20 );
 		$storage->real_batches = false;
 
@@ -1766,7 +1766,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	 */
 	public function test_table_storage_throws_away_the_rows_of_a_batch_that_is_rolled_back() {
 		$room    = 'postType/post:987654321';
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 
 		$this->assertTrue( $storage->begin_batch() );
 		$this->assertTrue( $storage->add_update( $room, array( 'kept' => false ) ) );
@@ -1798,7 +1798,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 	public function test_stored_edits_carry_their_position() {
 		list( , $room, $block ) = $this->make_room();
 		add_filter(
-			'wp_sync_intent_log_checkpoint_interval',
+			'wp_rtc_intent_log_checkpoint_interval',
 			static function () {
 				return 3;
 			}
@@ -1870,7 +1870,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 		list( , $room, $block ) = $this->make_room();
 		$old_rows               = static function () use ( $room, $block ) {
 			$edit = json_decode( self::text_edit( 'old-1', $block, 0, 'OLD ', 0 )['data'], true );
-			( new WP_Sync_Table_Storage() )->add_update(
+			( new WP_RTC_Table_Storage() )->add_update(
 				$room,
 				array(
 					'client_id' => 9,
@@ -1898,7 +1898,7 @@ class Tests_Collaboration_WpIntentLogCommitPath extends WP_UnitTestCase {
 /**
  * A table storage that records where each read of a room's rows starts.
  */
-class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
+class Commit_Path_Recording_Storage extends WP_RTC_Table_Storage {
 	/**
 	 * The position each read started after, in call order.
 	 *
@@ -1975,7 +1975,7 @@ class Commit_Path_Recording_Storage extends WP_Sync_Table_Storage {
  * A room lock that records when it is taken and released, and can be
  * told that every lock is held by someone else.
  */
-class Commit_Path_Lock_Backend implements WP_Sync_Lock_Backend {
+class Commit_Path_Lock_Backend implements WP_RTC_Lock_Backend {
 	/**
 	 * What happened, in order. The recording storage adds its writes.
 	 *
@@ -2008,7 +2008,7 @@ class Commit_Path_Lock_Backend implements WP_Sync_Lock_Backend {
  * A table storage that can be told to refuse its next writes, to make a
  * commit fail midway.
  */
-class Commit_Path_Refusing_Storage extends WP_Sync_Table_Storage {
+class Commit_Path_Refusing_Storage extends WP_RTC_Table_Storage {
 	/**
 	 * How many of the next writes to refuse.
 	 *

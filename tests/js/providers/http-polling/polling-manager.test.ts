@@ -2211,14 +2211,11 @@ describe( 'polling-manager', () => {
 	} );
 	describe( 'presence token', () => {
 		afterEach( () => {
-			delete ( window as { _gutenbergSyncEnginesSettings?: unknown } )
-				._gutenbergSyncEnginesSettings;
+			delete ( window as { _wpRtcSettings?: unknown } )._wpRtcSettings;
 		} );
 
 		it( "stamps this tab's token on its post's room only", async () => {
-			(
-				window as { _gutenbergSyncEnginesSettings?: unknown }
-			 )._gutenbergSyncEnginesSettings = {
+			( window as { _wpRtcSettings?: unknown } )._wpRtcSettings = {
 				advisory: { room: 'postType/post:7', token: 'tab-token' },
 			};
 			mockPostSyncUpdate.mockResolvedValue( {
@@ -2270,7 +2267,7 @@ describe( 'polling-manager', () => {
 
 	describe( 'sync inspector tap', () => {
 		it( 'records decoded polls and requests the server envelope when enabled', async () => {
-			window.localStorage.setItem( 'wp_sync_debug', '1' );
+			window.localStorage.setItem( 'wp_rtc_debug', '1' );
 			inspector.clear();
 			inspector.untail();
 			try {
@@ -2322,7 +2319,7 @@ describe( 'polling-manager', () => {
 				).toContain( 'remove_block -p1' );
 				expect( records[ 0 ].serverDebug ).toEqual( { head_seq: 1 } );
 			} finally {
-				window.localStorage.removeItem( 'wp_sync_debug' );
+				window.localStorage.removeItem( 'wp_rtc_debug' );
 				inspector.clear();
 			}
 		} );

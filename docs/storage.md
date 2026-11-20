@@ -7,9 +7,9 @@ other data otherwise.
 
 ## The two tables
 
-`WP_Sync_Table_Storage` (`includes/storage/class-wp-sync-table-storage.php`)
+`WP_RTC_Table_Storage` (`includes/storage/class-wp-rtc-table-storage.php`)
 is the default storage and the only code that touches the tables.
-`WP_Sync_Table_Schema` creates, upgrades and drops them. Everything in
+`WP_RTC_Table_Schema` creates, upgrades and drops them. Everything in
 the plugin gets its storage from `wp_rtc_get_storage()`
 (`includes/server/functions.php`). A site that could not create the
 tables falls back to `WP_RTC_Post_Meta_Storage`, which keeps rows as
@@ -37,11 +37,11 @@ with an underscore belong to the storage:
 
 The advisory channel keeps each tab's waiting handshake messages in
 options rows,
-swapped atomically by `WP_Sync_Atomic_Option` (a compare-and-swap:
+swapped atomically by `WP_RTC_Atomic_Option` (a compare-and-swap:
 change a value only if nobody changed it first; the
-`wp_sync_cas_backend` filter can substitute Redis). Intent-log's
-per-room lock is an options row too (`WP_Sync_Room_Lock`, replaceable
-through `wp_sync_lock_backend`). A commit, the making of a room's first
+`wp_rtc_cas_backend` filter can substitute Redis). Intent-log's
+per-room lock is an options row too (`WP_RTC_Room_Lock`, replaceable
+through `wp_rtc_lock_backend`). A commit, the making of a room's first
 document, and a reset all hold that lock.
 
 Intent-log stores the rows of one request in one database transaction,
@@ -63,7 +63,7 @@ Every successful write bumps the room's version counter (an atomic
 increment), so a waiting reader can
 ask "did anything change in these rooms?" with one lookup
 (`get_room_versions`) and read again when the value differs. Every
-write also fires `gutenberg_sync_engines_room_changed` with the room
+write also fires `wp_rtc_room_changed` with the room
 name, and a
 replacement storage must fire it too. Nothing in the plugin reads the
 counter or listens to the action now. Both stay for other code to
@@ -83,30 +83,30 @@ recommended ("custom table with transients"):
 Nothing else is cached, because checkpoints are
 rewritten by several requests at once. An idle poll is read-only either
 way: presence timestamps are rounded to ten-second buckets
-(`wp_sync_awareness_timestamp_granularity`), and a poll that changes
+(`wp_rtc_awareness_timestamp_granularity`), and a poll that changes
 nothing writes nothing.
 
 ## Presence
 
-Who is in a room is read and written only through `WP_Sync_Awareness`.
-The `wp_sync_awareness_backend` filter can replace where it is kept.
+Who is in a room is read and written only through `WP_RTC_Awareness`.
+The `wp_rtc_awareness_backend` filter can replace where it is kept.
 The plugin's own backend keeps presence in the required Presence API's
-`wp_presence` table, one row per tab under a `gse-` client-id prefix.
+`wp_presence` table, one row per tab under a `wp-rtc-` client-id prefix.
 It is used whenever that plugin reports it can serve
 (`wp_presence_is_available()`); otherwise presence falls back to the
 room's own data.
 
 The list of editor tabs on a post, which the advisory channel uses to
-find peers, has the same kind of backend (`wp_sync_tab_list_backend`):
-`gsetab-` rows in the same table, else one transient per room.
+find peers, has the same kind of backend (`wp_rtc_tab_list_backend`):
+`wp-rtctab-` rows in the same table, else one transient per room.
 `tests/tools/check-presence-api.php` checks the backend against the
 real plugin.
 
 ## Lifecycle and commands
 
 Activation creates the tables with `dbDelta` and records the schema
-version (`gutenberg_sync_engines_db_version`); a newer
-`WP_Sync_Table_Schema::DB_VERSION` upgrades them on the next load.
+version (`wp_rtc_db_version`); a newer
+`WP_RTC_Table_Schema::DB_VERSION` upgrades them on the next load.
 Deactivation leaves the tables and every room alone. Deleting the plugin
 (`uninstall.php`) drops the tables on every site. If the tables cannot
 be created, the post-meta default stays and an admin notice says to run
@@ -117,4 +117,4 @@ registered under WP-CLI (`reset` deletes every room and keeps the
 tables). `wp collaboration rooms list` and
 `wp collaboration rooms inspect <room> [--rows=N] [--materialize]`
 dump room state read-only, on local or development sites or with the
-`GUTENBERG_SYNC_ENGINES_DIAGNOSTICS` constant.
+`WP_RTC_DIAGNOSTICS` constant.

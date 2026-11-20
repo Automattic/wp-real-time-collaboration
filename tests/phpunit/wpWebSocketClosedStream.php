@@ -30,7 +30,7 @@ class Tests_Collaboration_WpWebSocketClosedStream extends WP_UnitTestCase {
 		parent::set_up();
 
 		$this->server = new WP_WebSocket_Sync_Server(
-			new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() )
+			new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() )
 		);
 
 		// A real listener on a free port, so a loop pass has one to watch.
@@ -75,7 +75,7 @@ class Tests_Collaboration_WpWebSocketClosedStream extends WP_UnitTestCase {
 		$this->sockets[] = $pair[0];
 
 		$conn      = new WP_WebSocket_Connection( $pair[0] );
-		$mark_open = new ReflectionMethod( WP_Sync_Connection::class, 'mark_open' );
+		$mark_open = new ReflectionMethod( WP_RTC_Connection::class, 'mark_open' );
 		$mark_open->setAccessible( true );
 		$mark_open->invoke( $conn );
 

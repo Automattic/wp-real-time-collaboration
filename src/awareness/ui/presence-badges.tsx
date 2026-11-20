@@ -115,7 +115,7 @@ function Badge( { peer, entering, leaving }: StackBadge ) {
 	const name = peer.identity.name || __( 'Anonymous User' );
 	const src = peer.identity.avatarUrl;
 	const className = [
-		'gse-avatar',
+		'wp-rtc-avatar',
 		'is-badge',
 		'is-small',
 		loaded ? 'has-src' : null,
@@ -125,8 +125,8 @@ function Badge( { peer, entering, leaving }: StackBadge ) {
 		.filter( Boolean )
 		.join( ' ' );
 	const style: StyleWithVars = {
-		'--gse-avatar-outline-color': peer.color,
-		'--gse-avatar-name-color': nameColorOn( peer.color ),
+		'--wp-rtc-avatar-outline-color': peer.color,
+		'--wp-rtc-avatar-name-color': nameColorOn( peer.color ),
 	};
 	return (
 		<div
@@ -135,20 +135,20 @@ function Badge( { peer, entering, leaving }: StackBadge ) {
 			role="img"
 			aria-label={ name }
 		>
-			<span className="gse-avatar__image">
+			<span className="wp-rtc-avatar__image">
 				{ src && (
 					<img
 						src={ src }
 						alt=""
 						crossOrigin="anonymous"
-						className="gse-avatar__img"
+						className="wp-rtc-avatar__img"
 						onLoad={ () => setLoaded( true ) }
 						onError={ () => setLoaded( false ) }
 					/>
 				) }
 				{ ! loaded && initialsOf( name ) }
 			</span>
-			<span className="gse-avatar__name">{ name }</span>
+			<span className="wp-rtc-avatar__name">{ name }</span>
 		</div>
 	);
 }
@@ -404,17 +404,17 @@ export function PresenceBadges() {
 	}
 
 	return createPortal(
-		<div className="gse-presence-layer">
+		<div className="wp-rtc-presence-layer">
 			{ placed.map( ( stack ) => (
 				<div
 					key={ stack.blockId }
-					className="gse-presence-badge"
+					className="wp-rtc-presence-badge"
 					style={ {
 						top: `${ stack.top }px`,
 						left: `${ stack.left }px`,
 					} }
 				>
-					<div className="gse-avatar-group" role="group">
+					<div className="wp-rtc-avatar-group" role="group">
 						{ stackBadges(
 							stack,
 							drawnRef.current[ stack.blockId ],

@@ -30,7 +30,7 @@
  */
 import { getAdvisoryDebugState } from '../providers/advisory/channel';
 
-const STORAGE_KEY = 'wp_sync_debug';
+const STORAGE_KEY = 'wp_rtc_debug';
 const BUFFER_LIMIT = 500;
 
 interface WireUpdate {

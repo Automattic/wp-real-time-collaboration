@@ -33,7 +33,7 @@ import baseConfig from './playwright.config';
  */
 if ( ! process.env.TEST_WORKER_INDEX ) {
 	for ( const holder of [
-		'wp-sync-ws-daemon',
+		'wp-rtc-ws-daemon',
 		'rtc-fuzz-ws-daemon',
 		'rtc-e2e-ws-daemon',
 	] ) {
@@ -97,8 +97,7 @@ const config = defineConfig( {
 			command: `exec node ../../examples/advisory-relay/relay.mjs`,
 			cwd: __dirname,
 			env: {
-				WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET:
-					RELAY_ACCESS_TOKEN_SECRET,
+				WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET: RELAY_ACCESS_TOKEN_SECRET,
 				PORT: String( RELAY_PORT ),
 			},
 			reuseExistingServer: false,

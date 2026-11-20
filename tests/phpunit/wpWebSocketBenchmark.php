@@ -2,11 +2,11 @@
 /**
  * Opt-in process measurements for the WebSocket daemon.
  *
- * @package gutenberg-sync-engines
+ * @package WPRealTimeCollaboration
  */
 class Tests_Collaboration_WpWebSocketBenchmark extends WP_UnitTestCase {
 	public function test_http_metrics_route_requires_explicit_opt_in() {
-		$previous = getenv( 'GSE_BENCH_METRICS' );
+		$previous = getenv( 'WP_RTC_BENCH_METRICS' );
 		$server   = ( new ReflectionClass( WP_WebSocket_Sync_Server::class ) )->newInstanceWithoutConstructor();
 		$conn     = new class() extends WP_WebSocket_Connection {
 			public array $response = array();
@@ -39,26 +39,26 @@ class Tests_Collaboration_WpWebSocketBenchmark extends WP_UnitTestCase {
 		$handle = new ReflectionMethod( $server, 'handle_handshake' );
 		$handle->setAccessible( true );
 		try {
-			putenv( 'GSE_BENCH_METRICS=0' );
+			putenv( 'WP_RTC_BENCH_METRICS=0' );
 			$handle->invoke( $server, 1 );
 			$this->assertSame( array( 404, '' ), $conn->response );
-			putenv( 'GSE_BENCH_METRICS=1' );
+			putenv( 'WP_RTC_BENCH_METRICS=1' );
 			$handle->invoke( $server, 1 );
 			$this->assertSame( 200, $conn->response[0] );
 			$this->assertSame( 1, json_decode( $conn->response[1], true )['version'] );
 		} finally {
-			putenv( false === $previous ? 'GSE_BENCH_METRICS' : 'GSE_BENCH_METRICS=' . $previous );
+			putenv( false === $previous ? 'WP_RTC_BENCH_METRICS' : 'WP_RTC_BENCH_METRICS=' . $previous );
 		}
 	}
 
 	public function test_process_counters_match_cpu_and_database_work() {
 		global $wpdb;
-		$previous = getenv( 'GSE_BENCH_METRICS' );
+		$previous = getenv( 'WP_RTC_BENCH_METRICS' );
 		$server   = ( new ReflectionClass( WP_WebSocket_Sync_Server::class ) )->newInstanceWithoutConstructor();
 		try {
-			putenv( 'GSE_BENCH_METRICS=0' );
+			putenv( 'WP_RTC_BENCH_METRICS=0' );
 			$this->assertNull( $server->benchmark_snapshot() );
-			putenv( 'GSE_BENCH_METRICS=1' );
+			putenv( 'WP_RTC_BENCH_METRICS=1' );
 			$before     = $server->benchmark_snapshot();
 			$cpu_before = getrusage();
 			$until      = hrtime( true ) + 20000000;
@@ -78,7 +78,7 @@ class Tests_Collaboration_WpWebSocketBenchmark extends WP_UnitTestCase {
 			$this->assertSame( 'php-allocated', $after['memory_kind'] );
 			$this->assertGreaterThan( 0, $after['memory_bytes'] );
 		} finally {
-			putenv( false === $previous ? 'GSE_BENCH_METRICS' : 'GSE_BENCH_METRICS=' . $previous );
+			putenv( false === $previous ? 'WP_RTC_BENCH_METRICS' : 'WP_RTC_BENCH_METRICS=' . $previous );
 		}
 	}
 }

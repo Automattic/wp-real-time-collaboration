@@ -20,7 +20,7 @@
  * The compiled design tokens (`collaborator-styles.ts` there) are inlined.
  */
 
-const CANVAS_STYLE_ID = 'gutenberg-sync-engines-awareness-styles';
+const CANVAS_STYLE_ID = 'wp-rtc-awareness-styles';
 
 const WHITE = '#fff';
 const ELEVATION_X_SMALL =
@@ -44,7 +44,7 @@ const CANVAS_STYLES = `
  * editor was already outlining gains a peer, since the animation name
  * changes then).
  */
-@keyframes gse-outline-fade-in {
+@keyframes wp-rtc-outline-fade-in {
 	from {
 		opacity: 0;
 	}
@@ -52,17 +52,17 @@ const CANVAS_STYLES = `
 		opacity: 1;
 	}
 }
-.block-editor-block-list__block.gse-presence::after {
-	animation: gse-outline-fade-in 0.15s ease-out;
-	--gse-outline-inset: calc(-1px - var(--wp-admin-border-width-focus, 2px) / var(--wp-block-editor-iframe-zoom-out-scale, 1));
+.block-editor-block-list__block.wp-rtc-presence::after {
+	animation: wp-rtc-outline-fade-in 0.15s ease-out;
+	--wp-rtc-outline-inset: calc(-1px - var(--wp-admin-border-width-focus, 2px) / var(--wp-block-editor-iframe-zoom-out-scale, 1));
 	content: "";
 	position: absolute;
 	pointer-events: none;
-	top: var(--gse-outline-inset) !important;
-	right: var(--gse-outline-inset) !important;
-	bottom: var(--gse-outline-inset) !important;
-	left: var(--gse-outline-inset) !important;
-	outline-color: var(--gse-outline-color) !important;
+	top: var(--wp-rtc-outline-inset) !important;
+	right: var(--wp-rtc-outline-inset) !important;
+	bottom: var(--wp-rtc-outline-inset) !important;
+	left: var(--wp-rtc-outline-inset) !important;
+	outline-color: var(--wp-rtc-outline-color) !important;
 	outline-style: solid;
 	outline-width: calc(var(--wp-admin-border-width-focus, 2px) / var(--wp-block-editor-iframe-zoom-out-scale, 1));
 	outline-offset: calc(-1 * var(--wp-admin-border-width-focus, 2px) / var(--wp-block-editor-iframe-zoom-out-scale, 1));
@@ -71,7 +71,7 @@ const CANVAS_STYLES = `
 }
 
 /* The badge layer: a zero-size anchor at the document origin. */
-.gse-presence-layer {
+.wp-rtc-presence-layer {
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -82,7 +82,7 @@ const CANVAS_STYLES = `
 	z-index: 20001;
 }
 /* One badge, placed at a block's top-left and lifted above it. */
-.gse-presence-badge {
+.wp-rtc-presence-badge {
 	position: absolute;
 	z-index: 1;
 	transform: translateY(calc(-100% - 8px));
@@ -97,24 +97,24 @@ const CANVAS_STYLES = `
  * Hovering anywhere on the stack removes the overlap; the badges' own
  * hover rules below open each name at the same time.
  */
-.gse-avatar-group {
+.wp-rtc-avatar-group {
 	display: flex;
 	align-items: center;
 }
-.gse-avatar-group > .gse-avatar + .gse-avatar {
+.wp-rtc-avatar-group > .wp-rtc-avatar + .wp-rtc-avatar {
 	margin-inline-start: -8px;
 	transition: margin-inline-start 0.3s cubic-bezier(0.15, 0, 0.15, 1);
 }
-.gse-avatar-group:hover > .gse-avatar + .gse-avatar {
+.wp-rtc-avatar-group:hover > .wp-rtc-avatar + .wp-rtc-avatar {
 	margin-inline-start: 4px;
 	transition-timing-function: cubic-bezier(0.85, 0, 0.85, 1);
 }
 ${ Array.from(
 	{ length: 10 },
 	( _, index ) =>
-		`.gse-avatar-group > .gse-avatar:nth-child(${ index + 1 }) { z-index: ${
-			10 - index
-		}; }`
+		`.wp-rtc-avatar-group > .wp-rtc-avatar:nth-child(${
+			index + 1
+		}) { z-index: ${ 10 - index }; }`
 ).join( '\n' ) }
 
 /*
@@ -126,7 +126,7 @@ ${ Array.from(
  * moment it ends; the pop-out fills forwards, staying collapsed until
  * the badge is removed.
  */
-@keyframes gse-avatar-pop-in {
+@keyframes wp-rtc-avatar-pop-in {
 	from {
 		width: 0;
 		margin-inline-start: 0;
@@ -146,7 +146,7 @@ ${ Array.from(
 		opacity: 1;
 	}
 }
-@keyframes gse-avatar-pop-out {
+@keyframes wp-rtc-avatar-pop-out {
 	from {
 		width: 24px;
 		margin-inline-start: -8px;
@@ -160,16 +160,16 @@ ${ Array.from(
 		opacity: 0;
 	}
 }
-.gse-avatar-group > .gse-avatar.is-entering {
-	animation: gse-avatar-pop-in 0.3s cubic-bezier(0.15, 0, 0.15, 1) backwards;
+.wp-rtc-avatar-group > .wp-rtc-avatar.is-entering {
+	animation: wp-rtc-avatar-pop-in 0.3s cubic-bezier(0.15, 0, 0.15, 1) backwards;
 }
-.gse-avatar-group > .gse-avatar.is-leaving {
-	animation: gse-avatar-pop-out 0.25s cubic-bezier(0.85, 0, 0.85, 1) forwards;
+.wp-rtc-avatar-group > .wp-rtc-avatar.is-leaving {
+	animation: wp-rtc-avatar-pop-out 0.25s cubic-bezier(0.85, 0, 0.85, 1) forwards;
 	pointer-events: none;
 }
 
 /* The avatar badge (the framework's Avatar, badge variant, small). */
-.gse-avatar {
+.wp-rtc-avatar {
 	position: relative;
 	display: inline-grid;
 	grid-template-columns: min-content 0fr;
@@ -179,34 +179,34 @@ ${ Array.from(
 	border-radius: 9999px;
 	flex-shrink: 0;
 	box-shadow: 0 0 0 var(--wp-admin-border-width-focus, 2px) ${ WHITE }, ${ ELEVATION_X_SMALL };
-	background-color: var(--gse-avatar-outline-color, var(--wp-admin-theme-color, #3858e9));
+	background-color: var(--wp-rtc-avatar-outline-color, var(--wp-admin-theme-color, #3858e9));
 	transition:
 		grid-template-columns 0.3s cubic-bezier(0.15, 0, 0.15, 1),
 		column-gap 0.3s cubic-bezier(0.15, 0, 0.15, 1),
 		padding-inline-end 0.3s cubic-bezier(0.15, 0, 0.15, 1);
 }
-.gse-avatar-group:hover .gse-avatar {
+.wp-rtc-avatar-group:hover .wp-rtc-avatar {
 	grid-template-columns: min-content 1fr;
 	column-gap: 4px;
 	padding-inline-end: 8px;
 	transition-timing-function: cubic-bezier(0.85, 0, 0.85, 1);
 }
-.gse-avatar__image {
+.wp-rtc-avatar__image {
 	box-sizing: border-box;
 	position: relative;
 	width: 24px;
 	height: 24px;
 	border-radius: 9999px;
-	border: var(--wp-admin-border-width-focus, 2px) solid var(--gse-avatar-outline-color);
+	border: var(--wp-admin-border-width-focus, 2px) solid var(--wp-rtc-avatar-outline-color);
 	background-clip: padding-box;
-	background-color: var(--gse-avatar-outline-color, var(--wp-admin-theme-color, #3858e9));
+	background-color: var(--wp-rtc-avatar-outline-color, var(--wp-admin-theme-color, #3858e9));
 	overflow: hidden;
 	overflow: clip;
 	flex-shrink: 0;
 	font-size: 0;
 	color: ${ WHITE };
 }
-.gse-avatar__image::after {
+.wp-rtc-avatar__image::after {
 	content: "";
 	position: absolute;
 	inset: 0;
@@ -215,7 +215,7 @@ ${ Array.from(
 	pointer-events: none;
 	z-index: 1;
 }
-.gse-avatar__img {
+.wp-rtc-avatar__img {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -224,11 +224,11 @@ ${ Array.from(
 	border-radius: inherit;
 	opacity: 0;
 }
-.gse-avatar.has-src > .gse-avatar__image > .gse-avatar__img {
+.wp-rtc-avatar.has-src > .wp-rtc-avatar__image > .wp-rtc-avatar__img {
 	opacity: 1;
 }
 /* No image: initials on the peer's color. */
-.gse-avatar:not(.has-src) > .gse-avatar__image {
+.wp-rtc-avatar:not(.has-src) > .wp-rtc-avatar__image {
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -237,14 +237,14 @@ ${ Array.from(
 	border: 0;
 	background-clip: border-box;
 }
-.gse-avatar:not(.has-src) > .gse-avatar__image::after {
+.wp-rtc-avatar:not(.has-src) > .wp-rtc-avatar__image::after {
 	content: none;
 }
-.gse-avatar__name {
+.wp-rtc-avatar__name {
 	font-size: 13px;
 	font-weight: var(--wpds-typography-font-weight-emphasis, 600);
 	line-height: 20px;
-	color: var(--gse-avatar-name-color, ${ WHITE });
+	color: var(--wp-rtc-avatar-name-color, ${ WHITE });
 	min-width: 0;
 	padding-bottom: 2px;
 	overflow: hidden;
@@ -252,21 +252,21 @@ ${ Array.from(
 	white-space: nowrap;
 	transition: opacity 0.15s cubic-bezier(0.15, 0, 0.15, 1);
 }
-.gse-avatar-group:hover .gse-avatar__name {
+.wp-rtc-avatar-group:hover .wp-rtc-avatar__name {
 	opacity: 1;
 	transition-timing-function: cubic-bezier(0.85, 0, 0.85, 1);
 }
 @media (prefers-reduced-motion: reduce) {
-	.gse-avatar-group > .gse-avatar + .gse-avatar,
-	.gse-avatar,
-	.gse-avatar__name {
+	.wp-rtc-avatar-group > .wp-rtc-avatar + .wp-rtc-avatar,
+	.wp-rtc-avatar,
+	.wp-rtc-avatar__name {
 		transition: none;
 	}
-	.block-editor-block-list__block.gse-presence::after,
-	.gse-avatar-group > .gse-avatar.is-entering {
+	.block-editor-block-list__block.wp-rtc-presence::after,
+	.wp-rtc-avatar-group > .wp-rtc-avatar.is-entering {
 		animation: none;
 	}
-	.gse-avatar-group > .gse-avatar.is-leaving {
+	.wp-rtc-avatar-group > .wp-rtc-avatar.is-leaving {
 		display: none;
 	}
 }

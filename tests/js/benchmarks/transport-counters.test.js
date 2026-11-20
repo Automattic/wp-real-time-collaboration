@@ -31,7 +31,7 @@ it( 'does not confuse advisory socket traffic with the content transport', () =>
 	expect( counters.snapshot().wsFramesSent ).toBe( 1 );
 	expect( observeTransport( counters ) ).toBe( 'none' );
 	events.request( {
-		url: () => 'http://site/wp-sync/v1/updates',
+		url: () => 'http://site/wp-rtc/v1/updates',
 		postDataBuffer: () => null,
 	} );
 	expect( observeTransport( counters ) ).toBe( 'http-polling' );

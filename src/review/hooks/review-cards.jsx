@@ -59,8 +59,4 @@ const withReviewCards = createHigherOrderComponent(
 	'withReviewCards'
 );
 
-addFilter(
-	'editor.BlockEdit',
-	'gutenberg-sync-engines/review-cards',
-	withReviewCards
-);
+addFilter( 'editor.BlockEdit', 'wp-rtc/review-cards', withReviewCards );

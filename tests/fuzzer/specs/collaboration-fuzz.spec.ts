@@ -697,7 +697,7 @@ async function typeIntoNthParagraph(
 /**
  * Arm a one-shot fault on the acting page's next sync request. Matches both
  * pretty and plain-permalink sync routes (wp-env uses
- * `?rest_route=%2Fwp-sync%2F...`). HTTP transports only.
+ * `?rest_route=%2Fwp-rtc%2F...`). HTTP transports only.
  *
  * @param page          Acting page.
  * @param fault         The fault to inject.
@@ -710,8 +710,8 @@ async function armSyncFault(
 ): Promise< void > {
 	let armed = true;
 	const matcher = ( url: URL ) =>
-		url.href.includes( 'wp-sync' ) ||
-		decodeURIComponent( url.search ).includes( '/wp-sync/' );
+		url.href.includes( 'wp-rtc' ) ||
+		decodeURIComponent( url.search ).includes( '/wp-rtc/' );
 	await page.route( matcher, async ( route ) => {
 		if ( ! armed ) {
 			await route.fallback();
@@ -1638,7 +1638,7 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 				}
 				pg.on( 'request', ( request ) => {
 					if (
-						request.url().includes( 'wp-sync' ) &&
+						request.url().includes( 'wp-rtc' ) &&
 						request.method() === 'POST'
 					) {
 						const body = request.postData() || '';
@@ -1656,7 +1656,7 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 				} );
 				pg.on( 'response', ( response ) => {
 					if (
-						response.url().includes( 'wp-sync' ) &&
+						response.url().includes( 'wp-rtc' ) &&
 						response.request().method() === 'POST'
 					) {
 						response
@@ -1684,7 +1684,7 @@ test.describe( `Collaboration fuzz [${ ENGINE }/${ TRANSPORT }]`, () => {
 					}
 				} );
 				pg.on( 'requestfailed', ( request ) => {
-					if ( request.url().includes( 'wp-sync' ) ) {
+					if ( request.url().includes( 'wp-rtc' ) ) {
 						consoleLog.push( {
 							kind: 'sync-reqfail',
 							page: index,

@@ -13,7 +13,7 @@ import { canApproveUnfilteredHtml, useDecideConflict } from './review-data';
  * preview.
  */
 const CANVAS_CSS = `
-	.gse-review-sequestered-block__preview {
+	.wp-rtc-review-sequestered-block__preview {
 		background: #f0f0f0;
 		border-radius: 2px;
 		box-sizing: border-box;
@@ -87,7 +87,7 @@ export function SequesteredBlockBody( { sequestration, canReview, onReview } ) {
 						</div>
 					) }
 				</div>
-				<pre className="gse-review-sequestered-block__preview">
+				<pre className="wp-rtc-review-sequestered-block__preview">
 					{ sequestration.proposed }
 				</pre>
 			</div>

@@ -56,18 +56,18 @@ export const POLLING_INTERVAL_BACKGROUND_TAB_IN_MS = 25 * 1000; // 25 seconds
 /**
  * Reads the polling interval chosen on Settings → Collaboration, in
  * milliseconds. The plugin injects it as an inline script before this bundle
- * loads (`window._gutenbergSyncEnginesSettings`). Returns 0 when the site
+ * loads (`window._wpRtcSettings`). Returns 0 when the site
  * keeps the defaults. Capped at the background-tab cadence so a large value
  * can never trip the server's 30-second awareness timeout.
  */
 function getSitePollingIntervalMs(): number {
 	const settings = (
 		window as {
-			_gutenbergSyncEnginesSettings?: {
+			_wpRtcSettings?: {
 				httpPollingIntervalMs?: number;
 			};
 		}
-	 )._gutenbergSyncEnginesSettings;
+	 )._wpRtcSettings;
 	const value = Number( settings?.httpPollingIntervalMs ?? 0 );
 
 	if ( ! Number.isFinite( value ) || value <= 0 ) {

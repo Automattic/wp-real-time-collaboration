@@ -16,8 +16,8 @@ WebSocket is the default, with polling as its backup. A tab polls until
 its socket opens and whenever the socket is down, and takes the room
 back onto the socket when it opens again. A site that has not said
 where its daemon is (the "WebSocket transport server" setting is empty,
-neither `WP_SYNC_WEBSOCKET_HOST` nor `WP_SYNC_WEBSOCKET_PORT` is
-defined, and nothing answers the `wp_sync_websocket_url` filter) is
+neither `WP_RTC_WEBSOCKET_HOST` nor `WP_RTC_WEBSOCKET_PORT` is
+defined, and nothing answers the `wp_rtc_websocket_url` filter) is
 taken to have no daemon: its tabs never ask for a socket token and
 poll, with the WebRTC advisory channel. So the default needs nothing
 from the host until a daemon is set up.
@@ -29,17 +29,17 @@ transport falls back to polling when its connection fails, and comes
 back when it can. Every setting is explained on the Settings → Collaboration screen
 itself. The options are plain WordPress options, so WP-CLI and the REST
 settings endpoint can set them: the on/off switch is `wp_rtc_enabled`,
-the engine is `wp_sync_engine`, the
-transport `gutenberg_sync_engines_transport`, the advisory channel
-`gutenberg_sync_engines_advisory_channel`, and the rest start with
-`gutenberg_sync_engines_`. `WP_COLLABORATION_TRANSPORT` (constant or
+the engine is `wp_rtc_engine`, the
+transport `wp_rtc_transport`, the advisory channel
+`wp_rtc_advisory_channel`, and the rest start with
+`wp_rtc_`. `WP_COLLABORATION_TRANSPORT` (constant or
 environment variable) takes priority over the stored transport choice,
-and the `wp_sync_websocket_url` filter over the daemon address.
+and the `wp_rtc_websocket_url` filter over the daemon address.
 
 ## Polling and the advisory channel
 
 Short polling is the transport every host can run: the editor sends
-`POST /wp-sync/v1/updates` on a timer with every open room's queued
+`POST /wp-rtc/v1/updates` on a timer with every open room's queued
 edits and gets back the rows it has not seen. Beside it, every editor
 tab opens an **advisory channel** to the other tabs on its post. The
 channel carries presence (who is here) and the sentence "I landed rows,
@@ -101,7 +101,7 @@ there. Every room response carries a generation token (the id of the
 room's first row), so a tab whose room was reset under it starts over
 from the saved post. The alternative, `keep`, lets the room live on as
 a shared working copy. Engines that keep data elsewhere clear it on the
-`gutenberg_sync_engines_room_reset` action. Rooms not tied to one post
+`wp_rtc_room_reset` action. Rooms not tied to one post
 (a taxonomy's list) are never reset this way.
 
 ## Presence on a slow connection
@@ -111,7 +111,7 @@ updates arrive before the other person moves on. Over polling every few
 seconds they always show a spot someone has left. Intent-log
 has no shared document to place them in at all. The "Awareness
 interval" setting replaces cursors with block presence: once per
-interval each editor names the block its selection is in (`gseBlock`),
+interval each editor names the block its selection is in (`wpRtcBlock`),
 sent only when it changes, and other editors see Gutenberg's block
 outline and an avatar badge on that block. The name travels with
 whatever already carries presence (the sync transport by default, or
@@ -123,7 +123,7 @@ does not hold yet shows nothing until the block arrives.
 
 - **Polling:** nothing. The WebRTC link needs the browsers to reach a
   STUN server (a public Google one by default;
-  `gutenberg_sync_engines_advisory_ice_servers` replaces the list) and
+  `wp_rtc_advisory_ice_servers` replaces the list) and
   falls back to the timer when they cannot.
 - **The sync daemon** (the `websocket` transport, and the
   `websocket-advisory` channel unless a relay serves it): a PHP command-line

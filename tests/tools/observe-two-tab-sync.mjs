@@ -10,7 +10,7 @@
  * errors. Scenarios: type (default), split, split-settled, empty-race.
  *
  * Requires: the env's admin login (WP_USERNAME/WP_PASSWORD, default
- * admin/password), collaboration enabled, wp_sync_engine=intent-log, and
+ * admin/password), collaboration enabled, wp_rtc_engine=intent-log, and
  * `@playwright/test` resolvable (run from the repo root). WP_BASE_URL
  * defaults to the wp-env tests site (http://localhost:8889); override it
  * when the env landed on another port.

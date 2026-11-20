@@ -15,7 +15,7 @@ import MergedResultEditor from './merged-result-editor';
 export function MissingBaseNotice() {
 	return (
 		<Notice
-			className="gse-review-merge-dialog__notice"
+			className="wp-rtc-review-merge-dialog__notice"
 			status="warning"
 			isDismissible={ false }
 		>
@@ -39,7 +39,7 @@ export function MissingBaseNotice() {
 export function ChangedWhileReviewingNotice( { children, onDismiss } ) {
 	return (
 		<Notice
-			className="gse-review-merge-dialog__notice"
+			className="wp-rtc-review-merge-dialog__notice"
 			status="warning"
 			onRemove={ onDismiss }
 		>
@@ -61,9 +61,11 @@ export function ChangedWhileReviewingNotice( { children, onDismiss } ) {
  */
 export function Pane( { label, onRestore, children } ) {
 	return (
-		<div className="gse-review-merge-dialog__pane">
-			<h3 className="gse-review-merge-dialog__pane-label">{ label }</h3>
-			<div className="gse-review-merge-dialog__pane-content">
+		<div className="wp-rtc-review-merge-dialog__pane">
+			<h3 className="wp-rtc-review-merge-dialog__pane-label">
+				{ label }
+			</h3>
+			<div className="wp-rtc-review-merge-dialog__pane-content">
 				{ children }
 			</div>
 			<Button
@@ -178,9 +180,9 @@ export function MergeDialogBody( {
 	};
 
 	return (
-		<div className="gse-review-merge-dialog__body">
+		<div className="wp-rtc-review-merge-dialog__body">
 			<BlockDiffResources />
-			<p className="gse-review-merge-dialog__description">
+			<p className="wp-rtc-review-merge-dialog__description">
 				{ __(
 					'These edits could not be merged automatically. Compare the versions and choose what to keep.'
 				) }
@@ -204,7 +206,7 @@ export function MergeDialogBody( {
 					) }
 				</ChangedWhileReviewingNotice>
 			) }
-			<div className="gse-review-merge-dialog__panes">
+			<div className="wp-rtc-review-merge-dialog__panes">
 				<Pane
 					label={ proposedLabel }
 					onRestore={ () => restore( 'proposed', proposed ) }
@@ -224,8 +226,8 @@ export function MergeDialogBody( {
 					/>
 				</Pane>
 			</div>
-			<div className="gse-review-merge-dialog__merged">
-				<h3 className="gse-review-merge-dialog__pane-label">
+			<div className="wp-rtc-review-merge-dialog__merged">
+				<h3 className="wp-rtc-review-merge-dialog__pane-label">
 					{ __( 'Merged result' ) }
 				</h3>
 				<MergedResultEditor
@@ -233,9 +235,9 @@ export function MergeDialogBody( {
 					onChange={ onEditMerged }
 					templateLock={ templateLock }
 				/>
-				<p className="gse-review-merge-dialog__help">{ help }</p>
+				<p className="wp-rtc-review-merge-dialog__help">{ help }</p>
 			</div>
-			<div className="gse-review-merge-dialog__actions">
+			<div className="wp-rtc-review-merge-dialog__actions">
 				<Button
 					__next40pxDefaultSize
 					variant="tertiary"
@@ -295,9 +297,9 @@ export default function CollaborationMergeDialog( {
 	onClose,
 } ) {
 	const proposedLabel = useProposedLabel( conflict.authorId );
-	let className = 'gse-review-merge-dialog';
+	let className = 'wp-rtc-review-merge-dialog';
 	if ( isSection ) {
-		className += ' gse-review-merge-dialog--section';
+		className += ' wp-rtc-review-merge-dialog--section';
 	}
 	let templateLock = 'all';
 	let help = __(

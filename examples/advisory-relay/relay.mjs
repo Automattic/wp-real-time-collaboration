@@ -10,19 +10,19 @@
  * Environment variables:
  *   HOST				    default: localhost
  *   PORT                                   default: 8790
- *   WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET  the secret WordPress signs with
+ *   WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET  the secret WordPress signs with
  */
 
 import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer } from 'ws';
 
-const SECRET = process.env.WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET;
+const SECRET = process.env.WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET;
 const PORT = Number( process.env.PORT || 8790 );
 
 if ( ! SECRET ) {
 	// eslint-disable-next-line no-console
-	console.error( 'Set WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET.' );
+	console.error( 'Set WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET.' );
 	process.exit( 1 );
 }
 
@@ -238,7 +238,7 @@ const server = createServer( ( request, response ) => {
 	if (
 		request.method === 'GET' &&
 		request.url === '/bench-metrics' &&
-		process.env.GSE_BENCH_METRICS === '1'
+		process.env.WP_RTC_BENCH_METRICS === '1'
 	) {
 		const cpu = process.cpuUsage();
 		response.writeHead( 200, {
@@ -268,20 +268,20 @@ const wss = new WebSocketServer( {
 	noServer: true,
 	maxPayload: 64 * 1024,
 	// Echo the base subprotocol only, never the access-token entry.
-	handleProtocols: ( offered ) => offered.has( 'wp-sync' ) && 'wp-sync',
+	handleProtocols: ( offered ) => offered.has( 'wp-rtc' ) && 'wp-rtc',
 } );
 
 server.on( 'upgrade', ( request, socket, head ) => {
 	// The access token rides the subprotocol offer, never the URL:
-	// `Sec-WebSocket-Protocol: wp-sync, wp-sync-token.<token>`.
+	// `Sec-WebSocket-Protocol: wp-rtc, wp-rtc-token.<token>`.
 	const offers = String( request.headers[ 'sec-websocket-protocol' ] )
 		.split( ',' )
 		.map( ( offer ) => offer.trim() );
 	const token = offers
-		.find( ( offer ) => offer.startsWith( 'wp-sync-token.' ) )
-		?.slice( 'wp-sync-token.'.length );
+		.find( ( offer ) => offer.startsWith( 'wp-rtc-token.' ) )
+		?.slice( 'wp-rtc-token.'.length );
 	const claims =
-		offers.includes( 'wp-sync' ) && token && verifyAccessToken( token );
+		offers.includes( 'wp-rtc' ) && token && verifyAccessToken( token );
 	if ( ! claims ) {
 		socket.end( 'HTTP/1.1 403 Forbidden\r\n\r\n' );
 		return;

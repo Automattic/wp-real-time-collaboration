@@ -35,7 +35,7 @@ async function countSyncRequests( page: Page, windowMs: number ) {
 	const onRequest = ( request: { url: () => string } ) => {
 		// Matched without slashes: without pretty permalinks the route is
 		// URL-encoded inside `?rest_route=`.
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			count++;
 		}
 	};

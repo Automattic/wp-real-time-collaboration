@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name: Gutenberg Sync Engines benchmark measurement (mu)
- * Description: Whole-request server measurement for the host benchmark, following the community RTC performance harness's MU-plugin model. Measures ANY request tagged with X-RTC-Test — page loads, admin-ajax, REST — from mu-plugin load to shutdown, and works with the gutenberg-sync-engines plugin DEACTIVATED, which is what gives the benchmark's baseline phase real server-side CPU, memory, and worker numbers. Untagged requests pay one $_SERVER read. This repo's wp-env configs map this file into mu-plugins; on another site, copy it there yourself (it needs a plugin copy installed as "gutenberg-sync-engines" to load the log class from).
+ * Plugin Name: WP Real-Time Collaboration benchmark measurement (mu)
+ * Description: Whole-request server measurement for the host benchmark, following the community RTC performance harness's MU-plugin model. Measures ANY request tagged with X-RTC-Test — page loads, admin-ajax, REST — from mu-plugin load to shutdown, and works with the wp-rtc plugin DEACTIVATED, which is what gives the benchmark's baseline phase real server-side CPU, memory, and worker numbers. Untagged requests pay one $_SERVER read. This repo's wp-env configs map this file into mu-plugins; on another site, copy it there yourself (it needs a plugin copy installed as "wp-rtc" to load the log class from).
  * Version: 0.0.0
- * Author: Gutenberg Sync Engines benchmarks
+ * Author: WP Real-Time Collaboration benchmarks
  * License: GPL-2.0-or-later
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // production-shaped site.
 if (
 	! in_array( wp_get_environment_type(), array( 'local', 'development' ), true )
-	&& ! defined( 'GUTENBERG_SYNC_ENGINES_DIAGNOSTICS' )
+	&& ! defined( 'WP_RTC_DIAGNOSTICS' )
 ) {
 	return;
 }
@@ -31,12 +31,12 @@ if ( '1' !== ( $_SERVER['HTTP_X_RTC_TEST'] ?? '' ) && '1' !== ( $_GET['_rtctest'
 // The log class lives in the plugin directory, which is mounted whether or
 // not the plugin is ACTIVE — that is the point: the baseline phase runs
 // with it deactivated.
-$gutenberg_sync_engines_request_log = WP_PLUGIN_DIR . '/wp-real-time-collaboration/includes/diagnostics/class-gutenberg-sync-engines-request-log.php';
-if ( ! file_exists( $gutenberg_sync_engines_request_log ) ) {
+$wp_rtc_request_log = WP_PLUGIN_DIR . '/wp-real-time-collaboration/includes/diagnostics/class-wp-rtc-request-log.php';
+if ( ! file_exists( $wp_rtc_request_log ) ) {
 	return;
 }
-require_once $gutenberg_sync_engines_request_log;
-if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
+require_once $wp_rtc_request_log;
+if ( ! class_exists( 'WP_RTC_Request_Log' ) ) {
 	return;
 }
 
@@ -50,7 +50,7 @@ if ( ! class_exists( 'Gutenberg_Sync_Engines_Request_Log' ) ) {
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only counters on a diagnostics-only lane.
 if ( isset( $_GET['_rtcdbio'] ) ) {
 	header( 'Content-Type: application/json' );
-	echo wp_json_encode( Gutenberg_Sync_Engines_Request_Log::db_io_counters() );
+	echo wp_json_encode( WP_RTC_Request_Log::db_io_counters() );
 	exit;
 }
 
@@ -64,11 +64,11 @@ if ( isset( $_GET['_rtcclock'] ) ) {
 	echo wp_json_encode(
 		array(
 			'at_ms'            => microtime( true ) * 1000,
-			'clock_id'         => Gutenberg_Sync_Engines_Request_Log::clock_id(),
+			'clock_id'         => WP_RTC_Request_Log::clock_id(),
 			'timeline_version' => 1,
 		)
 	);
 	exit;
 }
 
-( new Gutenberg_Sync_Engines_Request_Log() )->capture_whole_request();
+( new WP_RTC_Request_Log() )->capture_whole_request();

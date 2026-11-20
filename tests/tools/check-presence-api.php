@@ -11,12 +11,12 @@
  *
  * Exits non-zero on the first thing that does not hold.
  *
- * @package gutenberg-sync-engines
+ * @package WPRealTimeCollaboration
  */
 
 global $wpdb;
 
-$gse_failures = 0;
+$wp_rtc_failures = 0;
 
 /**
  * Prints one result and remembers a failure.
@@ -25,11 +25,11 @@ $gse_failures = 0;
  * @param string $label  What was checked.
  * @param string $detail Optional context to print alongside.
  */
-function gse_presence_check( $ok, $label, $detail = '' ) {
-	global $gse_failures;
+function wp_rtc_presence_check( $ok, $label, $detail = '' ) {
+	global $wp_rtc_failures;
 
 	if ( ! $ok ) {
-		++$gse_failures;
+		++$wp_rtc_failures;
 	}
 
 	WP_CLI::log( ( $ok ? '  ok   ' : '  FAIL ' ) . $label . ( '' !== $detail ? " -- {$detail}" : '' ) );
@@ -38,29 +38,29 @@ function gse_presence_check( $ok, $label, $detail = '' ) {
 if ( ! function_exists( 'wp_set_presence' ) ) {
 	WP_CLI::error( 'The Presence API plugin is not active on this site.' );
 }
-if ( ! class_exists( 'WP_Sync_Awareness' ) ) {
+if ( ! class_exists( 'WP_RTC_Awareness' ) ) {
 	WP_CLI::error( 'This plugin is not active on this site.' );
 }
 
-$gse_user_id = (int) get_users(
+$wp_rtc_user_id = (int) get_users(
 	array(
 		'role'   => 'administrator',
 		'number' => 1,
 		'fields' => 'ID',
 	)
 )[0];
-wp_set_current_user( $gse_user_id );
+wp_set_current_user( $wp_rtc_user_id );
 
-$gse_post_id = wp_insert_post(
+$wp_rtc_post_id = wp_insert_post(
 	array(
 		'post_title'  => 'presence api check',
 		'post_status' => 'draft',
 	)
 );
-$gse_room    = 'postType/post:' . $gse_post_id;
-$gse_state   = array(
-	'name'     => 'Ada',
-	'gseBlock' => 'p1',
+$wp_rtc_room    = 'postType/post:' . $wp_rtc_post_id;
+$wp_rtc_state   = array(
+	'name'       => 'Ada',
+	'wpRtcBlock' => 'p1',
 );
 
 /**
@@ -70,7 +70,7 @@ $gse_state   = array(
  * @param string $client_id The row's client id.
  * @return object|null The row, or null when there is none.
  */
-function gse_presence_row( $room, $client_id ) {
+function wp_rtc_presence_row( $room, $client_id ) {
 	global $wpdb;
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -80,92 +80,92 @@ function gse_presence_row( $room, $client_id ) {
 }
 
 // The seam picks the backend up at all.
-gse_presence_check( WP_Sync_Presence_API_Awareness_Backend::is_available(), 'the backend reports itself available' );
-gse_presence_check( WP_Sync_Awareness::has_substitute_backend(), 'the seam picked the Presence API backend' );
+wp_rtc_presence_check( WP_RTC_Presence_API_Awareness_Backend::is_available(), 'the backend reports itself available' );
+wp_rtc_presence_check( WP_RTC_Awareness::has_substitute_backend(), 'the seam picked the Presence API backend' );
 
-$gse_awareness = new WP_Sync_Awareness( wp_rtc_get_storage() );
+$wp_rtc_awareness = new WP_RTC_Awareness( wp_rtc_get_storage() );
 
 // A write lands in the real table and comes back out of it unchanged.
-$gse_entries = $gse_awareness->put( $gse_room, 7, $gse_state, $gse_user_id, 30 );
-gse_presence_check( array( 7 ) === array_column( $gse_entries, 'client_id' ), 'a write returns the room' );
-gse_presence_check( $gse_state === $gse_entries[0]['state'], 'state round trips', wp_json_encode( $gse_entries[0]['state'] ) );
-gse_presence_check( $gse_user_id === $gse_entries[0]['wp_user_id'], 'the user id round trips' );
-gse_presence_check( null !== gse_presence_row( $gse_room, 'gse-7' ), 'the row is in wp_presence' );
-gse_presence_check( array() === wp_rtc_get_storage()->get_awareness_state( $gse_room ), 'the room array stayed empty' );
+$wp_rtc_entries = $wp_rtc_awareness->put( $wp_rtc_room, 7, $wp_rtc_state, $wp_rtc_user_id, 30 );
+wp_rtc_presence_check( array( 7 ) === array_column( $wp_rtc_entries, 'client_id' ), 'a write returns the room' );
+wp_rtc_presence_check( $wp_rtc_state === $wp_rtc_entries[0]['state'], 'state round trips', wp_json_encode( $wp_rtc_entries[0]['state'] ) );
+wp_rtc_presence_check( $wp_rtc_user_id === $wp_rtc_entries[0]['wp_user_id'], 'the user id round trips' );
+wp_rtc_presence_check( null !== wp_rtc_presence_row( $wp_rtc_room, 'wp-rtc-7' ), 'the row is in wp_presence' );
+wp_rtc_presence_check( array() === wp_rtc_get_storage()->get_awareness_state( $wp_rtc_room ), 'the room array stayed empty' );
 
 // One client's write leaves another's row alone.
-$gse_entries = $gse_awareness->put( $gse_room, 9, array( 'name' => 'Grace' ), $gse_user_id, 30 );
-gse_presence_check( array( 7, 9 ) === array_column( $gse_entries, 'client_id' ), 'two clients coexist' );
+$wp_rtc_entries = $wp_rtc_awareness->put( $wp_rtc_room, 9, array( 'name' => 'Grace' ), $wp_rtc_user_id, 30 );
+wp_rtc_presence_check( array( 7, 9 ) === array_column( $wp_rtc_entries, 'client_id' ), 'two clients coexist' );
 
 // An idle client repeating its state writes nothing.
-$gse_writes = 0;
+$wp_rtc_writes = 0;
 add_filter(
 	'query',
-	static function ( $query ) use ( &$gse_writes ) {
+	static function ( $query ) use ( &$wp_rtc_writes ) {
 		if ( false !== stripos( $query, 'INSERT INTO' ) && false !== stripos( $query, 'presence' ) ) {
-			++$gse_writes;
+			++$wp_rtc_writes;
 		}
 		return $query;
 	}
 );
-$gse_awareness->put( $gse_room, 7, $gse_state, $gse_user_id, 30 );
-gse_presence_check( 0 === $gse_writes, 'an idle repeat is read-only', "writes={$gse_writes}" );
+$wp_rtc_awareness->put( $wp_rtc_room, 7, $wp_rtc_state, $wp_rtc_user_id, 30 );
+wp_rtc_presence_check( 0 === $wp_rtc_writes, 'an idle repeat is read-only', "writes={$wp_rtc_writes}" );
 
 // A quiet client past this backend's refresh age IS rewritten, at the oldest
 // age the Presence API's own skip would still have left the row alone. Both
 // ages are read off the code rather than guessed, and the check below pins
 // that the one is in fact past the other.
-$gse_refresh = max( 1, intdiv( 30, WP_Sync_Presence_API_Awareness_Backend::REFRESH_FRACTION ) );
-$gse_skip    = function_exists( 'wp_presence_refresh_threshold' ) ? wp_presence_refresh_threshold() : $gse_refresh;
+$wp_rtc_refresh = max( 1, intdiv( 30, WP_RTC_Presence_API_Awareness_Backend::REFRESH_FRACTION ) );
+$wp_rtc_skip    = function_exists( 'wp_presence_refresh_threshold' ) ? wp_presence_refresh_threshold() : $wp_rtc_refresh;
 
-gse_presence_check(
-	$gse_skip >= $gse_refresh,
+wp_rtc_presence_check(
+	$wp_rtc_skip >= $wp_rtc_refresh,
 	'the Presence API would skip a row this backend refreshes',
-	"skip={$gse_skip}s refresh={$gse_refresh}s"
+	"skip={$wp_rtc_skip}s refresh={$wp_rtc_refresh}s"
 );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 $wpdb->query(
 	$wpdb->prepare(
 		"UPDATE {$wpdb->presence} SET date_gmt = %s WHERE room = %s AND client_id = %s",
-		gmdate( 'Y-m-d H:i:s', time() - $gse_skip ),
-		$gse_room,
-		'gse-7'
+		gmdate( 'Y-m-d H:i:s', time() - $wp_rtc_skip ),
+		$wp_rtc_room,
+		'wp-rtc-7'
 	)
 );
 
-$gse_awareness->put( $gse_room, 7, $gse_state, $gse_user_id, 30 );
-$gse_age = time() - (int) strtotime( gse_presence_row( $gse_room, 'gse-7' )->date_gmt . ' UTC' );
-gse_presence_check( $gse_age <= 1, 'a quiet client is refreshed anyway', "age={$gse_age}s" );
+$wp_rtc_awareness->put( $wp_rtc_room, 7, $wp_rtc_state, $wp_rtc_user_id, 30 );
+$wp_rtc_age = time() - (int) strtotime( wp_rtc_presence_row( $wp_rtc_room, 'wp-rtc-7' )->date_gmt . ' UTC' );
+wp_rtc_presence_check( $wp_rtc_age <= 1, 'a quiet client is refreshed anyway', "age={$wp_rtc_age}s" );
 
 // Rows the Presence API keeps for its own screens are not collaborators,
 // and a collaborator leaving does not disturb them.
-wp_set_presence( $gse_room, 'editor-' . $gse_user_id, array(), $gse_user_id );
-gse_presence_check( array( 7, 9 ) === array_column( $gse_awareness->entries( $gse_room, 30 ), 'client_id' ), 'rows without the gse- prefix are ignored' );
+wp_set_presence( $wp_rtc_room, 'editor-' . $wp_rtc_user_id, array(), $wp_rtc_user_id );
+wp_rtc_presence_check( array( 7, 9 ) === array_column( $wp_rtc_awareness->entries( $wp_rtc_room, 30 ), 'client_id' ), 'rows without the wp-rtc- prefix are ignored' );
 
-$gse_entries = $gse_awareness->forget( $gse_room, 7, 30 );
-gse_presence_check( array( 9 ) === array_column( $gse_entries, 'client_id' ), 'leaving removes one client' );
-gse_presence_check( null !== gse_presence_row( $gse_room, 'editor-' . $gse_user_id ), "the Presence API's own row survives" );
+$wp_rtc_entries = $wp_rtc_awareness->forget( $wp_rtc_room, 7, 30 );
+wp_rtc_presence_check( array( 9 ) === array_column( $wp_rtc_entries, 'client_id' ), 'leaving removes one client' );
+wp_rtc_presence_check( null !== wp_rtc_presence_row( $wp_rtc_room, 'editor-' . $wp_rtc_user_id ), "the Presence API's own row survives" );
 
-$gse_tab_list = apply_filters( 'wp_sync_tab_list_backend', null );
-gse_presence_check( $gse_tab_list instanceof WP_Sync_Presence_API_Tab_List_Backend, 'the seam picked the Presence API tab list' );
+$wp_rtc_tab_list = apply_filters( 'wp_rtc_tab_list_backend', null );
+wp_rtc_presence_check( $wp_rtc_tab_list instanceof WP_RTC_Presence_API_Tab_List_Backend, 'the seam picked the Presence API tab list' );
 
-$gse_ttl = Gutenberg_Sync_Engines_Advisory_Presence::PRESENCE_TTL;
-$gse_tab = array(
+$wp_rtc_ttl = WP_RTC_Advisory_Presence::PRESENCE_TTL;
+$wp_rtc_tab = array(
 	'c' => 'Ada',
 	'j' => 1,
 );
-$gse_tab_list->put( $gse_room, 'tok-a', $gse_tab, $gse_user_id, $gse_ttl );
-$gse_tab_list->put( $gse_room, 'tok-b', array( 'c' => 'Grace' ), $gse_user_id, $gse_ttl );
-$gse_tabs = $gse_tab_list->tabs( $gse_room, $gse_ttl );
-gse_presence_check( array( 'tok-a', 'tok-b' ) === array_keys( $gse_tabs ), 'two tabs coexist', wp_json_encode( array_keys( $gse_tabs ) ) );
-gse_presence_check( $gse_tab === $gse_tabs['tok-a']['state'], 'tab state round trips' );
-gse_presence_check( $gse_user_id === $gse_tabs['tok-a']['user_id'], 'the tab user id round trips' );
+$wp_rtc_tab_list->put( $wp_rtc_room, 'tok-a', $wp_rtc_tab, $wp_rtc_user_id, $wp_rtc_ttl );
+$wp_rtc_tab_list->put( $wp_rtc_room, 'tok-b', array( 'c' => 'Grace' ), $wp_rtc_user_id, $wp_rtc_ttl );
+$wp_rtc_tabs = $wp_rtc_tab_list->tabs( $wp_rtc_room, $wp_rtc_ttl );
+wp_rtc_presence_check( array( 'tok-a', 'tok-b' ) === array_keys( $wp_rtc_tabs ), 'two tabs coexist', wp_json_encode( array_keys( $wp_rtc_tabs ) ) );
+wp_rtc_presence_check( $wp_rtc_tab === $wp_rtc_tabs['tok-a']['state'], 'tab state round trips' );
+wp_rtc_presence_check( $wp_rtc_user_id === $wp_rtc_tabs['tok-a']['user_id'], 'the tab user id round trips' );
 
 // The row lives as long as the channel asked, not the site's shorter default.
-$gse_row      = gse_presence_row( $gse_room, 'gsetab-tok-a' );
-$gse_lifetime = null === $gse_row ? 0 : strtotime( $gse_row->expires_gmt . ' UTC' ) - strtotime( $gse_row->date_gmt . ' UTC' );
-gse_presence_check( $gse_ttl === $gse_lifetime, 'a tab row lasts as long as asked', "lifetime={$gse_lifetime}s" );
+$wp_rtc_row      = wp_rtc_presence_row( $wp_rtc_room, 'wp-rtctab-tok-a' );
+$wp_rtc_lifetime = null === $wp_rtc_row ? 0 : strtotime( $wp_rtc_row->expires_gmt . ' UTC' ) - strtotime( $wp_rtc_row->date_gmt . ' UTC' );
+wp_rtc_presence_check( $wp_rtc_ttl === $wp_rtc_lifetime, 'a tab row lasts as long as asked', "lifetime={$wp_rtc_lifetime}s" );
 
 // A refresh the Presence API would skip as too recent is still written.
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -173,26 +173,26 @@ $wpdb->query(
 	$wpdb->prepare(
 		"UPDATE {$wpdb->presence} SET date_gmt = %s WHERE room = %s AND client_id = %s",
 		gmdate( 'Y-m-d H:i:s', time() - 5 ),
-		$gse_room,
-		'gsetab-tok-a'
+		$wp_rtc_room,
+		'wp-rtctab-tok-a'
 	)
 );
-$gse_tab_list->put( $gse_room, 'tok-a', $gse_tab, $gse_user_id, $gse_ttl );
-$gse_age = time() - (int) strtotime( gse_presence_row( $gse_room, 'gsetab-tok-a' )->date_gmt . ' UTC' );
-gse_presence_check( $gse_age <= 1, 'a tab refresh is always written', "age={$gse_age}s" );
+$wp_rtc_tab_list->put( $wp_rtc_room, 'tok-a', $wp_rtc_tab, $wp_rtc_user_id, $wp_rtc_ttl );
+$wp_rtc_age = time() - (int) strtotime( wp_rtc_presence_row( $wp_rtc_room, 'wp-rtctab-tok-a' )->date_gmt . ' UTC' );
+wp_rtc_presence_check( $wp_rtc_age <= 1, 'a tab refresh is always written', "age={$wp_rtc_age}s" );
 
-gse_presence_check( array( 9 ) === array_column( $gse_awareness->entries( $gse_room, 30 ), 'client_id' ), 'awareness ignores tab rows' );
-gse_presence_check( ! isset( $gse_tabs['9'] ) && 2 === count( $gse_tabs ), 'the tab list ignores awareness rows' );
+wp_rtc_presence_check( array( 9 ) === array_column( $wp_rtc_awareness->entries( $wp_rtc_room, 30 ), 'client_id' ), 'awareness ignores tab rows' );
+wp_rtc_presence_check( ! isset( $wp_rtc_tabs['9'] ) && 2 === count( $wp_rtc_tabs ), 'the tab list ignores awareness rows' );
 
-$gse_tab_list->forget( $gse_room, 'tok-b' );
-gse_presence_check( array( 'tok-a' ) === array_keys( $gse_tab_list->tabs( $gse_room, $gse_ttl ) ), 'leaving removes one tab' );
+$wp_rtc_tab_list->forget( $wp_rtc_room, 'tok-b' );
+wp_rtc_presence_check( array( 'tok-a' ) === array_keys( $wp_rtc_tab_list->tabs( $wp_rtc_room, $wp_rtc_ttl ) ), 'leaving removes one tab' );
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->presence} WHERE room = %s", $gse_room ) );
-wp_delete_post( $gse_post_id, true );
+$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->presence} WHERE room = %s", $wp_rtc_room ) );
+wp_delete_post( $wp_rtc_post_id, true );
 
-if ( $gse_failures > 0 ) {
-	WP_CLI::error( $gse_failures . ' check(s) failed.' );
+if ( $wp_rtc_failures > 0 ) {
+	WP_CLI::error( $wp_rtc_failures . ' check(s) failed.' );
 }
 
 WP_CLI::success( 'Awareness and the tab list work against the real Presence API.' );

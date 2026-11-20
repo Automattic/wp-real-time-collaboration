@@ -23,7 +23,7 @@ Exit code is non-zero when any failure reproduces.
 
 Websocket combos need host port 8787 for a daemon serving the TESTS
 database, so the runner removes the dev env's auto-started daemon
-(`wp-sync-ws-daemon`, which serves the DEV database) for the duration of
+(`wp-rtc-ws-daemon`, which serves the DEV database) for the duration of
 the run; `npm run env start` or `npm run rtc:ws` brings it back.
 
 Common variations:
@@ -123,8 +123,8 @@ few durable invariants instead of many brittle UI details.*
 
 - **The matrix is the point.** Upstream fuzzed one merge implementation over
   two transports. Here engines and transports are pluggable, so the runner
-  sweeps the cross product: it flips `wp_sync_engine` and
-  `gutenberg_sync_engines_transport` on the tests site via wp-cli between
+  sweeps the cross product: it flips `wp_rtc_engine` and
+  `wp_rtc_transport` on the tests site via wp-cli between
   combos, and empties every room (`wp collaboration storage reset`) so no combo inherits another
   engine's room lineage (rooms are engine-stamped; the websocket daemon
   strips the stamps that let HTTP transports heal stale collection rooms).

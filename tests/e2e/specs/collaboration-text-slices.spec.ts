@@ -17,14 +17,14 @@ for ( const engine of [ 'intent-log' ] ) {
 			await requestUtils.rest( {
 				method: 'POST',
 				path: '/wp/v2/settings',
-				data: { wp_sync_engine: engine },
+				data: { wp_rtc_engine: engine },
 			} );
 		} );
 		test.afterAll( async ( { requestUtils } ) => {
 			await requestUtils.rest( {
 				method: 'POST',
 				path: '/wp/v2/settings',
-				data: { wp_sync_engine: 'intent-log' },
+				data: { wp_rtc_engine: 'intent-log' },
 			} );
 		} );
 		for ( const edit of [ 'append', 'format' ] ) {
@@ -53,7 +53,7 @@ for ( const engine of [ 'intent-log' ] ) {
 				const held = new Promise< void >( ( resolve ) => {
 					release = resolve;
 				} );
-				await page2.route( /wp-sync|autosaves/, async ( route ) => {
+				await page2.route( /wp-rtc|autosaves/, async ( route ) => {
 					await held;
 					await route.continue();
 				} );
@@ -68,7 +68,7 @@ for ( const engine of [ 'intent-log' ] ) {
 					}
 					const splitAccepted = editor.page.waitForResponse(
 						( response ) =>
-							/wp-sync|autosaves/.test( response.url() ) &&
+							/wp-rtc|autosaves/.test( response.url() ) &&
 							response.status() === 200 &&
 							( engine !== 'intent-log' ||
 								(

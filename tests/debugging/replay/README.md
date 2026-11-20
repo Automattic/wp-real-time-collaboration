@@ -39,7 +39,7 @@ node tests/debugging/replay/replay.mjs my-session-clean.json --speed=1
 ## The fixture format
 
 The export is the community harness's `capture-export` JSON — one frame per
-captured `/wp-sync/` request:
+captured `/wp-rtc/` request:
 
 ```json
 {
@@ -104,7 +104,7 @@ list. Environment: `WP_BASE_URL` (default
 
 Capture and the per-request benchmark log live in
 `includes/diagnostics/` and load only on local/development sites or under
-the `GUTENBERG_SYNC_ENGINES_DIAGNOSTICS` constant — never in the
+the `WP_RTC_DIAGNOSTICS` constant — never in the
 production path. Replayed requests carry the community harness's tags
 (`X-RTC-Test`, `X-RTC-Scenario`), so the request log records dispatch
 wall/CPU time, `db_queries`, `db_time_ms` (needs `SAVEQUERIES`), memory,

@@ -2,7 +2,7 @@
 /**
  * WP_WebSocket_Access_Token class
  *
- * @package gutenberg-sync-engines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! class_exists( 'WP_WebSocket_Access_Token' ) ) {
@@ -38,8 +38,8 @@ if ( ! class_exists( 'WP_WebSocket_Access_Token' ) ) {
 	 * other.
 	 *
 	 * Access-token mode is on when a secret is configured: the
-	 * `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` constant, else the environment
-	 * variable of the same name, else the `wp_sync_websocket_access_token_secret`
+	 * `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` constant, else the environment
+	 * variable of the same name, else the `wp_rtc_websocket_access_token_secret`
 	 * filter. Use at least 32 random bytes and rotate by restarting the
 	 * relay with the new value; access tokens outlive a rotation by at most
 	 * their two-minute lifetime.
@@ -111,10 +111,10 @@ if ( ! class_exists( 'WP_WebSocket_Access_Token' ) ) {
 		 */
 		public static function secret(): string {
 			$secret = '';
-			if ( defined( 'WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET' ) && is_string( WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET ) ) {
-				$secret = WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET;
+			if ( defined( 'WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET' ) && is_string( WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET ) ) {
+				$secret = WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET;
 			} else {
-				$from_env = getenv( 'WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET' );
+				$from_env = getenv( 'WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET' );
 				if ( is_string( $from_env ) ) {
 					$secret = $from_env;
 				}
@@ -131,7 +131,7 @@ if ( ! class_exists( 'WP_WebSocket_Access_Token' ) ) {
 			 *
 			 * @param string $secret The secret, or '' for off.
 			 */
-			$secret = apply_filters( 'wp_sync_websocket_access_token_secret', $secret );
+			$secret = apply_filters( 'wp_rtc_websocket_access_token_secret', $secret );
 
 			return is_string( $secret ) ? $secret : '';
 		}

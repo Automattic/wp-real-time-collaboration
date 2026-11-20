@@ -77,6 +77,6 @@ export const withSpanBlocksFolded = createHigherOrderComponent(
 
 addFilter(
 	'editor.BlockListBlock',
-	'gutenberg-sync-engines/span-blocks',
+	'wp-rtc/span-blocks',
 	withSpanBlocksFolded
 );

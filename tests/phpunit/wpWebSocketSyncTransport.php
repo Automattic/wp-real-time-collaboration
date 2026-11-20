@@ -23,8 +23,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 	}
 
 	private function transport(): WP_WebSocket_Sync_Transport {
-		$storage = new WP_Sync_Table_Storage();
-		return new WP_WebSocket_Sync_Transport( $storage, new WP_Sync_Engine_Registry( $storage ) );
+		$storage = new WP_RTC_Table_Storage();
+		return new WP_WebSocket_Sync_Transport( $storage, new WP_RTC_Engine_Registry( $storage ) );
 	}
 
 	public function test_slug_and_protocol() {
@@ -36,7 +36,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 	public function test_registers_the_one_time_token_route() {
 		$this->transport()->register_routes();
 		$this->assertArrayHasKey(
-			'/wp-sync/v1/ws-token',
+			'/wp-rtc/v1/ws-token',
 			rest_get_server()->get_routes()
 		);
 	}
@@ -48,7 +48,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		);
 
 		add_filter(
-			'wp_sync_websocket_url',
+			'wp_rtc_websocket_url',
 			static fn() => 'wss://example.com/collab'
 		);
 		$this->assertSame(
@@ -58,22 +58,22 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 	}
 
 	public function test_the_websocket_url_setting_wins_over_the_default_and_the_filter_wins_over_both() {
-		$option = Gutenberg_Sync_Engines_Settings::WEBSOCKET_URL_OPTION;
+		$option = WP_RTC_Settings::WEBSOCKET_URL_OPTION;
 
 		update_option( $option, 'wss://relay.example.com/collab' );
 		$this->assertSame( 'wss://relay.example.com/collab', WP_WebSocket_Sync_Transport::get_socket_url() );
 
 		// Only ws:// and wss:// survive sanitization; anything else means
 		// the default.
-		$this->assertSame( '', Gutenberg_Sync_Engines_Settings::sanitize_websocket_url( 'https://relay.example.com' ) );
-		$this->assertSame( '', Gutenberg_Sync_Engines_Settings::sanitize_websocket_url( '  ' ) );
-		$this->assertSame( 'ws://localhost:8790', Gutenberg_Sync_Engines_Settings::sanitize_websocket_url( ' ws://localhost:8790 ' ) );
+		$this->assertSame( '', WP_RTC_Settings::sanitize_websocket_url( 'https://relay.example.com' ) );
+		$this->assertSame( '', WP_RTC_Settings::sanitize_websocket_url( '  ' ) );
+		$this->assertSame( 'ws://localhost:8790', WP_RTC_Settings::sanitize_websocket_url( ' ws://localhost:8790 ' ) );
 		update_option( $option, 'javascript:alert(1)' );
 		$this->assertStringStartsWith( 'ws://', WP_WebSocket_Sync_Transport::get_socket_url() );
 
 		// Code still wins: a host that filters the URL keeps it.
 		update_option( $option, 'wss://relay.example.com/collab' );
-		add_filter( 'wp_sync_websocket_url', static fn() => 'wss://code.example.com' );
+		add_filter( 'wp_rtc_websocket_url', static fn() => 'wss://code.example.com' );
 		$this->assertSame( 'wss://code.example.com', WP_WebSocket_Sync_Transport::get_socket_url() );
 		delete_option( $option );
 	}
@@ -94,14 +94,14 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		// The daemon is constructed over the polling server (the shared
 		// engine seam), NOT a Yjs-specific core — the whole point of the
 		// port. Constructing it must not fatal.
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 		$sync    = new WP_RTC_HTTP_Polling_Sync_Server( $storage );
 		$server  = new WP_WebSocket_Sync_Server( $sync, '127.0.0.1', 8799 );
 		$this->assertInstanceOf( 'WP_WebSocket_Sync_Server', $server );
 	}
 
 	public function test_the_daemon_refuses_a_request_that_does_not_ask_to_upgrade() {
-		$server  = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() ), '127.0.0.1', 8799 );
+		$server  = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() ), '127.0.0.1', 8799 );
 		$conn    = new class() extends WP_WebSocket_Connection {
 			public array $response = array();
 			// phpcs:ignore Generic.CodeAnalysis.UselessOverridingMethod.Found -- No network socket in this test.
@@ -148,7 +148,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 	 * @return array|WP_Error Validated request or error.
 	 */
 	private function validate( array $room_request ) {
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 		$sync    = new WP_RTC_HTTP_Polling_Sync_Server( $storage );
 		$server  = new WP_WebSocket_Sync_Server( $sync, '127.0.0.1', 8799 );
 		$method  = new ReflectionMethod( WP_WebSocket_Sync_Server::class, 'validate_room_request' );
@@ -224,7 +224,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		$post_id = self::factory()->post->create( array( 'post_author' => $editor_id ) );
 		$room    = 'postType/post:' . $post_id;
 
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 		$sync    = new WP_RTC_HTTP_Polling_Sync_Server( $storage );
 
 		// Establish the room under the resolved (default) engine first.
@@ -271,8 +271,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		// so a client provably speaking the NEW engine must reset them
 		// instead of being fenced forever (there is no post lock to
 		// degrade to).
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
+		( new WP_RTC_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_rtc_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			$validated = $this->validate(
@@ -287,7 +287,7 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			);
 			$this->assertIsArray( $validated );
 
-			$storage = new WP_Sync_Table_Storage();
+			$storage = new WP_RTC_Table_Storage();
 			$sync    = new WP_RTC_HTTP_Polling_Sync_Server( $storage );
 			$result  = $sync->process_room_request( $validated );
 
@@ -296,12 +296,12 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			$this->assertIsArray( $result );
 			$this->assertSame(
 				WP_Intent_Log_Engine::SLUG,
-				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
+				( new WP_RTC_Table_Storage() )->get_room_engine( $room )
 			);
 			$this->assertNotEmpty( $result['updates'] );
 			$this->assertSame( WP_Intent_Log_Engine::UPDATE_TYPE_SNAPSHOT, $result['updates'][0]['type'] );
 		} finally {
-			delete_option( 'wp_sync_engine' );
+			delete_option( 'wp_rtc_engine' );
 			self::delete_user( $editor_id );
 		}
 	}
@@ -311,8 +311,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		wp_set_current_user( $editor_id );
 		$room = 'taxonomy/wp_pattern_category';
 
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
+		( new WP_RTC_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_rtc_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			// A stale tab still speaks the OLD engine after the switch: it
@@ -330,17 +330,17 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			);
 			$this->assertIsArray( $validated );
 
-			$sync   = new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
+			$sync   = new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() );
 			$result = $sync->process_room_request( $validated );
 
 			$this->assertWPError( $result );
 			$this->assertSame( 'rest_sync_engine_mismatch', $result->get_error_code() );
 			$this->assertSame(
 				Test_Opaque_Relay_Engine::SLUG,
-				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
+				( new WP_RTC_Table_Storage() )->get_room_engine( $room )
 			);
 		} finally {
-			delete_option( 'wp_sync_engine' );
+			delete_option( 'wp_rtc_engine' );
 			self::delete_user( $editor_id );
 		}
 	}
@@ -351,8 +351,8 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 		$post_id = self::factory()->post->create( array( 'post_author' => $editor_id ) );
 		$room    = 'postType/post:' . $post_id;
 
-		( new WP_Sync_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
-		update_option( 'wp_sync_engine', WP_Intent_Log_Engine::SLUG );
+		( new WP_RTC_Table_Storage() )->set_room_engine( $room, Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_rtc_engine', WP_Intent_Log_Engine::SLUG );
 
 		try {
 			// Per-post entity rooms can hold unsaved collaborative content:
@@ -370,17 +370,17 @@ class Test_WP_WebSocket_Sync_Transport extends WP_UnitTestCase {
 			);
 			$this->assertIsArray( $validated );
 
-			$sync   = new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() );
+			$sync   = new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() );
 			$result = $sync->process_room_request( $validated );
 
 			$this->assertWPError( $result );
 			$this->assertSame( 'rest_sync_engine_mismatch', $result->get_error_code() );
 			$this->assertSame(
 				Test_Opaque_Relay_Engine::SLUG,
-				( new WP_Sync_Table_Storage() )->get_room_engine( $room )
+				( new WP_RTC_Table_Storage() )->get_room_engine( $room )
 			);
 		} finally {
-			delete_option( 'wp_sync_engine' );
+			delete_option( 'wp_rtc_engine' );
 			self::delete_user( $editor_id );
 			wp_delete_post( $post_id, true );
 		}

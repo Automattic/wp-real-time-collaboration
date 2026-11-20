@@ -26,9 +26,9 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	 * top of every set_up — see the comment there for the hook-snapshot
 	 * timing this dances around.
 	 *
-	 * @param WP_Sync_Engine[] $engines Engines to register.
+	 * @param WP_RTC_Engine[] $engines Engines to register.
 	 * @param WP_RTC_Storage  $storage Storage backend.
-	 * @return WP_Sync_Engine[] Engines including the fixture.
+	 * @return WP_RTC_Engine[] Engines including the fixture.
 	 */
 	public static function register_fixture_engine( array $engines, WP_RTC_Storage $storage ): array {
 		$engines[] = new Test_Opaque_Relay_Engine( $storage );
@@ -45,13 +45,13 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 		// Make the fixture the active engine. Committed here (outside the
 		// per-test transaction) so it holds for every test in the class.
-		update_option( 'wp_sync_engine', Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_rtc_engine', Test_Opaque_Relay_Engine::SLUG );
 	}
 
 	public static function wpTearDownAfterClass() {
 		self::delete_user( self::$editor_id );
 		self::delete_user( self::$subscriber_id );
-		delete_option( 'wp_sync_engine' );
+		delete_option( 'wp_rtc_engine' );
 		wp_delete_post( self::$post_id, true );
 		wp_delete_term( self::$category_id, 'category' );
 		wp_delete_term( self::$tag_id, 'post_tag' );
@@ -65,7 +65,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		// test framework's tear_down restores hooks to a run-global snapshot
 		// that predates this class, wiping any class-level filter after
 		// every test.
-		add_filter( 'wp_sync_engines', array( self::class, 'register_fixture_engine' ), 10, 2 );
+		add_filter( 'wp_rtc_engines', array( self::class, 'register_fixture_engine' ), 10, 2 );
 
 		parent::set_up();
 	}
@@ -102,7 +102,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	 * @return WP_REST_Response Response object.
 	 */
 	private function dispatch_sync( $rooms ) {
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params( array( 'rooms' => $rooms ) );
 		return rest_get_server()->dispatch( $request );
 	}
@@ -125,7 +125,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 	public function test_register_routes() {
 		$routes = rest_get_server()->get_routes();
-		$this->assertArrayHasKey( '/wp-sync/v1/updates', $routes );
+		$this->assertArrayHasKey( '/wp-rtc/v1/updates', $routes );
 	}
 
 	/**
@@ -474,7 +474,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	public function test_sync_rejects_non_string_update_data(): void {
 		wp_set_current_user( self::$editor_id );
 
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params(
 			array(
 				'rooms' => array(
@@ -509,7 +509,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	public function test_sync_rejects_invalid_update_type_enum(): void {
 		wp_set_current_user( self::$editor_id );
 
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params(
 			array(
 				'rooms' => array(
@@ -544,7 +544,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	public function test_sync_rejects_missing_required_room_field(): void {
 		wp_set_current_user( self::$editor_id );
 
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params(
 			array(
 				'rooms' => array(
@@ -593,7 +593,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 		$oversized_data = str_repeat( 'a', WP_RTC_HTTP_Polling_Sync_Server::MAX_UPDATE_DATA_SIZE + 1 );
 
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params(
 			array(
 				'rooms' => array(
@@ -627,7 +627,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 	public function test_sync_rejects_oversized_request_body(): void {
 		wp_set_current_user( self::$editor_id );
 
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 
 		// Set valid parsed params so per-arg schema validation passes first.
 		$request->set_body_params(
@@ -784,7 +784,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 		// One wide bucket so the two polls cannot straddle a boundary.
 		$wide = static fn() => HOUR_IN_SECONDS;
-		add_filter( 'wp_sync_awareness_timestamp_granularity', $wide );
+		add_filter( 'wp_rtc_awareness_timestamp_granularity', $wide );
 
 		$room  = $this->get_post_room();
 		$first = $this->record_queries( fn() => $this->dispatch_sync( array( $this->build_room( $room, 1, 0, array( 'user' => 'one' ) ) ) ) );
@@ -810,7 +810,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		);
 		$this->assertNotEmpty( $this->write_queries( $this->queries_touching( $changed, $wpdb->sync_room_meta ) ), 'A changed state is written.' );
 
-		remove_filter( 'wp_sync_awareness_timestamp_granularity', $wide );
+		remove_filter( 'wp_rtc_awareness_timestamp_granularity', $wide );
 	}
 
 	public function test_awareness_timestamps_round_up_to_the_bucket() {
@@ -819,9 +819,9 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		$this->assertSame( 110, WP_RTC_HTTP_Polling_Sync_Server::awareness_timestamp( 110 ) );
 
 		$exact = static fn() => 1;
-		add_filter( 'wp_sync_awareness_timestamp_granularity', $exact );
+		add_filter( 'wp_rtc_awareness_timestamp_granularity', $exact );
 		$this->assertSame( 101, WP_RTC_HTTP_Polling_Sync_Server::awareness_timestamp( 101 ) );
-		remove_filter( 'wp_sync_awareness_timestamp_granularity', $exact );
+		remove_filter( 'wp_rtc_awareness_timestamp_granularity', $exact );
 	}
 
 	public function test_an_idle_poll_with_a_persistent_object_cache_reads_one_table_once() {
@@ -829,7 +829,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		wp_set_current_user( self::$editor_id );
 
 		$wide     = static fn() => HOUR_IN_SECONDS;
-		add_filter( 'wp_sync_awareness_timestamp_granularity', $wide );
+		add_filter( 'wp_rtc_awareness_timestamp_granularity', $wide );
 		$previous = wp_using_ext_object_cache( true );
 		try {
 			$room = $this->get_post_room();
@@ -863,7 +863,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 			$this->assertCount( 1, $this->queries_touching( $idle, $wpdb->sync_updates ), 'Only the cursor snapshot reads the update log.' );
 		} finally {
 			wp_using_ext_object_cache( (bool) $previous );
-			remove_filter( 'wp_sync_awareness_timestamp_granularity', $wide );
+			remove_filter( 'wp_rtc_awareness_timestamp_granularity', $wide );
 		}
 	}
 
@@ -1368,12 +1368,12 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 
 	/**
 	 * The advisory channel's signaling probe rides the poll and is answered
-	 * alongside the rooms (see Gutenberg_Sync_Engines_Advisory_Presence).
+	 * alongside the rooms (see WP_RTC_Advisory_Presence).
 	 */
 	public function test_poll_answers_the_advisory_probe_alongside_the_rooms() {
 		wp_set_current_user( self::$editor_id );
 		$room    = 'postType/post:' . self::$post_id;
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params(
 			array(
 				'rooms'    => array(
@@ -1482,7 +1482,7 @@ class Tests_Collaboration_WpHttpPollingSyncServer extends WP_Test_REST_Controlle
 		// gone stale.
 		$first = $this->dispatch_sync( array( $this->build_room( $room, 1, 0, array(), $update ) ) )->get_data()['rooms'][0];
 		$this->assertNotEmpty( $first['generation'] );
-		$storage = gutenberg_sync_engines_storage();
+		$storage = wp_rtc_get_storage();
 		$storage->set_awareness_state(
 			$room,
 			array_map(

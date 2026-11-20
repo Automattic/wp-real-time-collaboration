@@ -42,7 +42,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	public function set_up() {
 		parent::set_up();
 		wp_set_current_user( self::$editor_id );
-		update_option( 'wp_sync_engine', 'intent-log' );
+		update_option( 'wp_rtc_engine', 'intent-log' );
 
 		global $wp_rest_server;
 		$wp_rest_server = new Spy_REST_Server();
@@ -50,7 +50,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	}
 
 	public function tear_down() {
-		delete_option( 'wp_sync_engine' );
+		delete_option( 'wp_rtc_engine' );
 		global $wp_rest_server;
 		$wp_rest_server = null;
 		parent::tear_down();
@@ -87,7 +87,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				return null !== $value;
 			}
 		);
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/updates' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/updates' );
 		$request->set_body_params( array( 'rooms' => array( $room ) ) );
 		$response = rest_get_server()->dispatch( $request );
 
@@ -694,7 +694,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$interval = static function () {
 			return 3;
 		};
-		add_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+		add_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 		try {
 			$this->poll();
 			$target = self::paragraph_id();
@@ -757,7 +757,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			);
 			$this->assertStringNotContainsString( 'textSlices', wp_json_encode( $snapshot['doc'] ) );
 		} finally {
-			remove_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+			remove_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 		}
 	}
 
@@ -765,7 +765,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$interval = static function () {
 			return 3;
 		};
-		add_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+		add_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 
 		try {
 			// An early escalation parks a proposal (pre-floor content that
@@ -877,7 +877,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				$stale_write['dispositions'][0]
 			);
 		} finally {
-			remove_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+			remove_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 		}
 	}
 
@@ -1013,7 +1013,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$interval = static function () {
 			return 3;
 		};
-		add_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+		add_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 
 		try {
 			$this->poll(); // Genesis.
@@ -1041,7 +1041,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			$this->assertContains( $kept_id, $proposal_ids );
 			$this->assertNotContains( $resolved_id, $proposal_ids );
 		} finally {
-			remove_filter( 'wp_sync_intent_log_checkpoint_interval', $interval );
+			remove_filter( 'wp_rtc_intent_log_checkpoint_interval', $interval );
 		}
 	}
 
@@ -1066,16 +1066,16 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$deny = static function () {
 			return false;
 		};
-		add_filter( 'wp_sync_debug_enabled', $deny );
+		add_filter( 'wp_rtc_debug_enabled', $deny );
 		$response = $this->poll( array( $intent( 'dbg-1' ) ), array( 'debug' => true ) );
 		$this->assertArrayNotHasKey( '_debug', $response );
-		remove_filter( 'wp_sync_debug_enabled', $deny );
+		remove_filter( 'wp_rtc_debug_enabled', $deny );
 
 		// Gate open + opt-in: engine facts attached.
 		$allow = static function () {
 			return true;
 		};
-		add_filter( 'wp_sync_debug_enabled', $allow );
+		add_filter( 'wp_rtc_debug_enabled', $allow );
 		try {
 			$response = $this->poll( array( $intent( 'dbg-2' ) ), array( 'debug' => true ) );
 			$this->assertArrayHasKey( '_debug', $response );
@@ -1092,7 +1092,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 			$response = $this->poll( array(), array( 'client_id' => 202 ) );
 			$this->assertArrayNotHasKey( '_debug', $response );
 		} finally {
-			remove_filter( 'wp_sync_debug_enabled', $allow );
+			remove_filter( 'wp_rtc_debug_enabled', $allow );
 		}
 	}
 
@@ -1103,7 +1103,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		// this room (the lineage check passes on null).
 		$this->poll();
 
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 		$this->assertSame(
 			WP_Intent_Log_Engine::SLUG,
 			$storage->get_room_engine( $this->room() )
@@ -1118,7 +1118,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		 * other engines were removed).
 		 */
 		add_filter(
-			'wp_sync_engines',
+			'wp_rtc_engines',
 			static function ( array $engines, WP_RTC_Storage $storage ): array {
 				$engines[] = new Test_Opaque_Relay_Engine( $storage );
 				return $engines;
@@ -1143,7 +1143,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 				),
 			)
 		);
-		update_option( 'wp_sync_engine', Test_Opaque_Relay_Engine::SLUG );
+		update_option( 'wp_rtc_engine', Test_Opaque_Relay_Engine::SLUG );
 
 		// The routes were built in set_up(), before the fixture engine was
 		// registered. Build them again so the server knows the engine.
@@ -1171,7 +1171,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		 * wrapper element; the block validator rejected the markup on the
 		 * next parse.
 		 */
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->poll(
 			array(
 				self::intent_update(
@@ -1224,7 +1224,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 	}
 
 	public function test_materialize_round_trips_content_with_sync_ids() {
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->poll(
 			array(
 				self::intent_update(
@@ -1414,7 +1414,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$this->assertArrayHasKey( 'time', $proposals[0] );
 
 		// Nothing reached the document.
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->assertStringNotContainsString( '<script>', (string) $engine->materialize( $this->room() ) );
 
 		// Redelivery acks identically without a second parked row.
@@ -1437,7 +1437,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		);
 		$this->assertSame( 'applied', $response['dispositions'][0]['status'] );
 
-		$engine  = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine  = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$content = $engine->materialize( $this->room() );
 		$this->assertStringContainsString( '<a href="https://example.com/">Hello</a>', $content );
 	}
@@ -1451,7 +1451,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		);
 		$this->assertSame( 'applied', $applied['dispositions'][0]['status'] );
 
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->assertStringContainsString( '<script>alert(1)</script>', (string) $engine->materialize( $this->room() ) );
 
 		/*
@@ -1605,7 +1605,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		);
 		$this->assertSame( 'applied', $response['dispositions'][0]['status'] );
 
-		$engine  = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine  = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$content = $engine->materialize( $this->room() );
 		$this->assertStringNotContainsString( '<script>', $content );
 		$this->assertStringContainsString( '&lt;script&gt;', $content );
@@ -1640,7 +1640,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$this->assertSame( array( 'requires-approval', 'requires-approval' ), $reasons );
 		$this->assertCount( 2, $this->proposal_rows() );
 
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->assertStringNotContainsString( 'kses-nb', (string) $engine->materialize( $this->room() ) );
 	}
 
@@ -1703,7 +1703,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		);
 		$this->assertSame( 'applied', $response['dispositions'][0]['status'] );
 
-		$engine = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$this->assertStringContainsString( '<script>x</script>', (string) $engine->materialize( $this->room() ) );
 	}
 
@@ -1842,7 +1842,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 		$this->assertSame( 'requires-approval', $swapped['dispositions'][0]['reason'] );
 
 		// The document still holds the benign value.
-		$engine  = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine  = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$content = (string) $engine->materialize( $this->room() );
 		$this->assertStringContainsString( '[script]alert(1);[/script]', $content );
 		$this->assertStringNotContainsString( '<script>alert(1);</script>', $content );
@@ -1892,7 +1892,7 @@ class Tests_Collaboration_WpIntentLogEngine extends WP_Test_REST_TestCase {
 
 		// Materialize emits the classic run BARE: no comment delimiters,
 		// content byte-preserved.
-		$engine  = new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		$engine  = new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 		$content = (string) $engine->materialize( $room );
 		$this->assertStringContainsString( '<div>classic <strong>legacy</strong> run</div>', $content );
 		$this->assertStringNotContainsString( 'wp:freeform', $content );

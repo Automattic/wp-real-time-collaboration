@@ -66,7 +66,7 @@ function collectSyncRequests( page: Page ): { stop: () => string[] } {
 		url: () => string;
 		postData: () => string | null;
 	} ) => {
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			bodies.push( request.postData() ?? '' );
 		}
 	};
@@ -101,7 +101,7 @@ function carriesUpdates( body: string ): boolean {
 async function countSyncRequests( page: Page, windowMs: number ) {
 	let count = 0;
 	const onRequest = ( request: { url: () => string } ) => {
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			count++;
 		}
 	};

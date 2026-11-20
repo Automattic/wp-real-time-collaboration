@@ -84,7 +84,7 @@ test.describe( 'Standalone Gutenberg precedence', () => {
 			// symbol. If the bundled copy had loaded too, the site would have
 			// fataled on the redeclare before this request could answer.
 			const status = ( await requestUtils.rest( {
-				path: '/sync-engines-test/v1/gutenberg-status',
+				path: '/wp-rtc-test/v1/gutenberg-status',
 			} ) ) as {
 				pre_init_file: string;
 				is_stub: boolean;

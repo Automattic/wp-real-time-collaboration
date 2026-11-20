@@ -24,13 +24,13 @@ import { addAction } from '@wordpress/hooks';
  * itself unavailable and the transports keep their always-on cadence.
  */
 
-const HOOK_NAMESPACE = 'gutenberg-sync-engines/advisory-signaling';
+const HOOK_NAMESPACE = 'wp-rtc/advisory-signaling';
 
 /**
  * Key used in both directions of the heartbeat payload. Mirrors
- * Gutenberg_Sync_Engines_Advisory_Presence::HEARTBEAT_KEY on the server.
+ * WP_RTC_Advisory_Presence::HEARTBEAT_KEY on the server.
  */
-export const HEARTBEAT_DATA_KEY = 'gutenberg_sync_engines_advisory';
+export const HEARTBEAT_DATA_KEY = 'wp_rtc_advisory';
 
 export type SignalKind = 'offer' | 'answer' | 'ice' | 'bye';
 
@@ -127,11 +127,11 @@ export function getAdvisorySettings(): AdvisorySettings | null {
 		settingsOverride ??
 		(
 			window as {
-				_gutenbergSyncEnginesSettings?: {
+				_wpRtcSettings?: {
 					advisory?: AdvisorySettings;
 				};
 			}
-		 )._gutenbergSyncEnginesSettings?.advisory;
+		 )._wpRtcSettings?.advisory;
 
 	if ( ! settings?.room || ! settings?.token ) {
 		return null;

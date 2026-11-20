@@ -47,7 +47,7 @@ class Tests_Collaboration_WpRtcServer extends WP_UnitTestCase {
 	public function test_activation_switches_the_setting_on() {
 		update_option( 'wp_rtc_enabled', false );
 
-		gutenberg_sync_engines_activate( false );
+		wp_rtc_activate( false );
 
 		$this->assertTrue( wp_rtc_is_enabled_setting() );
 		$this->assertTrue( wp_rtc_is_collaboration_enabled() );
@@ -102,7 +102,7 @@ class Tests_Collaboration_WpRtcServer extends WP_UnitTestCase {
 		$resolved = wp_rtc_get_storage();
 		remove_filter( 'wp_rtc_storage', $junk );
 
-		$this->assertInstanceOf( 'WP_Sync_Table_Storage', $resolved );
+		$this->assertInstanceOf( 'WP_RTC_Table_Storage', $resolved );
 	}
 
 	public function test_the_browser_is_told_the_engine_and_the_transports() {

@@ -2,7 +2,7 @@
 /**
  * WP_RTC_Storage interface
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 /**

@@ -4,18 +4,10 @@
 import { test, expect } from '../../config/collaboration-fixtures';
 
 /*
- * NOTE — engine-dependent scope: this spec covers the CLIENT-side outgoing
- * size guard (the polling manager fences an oversized local update and drops
- * the session out of collaboration). Under the retired yjs-relay engine the
- * guard ALSO fired for every later visitor, because each client re-authored
- * the whole document at init (client-side genesis) — so a second user fell
- * back to the classic post-locked modal, which this spec used to assert.
- * Under yjs-server the server owns genesis and clients only send small
- * diffs, so later joiners are never size-fenced by this guard. The server
- * has its own separate size gates (genesis refuses above
- * `wp_sync_yjs_server_max_genesis_bytes`, and a grown room rejects writes
- * above `wp_sync_yjs_server_max_room_bytes`); they return 413 and are not
- * what this spec exercises.
+ * This spec covers the size check in the browser: the polling manager
+ * refuses to send a local update that is too large, and the session
+ * drops out of collaboration. A person who joins later is not affected,
+ * because a joining tab only sends small edits.
  */
 test.describe( 'Collaboration with large documents', () => {
 	test( 'disables collaboration when an oversized local update exceeds the document size limit', async ( {
@@ -111,7 +103,7 @@ test.describe( 'Collaboration with large documents', () => {
 		// entirely. Either outcome confirms the room was unregistered.
 		const POLL_TIMEOUT = 3000;
 		const nextSyncResponse = page.waitForResponse(
-			( res ) => res.url().includes( 'wp-sync' ) && res.status() === 200
+			( res ) => res.url().includes( 'wp-rtc' ) && res.status() === 200
 		);
 		const timeout = new Promise< 'timeout' >( ( resolve ) =>
 			setTimeout( () => resolve( 'timeout' ), POLL_TIMEOUT )

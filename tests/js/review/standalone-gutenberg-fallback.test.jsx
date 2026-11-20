@@ -43,7 +43,7 @@ const texts = ( role ) =>
 	screen.getAllByRole( role ).map( ( node ) => node.textContent );
 
 const panes = () =>
-	Array.from( document.querySelectorAll( '.gse-review-block-diff' ) );
+	Array.from( document.querySelectorAll( '.wp-rtc-review-block-diff' ) );
 
 describe( 'review dialogs on an editor without the revision comparison', () => {
 	it( 'reports both comparisons as missing', () => {

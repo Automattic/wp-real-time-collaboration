@@ -117,8 +117,8 @@ export function TableMergeDialogBody( {
 	};
 
 	return (
-		<div className="gse-review-merge-dialog__body">
-			<p className="gse-review-merge-dialog__description">
+		<div className="wp-rtc-review-merge-dialog__body">
+			<p className="wp-rtc-review-merge-dialog__description">
 				{ __(
 					'These edits could not be merged automatically. Compare the versions and choose what to keep.'
 				) }
@@ -142,7 +142,7 @@ export function TableMergeDialogBody( {
 					) }
 				</ChangedWhileReviewingNotice>
 			) }
-			<div className="gse-review-merge-dialog__panes">
+			<div className="wp-rtc-review-merge-dialog__panes">
 				<Pane
 					label={ proposedLabel }
 					onRestore={ () => restoreGrid( 'yours', yours ) }
@@ -164,21 +164,21 @@ export function TableMergeDialogBody( {
 					/>
 				</Pane>
 			</div>
-			<div className="gse-review-merge-dialog__merged">
-				<h3 className="gse-review-merge-dialog__pane-label">
+			<div className="wp-rtc-review-merge-dialog__merged">
+				<h3 className="wp-rtc-review-merge-dialog__pane-label">
 					{ __( 'Merged result' ) }
 				</h3>
 				<MergedResultEditor
 					blocks={ merged }
 					onChange={ onEditMerged }
 				/>
-				<p className="gse-review-merge-dialog__help">
+				<p className="wp-rtc-review-merge-dialog__help">
 					{ __(
 						'This table replaces the conflicted content when you accept.'
 					) }
 				</p>
 			</div>
-			<div className="gse-review-merge-dialog__actions">
+			<div className="wp-rtc-review-merge-dialog__actions">
 				<Button
 					__next40pxDefaultSize
 					variant="tertiary"
@@ -284,7 +284,7 @@ export function TableConflictView( { conflict, onDecide, onClose } ) {
 		<Modal
 			title={ __( 'Review conflicting edits' ) }
 			onRequestClose={ onClose }
-			className="gse-review-merge-dialog gse-review-merge-dialog--table"
+			className="wp-rtc-review-merge-dialog wp-rtc-review-merge-dialog--table"
 			size="large"
 		>
 			<TableMergeDialogBody

@@ -94,7 +94,7 @@ export interface PostEditorPresenceObject extends PresenceObject {
 
 	/**
 	 * Per-field equality checks. Internal use: the plugin adds a check for
-	 * its own `gseBlock` field, because core-data throws on a field it has
+	 * its own `wpRtcBlock` field, because core-data throws on a field it has
 	 * no check for, and another tab can send that field at any time.
 	 * Used in: src/awareness/registry.ts.
 	 */

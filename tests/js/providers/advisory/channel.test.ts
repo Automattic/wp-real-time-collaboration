@@ -185,7 +185,7 @@ interface Tab {
 }
 
 const ROOM = 'postType/post:7';
-const KEY = 'gutenberg_sync_engines_advisory';
+const KEY = 'wp_rtc_advisory';
 const mailboxes: Map< string, Array< Record< string, string > > > = new Map();
 
 function createTab( token: string, clientId: number, maxPeers = 8 ): Tab {

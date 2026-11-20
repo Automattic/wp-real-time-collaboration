@@ -24,8 +24,8 @@ const TWO_PARAGRAPHS =
 	'<!-- wp:paragraph -->\n<p>First paragraph</p>\n<!-- /wp:paragraph -->\n\n' +
 	'<!-- wp:paragraph -->\n<p>Second paragraph</p>\n<!-- /wp:paragraph -->';
 
-const INTERVAL_OPTION = 'gutenberg_sync_engines_awareness_interval';
-const ADVISORY_OPTION = 'gutenberg_sync_engines_advisory_channel';
+const INTERVAL_OPTION = 'wp_rtc_awareness_interval';
+const ADVISORY_OPTION = 'wp_rtc_advisory_channel';
 
 async function setSettings(
 	requestUtils: RequestUtils,
@@ -108,28 +108,28 @@ test.describe( 'Collaboration - slow awareness', () => {
 		// User B works in the second paragraph; user A sees the outline
 		// and the badge on that block and nowhere else.
 		await paragraphsOnB.nth( 1 ).click();
-		await expect( paragraphsOnA.nth( 1 ) ).toHaveClass( /gse-presence/, {
+		await expect( paragraphsOnA.nth( 1 ) ).toHaveClass( /wp-rtc-presence/, {
 			timeout: 15000,
 		} );
 		await expect( paragraphsOnA.nth( 0 ) ).not.toHaveClass(
-			/gse-presence/
+			/wp-rtc-presence/
 		);
 		await expect(
-			editor.canvas.locator( '.gse-presence-badge .gse-avatar' )
+			editor.canvas.locator( '.wp-rtc-presence-badge .wp-rtc-avatar' )
 		).toHaveCount( 1 );
 
 		// B moves to the first paragraph (selected through the editor, since
 		// the second paragraph's toolbar floats over the first): the
 		// indicator moves with them.
 		await editor2.selectBlocks( paragraphsOnB.nth( 0 ) );
-		await expect( paragraphsOnA.nth( 0 ) ).toHaveClass( /gse-presence/, {
+		await expect( paragraphsOnA.nth( 0 ) ).toHaveClass( /wp-rtc-presence/, {
 			timeout: 15000,
 		} );
 		await expect( paragraphsOnA.nth( 1 ) ).not.toHaveClass(
-			/gse-presence/
+			/wp-rtc-presence/
 		);
 		await expect(
-			editor.canvas.locator( '.gse-presence-badge .gse-avatar' )
+			editor.canvas.locator( '.wp-rtc-presence-badge .wp-rtc-avatar' )
 		).toHaveCount( 1 );
 
 		// No live cursor rides beside the outline in this mode.

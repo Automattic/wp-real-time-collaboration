@@ -152,7 +152,7 @@ samples remain in the JSON for independent inspection.
 
 WebSocket processes run outside the request logger. To measure the supplied
 PHP daemon or the example Node advisory relay, start each selected process
-with `GSE_BENCH_METRICS=1`. This explicitly enables a read-only
+with `WP_RTC_BENCH_METRICS=1`. This explicitly enables a read-only
 `GET /bench-metrics` endpoint on its existing listening port. Leave the flag
 off for normal use; the endpoint has no authentication, so enable it only
 on an isolated benchmark server or behind access controls.
@@ -246,7 +246,7 @@ restart the env.
 
 Local wp-env results describe that environment only. Point `WP_BASE_URL`
 (with `WP_USERNAME`/`WP_PASSWORD`) at a staging copy of the real hosting,
-install the mu-plugin, and define `GUTENBERG_SYNC_ENGINES_DIAGNOSTICS` to
+install the mu-plugin, and define `WP_RTC_DIAGNOSTICS` to
 measure that environment. The baseline temporarily deactivates the plugin;
 use a disposable site or staging copy.
 
@@ -439,12 +439,12 @@ Divergences, each deliberate:
 # The engines suite (`--suite=engines`)
 
 Measures the server sync engine **through the same calls production
-makes**: the `WP_Sync_Engine::handle_updates()` / `get_updates_since()`
+makes**: the `WP_RTC_Engine::handle_updates()` / `get_updates_since()`
 calls the polling transport makes. So the numbers are the real engine's,
 not a model's.
 
 Engines are resolved through the framework's registry (the
-`wp_sync_engines` filter), so **any engine registered by an active plugin is
+`wp_rtc_engines` filter), so **any engine registered by an active plugin is
 benchmarkable by slug**. Run `benchmark.php` with an unknown slug to list
 what's registered. This plugin registers one:
 
@@ -453,16 +453,16 @@ what's registered. This plugin registers one:
   every edit settled.
 
 HOW the runner speaks to an engine is an **authoring profile** — a
-first-class SPI (`WP_Sync_Bench_Authoring_Profile`) that owns everything
+first-class SPI (`WP_RTC_Bench_Authoring_Profile`) that owns everything
 engine-specific: translating the workload's abstract edits into the
 engine's wire vocabulary, playing the client's part between requests
 (applying read responses, tracking observed state, answering compaction
 nominations), classifying void reasons, and scoring quality with an oracle
 matched to the engine's merge semantics. The measurement loop
-(`WP_Sync_Bench_Runner`) is engine-neutral: it times whatever requests the
+(`WP_RTC_Bench_Runner`) is engine-neutral: it times whatever requests the
 profile hands it. Profiles are resolved by engine slug through
-`WP_Sync_Bench_Profiles`; an engine plugin can register its own via the
-`wp_sync_bench_authoring_profiles` filter (mapping slug to a class
+`WP_RTC_Bench_Profiles`; an engine plugin can register its own via the
+`wp_rtc_bench_authoring_profiles` filter (mapping slug to a class
 constructed as `new $class( int $post_id, array $workload )`).
 
 This plugin ships one dedicated profile. The **intent-log profile**
@@ -509,7 +509,7 @@ instead.
   in-memory implementation, so this mostly isolates *engine* CPU (the
   intent-log planner and replay; a relay's append) from database I/O —
   with one deliberate exception: the intent-log ingest holds a Core-style
-  options-row lock (`WP_Sync_Room_Lock`) for the length of each request
+  options-row lock (`WP_RTC_Room_Lock`) for the length of each request
   (its transform log is order-dependent), so each of its samples includes
   one claim/release pair of real DB writes. The reported `calibration`
   block times the lock
@@ -585,7 +585,7 @@ order-insensitively, exactly like the shipping client and the genesis
 seed normalize them. `set_meta` writes a registered-meta register,
 carried as a flat `meta.<key>` register. The
 harness registers the meta palette's keys before genesis
-(`WP_Sync_Bench_Workload::register_bench_meta()`) because synced meta IS
+(`WP_RTC_Bench_Workload::register_bench_meta()`) because synced meta IS
 registered meta — that is what puts the `meta.<key>` registers in the
 genesis seed.
 
@@ -879,7 +879,7 @@ What the numbers say:
 - **In-memory storage** understates absolute per-request time (no real DB
   round-trip for reads/writes) but keeps the *engine* measurement clean;
   storage growth is exact. For end-to-end latency including MySQL, point
-  the runner at `WP_Sync_Table_Storage` instead.
+  the runner at `WP_RTC_Table_Storage` instead.
 - **The intent-log lock IS real DB I/O inside
   `service_us`** (a claim/release options-row pair per
   request), so its

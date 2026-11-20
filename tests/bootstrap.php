@@ -12,24 +12,24 @@
  * Collaboration is on for the whole suite without any setup: the plugin's
  * `wp_rtc_enabled` setting is on until someone switches it off.
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
-$gse_tests_dir = getenv( 'WP_TESTS_DIR' );
-if ( ! $gse_tests_dir ) {
-	$gse_tests_dir = getenv( 'WP_PHPUNIT__DIR' );
+$wp_rtc_tests_dir = getenv( 'WP_TESTS_DIR' );
+if ( ! $wp_rtc_tests_dir ) {
+	$wp_rtc_tests_dir = getenv( 'WP_PHPUNIT__DIR' );
 }
-if ( ! $gse_tests_dir ) {
-	$gse_tests_dir = '/wordpress-phpunit';
+if ( ! $wp_rtc_tests_dir ) {
+	$wp_rtc_tests_dir = '/wordpress-phpunit';
 }
 
-require_once $gse_tests_dir . '/includes/functions.php';
+require_once $wp_rtc_tests_dir . '/includes/functions.php';
 
 // The diagnostics module (request log, session capture) is environment-gated
 // in the plugin bootstrap; force it on so its tests behave the same whether
 // or not the test environment reports 'local'.
-if ( ! defined( 'GUTENBERG_SYNC_ENGINES_DIAGNOSTICS' ) ) {
-	define( 'GUTENBERG_SYNC_ENGINES_DIAGNOSTICS', true );
+if ( ! defined( 'WP_RTC_DIAGNOSTICS' ) ) {
+	define( 'WP_RTC_DIAGNOSTICS', true );
 }
 
 tests_add_filter(
@@ -62,7 +62,7 @@ tests_add_filter(
 		/*
 		 * The test fixtures load here, after the plugin has booted on this
 		 * same hook: the fixture engine implements the plugin's own
-		 * WP_Sync_Engine interface, which does not exist before that.
+		 * WP_RTC_Engine interface, which does not exist before that.
 		 */
 		// Test fixture engine (naive opaque relay) used by the transport and
 		// registry machinery tests; registered per-test, never in production.
@@ -77,13 +77,13 @@ tests_add_filter(
 		// Test fixture marker for tests that prove a defect not yet fixed.
 		require __DIR__ . '/phpunit/fixtures/trait-known-defect-assertions.php';
 
-		if ( ! WP_Sync_Table_Schema::install() ) {
+		if ( ! WP_RTC_Table_Schema::install() ) {
 			fwrite( STDERR, "Could not create the plugin's storage tables.\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite
 			exit( 1 );
 		}
-		WP_Sync_Table_Schema::delete_all_rows();
+		WP_RTC_Table_Schema::delete_all_rows();
 	},
 	20
 );
 
-require $gse_tests_dir . '/includes/bootstrap.php';
+require $wp_rtc_tests_dir . '/includes/bootstrap.php';

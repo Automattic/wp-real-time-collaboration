@@ -2,7 +2,7 @@
 /**
  * WP_RTC_Config class
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 /**

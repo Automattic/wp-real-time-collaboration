@@ -162,5 +162,5 @@ export default function BlockDiffPane( { content, baseContent } ) {
 		);
 	}
 
-	return <div className="gse-review-block-diff">{ diff }</div>;
+	return <div className="wp-rtc-review-block-diff">{ diff }</div>;
 }

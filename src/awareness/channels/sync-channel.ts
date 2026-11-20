@@ -57,11 +57,11 @@ export interface AwarenessPeerState {
 		name: string;
 		avatar_urls?: Record< string, string >;
 	};
-	gseBlock?: string | null;
+	wpRtcBlock?: string | null;
 }
 
 /** The awareness field the block name travels in. */
-export const BLOCK_FIELD = 'gseBlock';
+export const BLOCK_FIELD = 'wpRtcBlock';
 
 export interface SyncChannelOptions {
 	awareness: AwarenessHost;
@@ -145,7 +145,7 @@ export function createSyncChannel( options: SyncChannelOptions ): SyncChannel {
 							.map( ( state ) => ( {
 								key: String( state.clientId ),
 								identity: identityFromState( state ),
-								block: state.gseBlock ?? null,
+								block: state.wpRtcBlock ?? null,
 							} ) )
 					);
 				} ) ?? null;

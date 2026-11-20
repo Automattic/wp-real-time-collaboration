@@ -40,8 +40,8 @@ const CONTAINER = 'rtc-e2e-ws-daemon';
 // Other holders of host port 8787 (the dev env's auto-started daemon
 // serves the DEV database — the wrong one for this suite; a stale fuzz
 // daemon may also linger).
-const OTHER_PORT_HOLDERS = [ 'wp-sync-ws-daemon', 'rtc-fuzz-ws-daemon' ];
-const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
+const OTHER_PORT_HOLDERS = [ 'wp-rtc-ws-daemon', 'rtc-fuzz-ws-daemon' ];
+const TRANSPORT_OPTION = 'wp_rtc_transport';
 // The daemon-served transport this lane runs.
 const TRANSPORT = 'websocket';
 // The pre-suite transport selection, persisted OUTSIDE this process:

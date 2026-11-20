@@ -89,8 +89,8 @@ export function KsesReviewDialogBody( { sequestration, onApprove, onRemove } ) {
 	}
 
 	return (
-		<div className="gse-review-kses-dialog__body">
-			<p className="gse-review-kses-dialog__description">
+		<div className="wp-rtc-review-kses-dialog__body">
+			<p className="wp-rtc-review-kses-dialog__description">
 				{ isUpdate
 					? __(
 							'This edit contains content that needs approval from someone allowed to publish unfiltered HTML.'
@@ -117,23 +117,23 @@ export function KsesReviewDialogBody( { sequestration, onApprove, onRemove } ) {
 					) }
 				</ChangedWhileReviewingNotice>
 			) }
-			<div className="gse-review-kses-dialog__pane">
-				<h3 className="gse-review-kses-dialog__pane-label">
+			<div className="wp-rtc-review-kses-dialog__pane">
+				<h3 className="wp-rtc-review-kses-dialog__pane-label">
 					{ isUpdate
 						? __( 'Proposed changes' )
 						: __( 'Proposed block' ) }
 				</h3>
-				<div className="gse-review-kses-dialog__code-diff">
+				<div className="wp-rtc-review-kses-dialog__code-diff">
 					{ codeDiff }
 				</div>
 			</div>
 			{ isEditing && (
-				<div className="gse-review-kses-dialog__editor">
-					<h3 className="gse-review-kses-dialog__pane-label">
+				<div className="wp-rtc-review-kses-dialog__editor">
+					<h3 className="wp-rtc-review-kses-dialog__pane-label">
 						{ __( 'Edit proposed block' ) }
 					</h3>
 					<textarea
-						className="gse-review-kses-dialog__editor-textarea"
+						className="wp-rtc-review-kses-dialog__editor-textarea"
 						aria-label={ __( 'Proposed block HTML' ) }
 						rows={ 6 }
 						value={ proposedHtml }
@@ -144,7 +144,7 @@ export function KsesReviewDialogBody( { sequestration, onApprove, onRemove } ) {
 					/>
 				</div>
 			) }
-			<div className="gse-review-kses-dialog__actions">
+			<div className="wp-rtc-review-kses-dialog__actions">
 				<Button
 					__next40pxDefaultSize
 					variant="secondary"
@@ -196,7 +196,7 @@ export default function KsesReviewDialog( {
 		<Modal
 			title={ __( 'Review proposed changes' ) }
 			onRequestClose={ onClose }
-			className="gse-review-kses-dialog"
+			className="wp-rtc-review-kses-dialog"
 			size="large"
 		>
 			<KsesReviewDialogBody

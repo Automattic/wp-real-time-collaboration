@@ -7,7 +7,7 @@
  * Gutenberg used to provide these. The plugin owns them now, so they work
  * the same beside any Gutenberg version.
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! function_exists( 'wp_rtc_is_enabled_setting' ) ) {
@@ -83,8 +83,8 @@ if ( ! function_exists( 'wp_rtc_get_storage' ) ) {
 	 * @return WP_RTC_Storage Storage to use.
 	 */
 	function wp_rtc_get_storage(): WP_RTC_Storage {
-		if ( WP_Sync_Table_Schema::is_ready() ) {
-			$default = new WP_Sync_Table_Storage();
+		if ( WP_RTC_Table_Schema::is_ready() ) {
+			$default = new WP_RTC_Table_Storage();
 		} else {
 			$default = new WP_RTC_Post_Meta_Storage();
 		}
@@ -175,13 +175,13 @@ if ( ! function_exists( 'wp_rtc_get_transport_registry' ) ) {
 	 *
 	 * @since n.e.x.t
 	 *
-	 * @return WP_Sync_Transport_Registry Transport registry.
+	 * @return WP_RTC_Transport_Registry Transport registry.
 	 */
-	function wp_rtc_get_transport_registry(): WP_Sync_Transport_Registry {
+	function wp_rtc_get_transport_registry(): WP_RTC_Transport_Registry {
 		$storage = wp_rtc_get_storage();
-		$engines = new WP_Sync_Engine_Registry( $storage );
+		$engines = new WP_RTC_Engine_Registry( $storage );
 
-		return new WP_Sync_Transport_Registry( $storage, $engines );
+		return new WP_RTC_Transport_Registry( $storage, $engines );
 	}
 }
 
@@ -203,8 +203,8 @@ if ( ! function_exists( 'wp_rtc_register_storage_post_type' ) ) {
 			WP_RTC_Post_Meta_Storage::POST_TYPE,
 			array(
 				'labels'             => array(
-					'name'          => __( 'Sync Updates', 'gutenberg-sync-engines' ),
-					'singular_name' => __( 'Sync Update', 'gutenberg-sync-engines' ),
+					'name'          => __( 'Sync Updates', 'wp-real-time-collaboration' ),
+					'singular_name' => __( 'Sync Update', 'wp-real-time-collaboration' ),
 				),
 				'public'             => false,
 				'hierarchical'       => false,
@@ -271,7 +271,7 @@ if ( ! function_exists( 'wp_rtc_print_client_settings' ) ) {
 		}
 
 		$transport_registry = wp_rtc_get_transport_registry();
-		$engine             = ( new WP_Sync_Engine_Registry( wp_rtc_get_storage() ) )->get_engine_for_room( '' );
+		$engine             = ( new WP_RTC_Engine_Registry( wp_rtc_get_storage() ) )->get_engine_for_room( '' );
 		$active_transport   = $transport_registry->get_transport( $transport_registry->get_active_slug() );
 
 		$sync = array(
@@ -301,7 +301,7 @@ if ( ! function_exists( 'wp_rtc_print_client_settings' ) ) {
 		 * @param array    $config     Connection details by transport slug.
 		 * @param string[] $transports Announced transport slugs.
 		 */
-		$transport_config = (object) apply_filters( 'wp_sync_transport_client_config', array(), $sync['transports'] );
+		$transport_config = (object) apply_filters( 'wp_rtc_transport_client_config', array(), $sync['transports'] );
 
 		wp_add_inline_script(
 			'wp-core-data',

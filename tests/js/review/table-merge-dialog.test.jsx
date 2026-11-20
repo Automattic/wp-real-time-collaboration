@@ -69,16 +69,16 @@ describe( 'TableMergeDialogBody', () => {
 
 		// Your pane: the added Team column and the changed Basic price.
 		expect( within( yourTable ).getByText( 'Team' ) ).toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 		expect( within( yourTable ).getByText( '$9' ) ).toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 		expect( within( yourTable ).getByText( '$6' ) ).toHaveClass(
-			'gse-review-table-diff__cell--changed'
+			'wp-rtc-review-table-diff__cell--changed'
 		);
 		expect( within( yourTable ).getByText( '$0' ) ).not.toHaveClass(
-			'gse-review-table-diff__cell--changed'
+			'wp-rtc-review-table-diff__cell--changed'
 		);
 		expect(
 			within( yourTable ).queryByText( 'API access' )
@@ -86,10 +86,10 @@ describe( 'TableMergeDialogBody', () => {
 
 		// Current pane: the added API access row and the changed price.
 		expect( within( currentTable ).getByText( 'API access' ) ).toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 		expect( within( currentTable ).getByText( '$7' ) ).toHaveClass(
-			'gse-review-table-diff__cell--changed'
+			'wp-rtc-review-table-diff__cell--changed'
 		);
 		expect(
 			within( currentTable ).queryByText( 'Team' )
@@ -203,10 +203,10 @@ describe( 'TableMergeDialogBody', () => {
 			within( yourTable ).queryByRole( 'columnheader' )
 		).not.toBeInTheDocument();
 		expect( within( yourTable ).getByText( 'E' ) ).toHaveClass(
-			'gse-review-table-diff__cell--changed'
+			'wp-rtc-review-table-diff__cell--changed'
 		);
 		expect( within( yourTable ).getByText( 'a' ) ).not.toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 
 		await user.click( screen.getByRole( 'button', { name: 'Accept' } ) );

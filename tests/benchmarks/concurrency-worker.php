@@ -29,32 +29,32 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit( 1 );
 }
 
-require_once __DIR__ . '/class-wp-sync-bench-runner.php';
+require_once __DIR__ . '/class-wp-rtc-bench-runner.php';
 
-$wp_sync_bench_opts = array();
-foreach ( ( isset( $args ) && is_array( $args ) ? $args : array() ) as $wp_sync_bench_arg ) {
-	if ( preg_match( '/^-{0,2}([a-z0-9-]+)=(.*)$/', (string) $wp_sync_bench_arg, $m ) ) {
-		$wp_sync_bench_opts[ $m[1] ] = $m[2];
+$wp_rtc_bench_opts = array();
+foreach ( ( isset( $args ) && is_array( $args ) ? $args : array() ) as $wp_rtc_bench_arg ) {
+	if ( preg_match( '/^-{0,2}([a-z0-9-]+)=(.*)$/', (string) $wp_rtc_bench_arg, $m ) ) {
+		$wp_rtc_bench_opts[ $m[1] ] = $m[2];
 	}
 }
 
-$engine_slug = (string) ( $wp_sync_bench_opts['engine'] ?? 'intent-log' );
-$post_id     = (int) ( $wp_sync_bench_opts['post'] ?? 0 );
-$worker      = (int) ( $wp_sync_bench_opts['worker'] ?? 0 );
-$workers     = max( 1, (int) ( $wp_sync_bench_opts['workers'] ?? 1 ) );
-$requests    = max( 1, (int) ( $wp_sync_bench_opts['requests'] ?? 40 ) );
-$paragraphs  = max( 1, (int) ( $wp_sync_bench_opts['paragraphs'] ?? 4 ) );
+$engine_slug = (string) ( $wp_rtc_bench_opts['engine'] ?? 'intent-log' );
+$post_id     = (int) ( $wp_rtc_bench_opts['post'] ?? 0 );
+$worker      = (int) ( $wp_rtc_bench_opts['worker'] ?? 0 );
+$workers     = max( 1, (int) ( $wp_rtc_bench_opts['workers'] ?? 1 ) );
+$requests    = max( 1, (int) ( $wp_rtc_bench_opts['requests'] ?? 40 ) );
+$paragraphs  = max( 1, (int) ( $wp_rtc_bench_opts['paragraphs'] ?? 4 ) );
 
 $room = 'postType/post:' . $post_id;
 
 // The profile IS the client: it persists across iterations (a browser tab
 // keeps its document/observed state between requests), while engine and
 // storage are rebuilt per iteration (each HTTP request starts cold).
-$wp_sync_bench_fresh_engine = static function () use ( $engine_slug ) {
-	return ( new WP_Sync_Engine_Registry( new WP_Sync_Table_Storage() ) )->get_engine( $engine_slug );
+$wp_rtc_bench_fresh_engine = static function () use ( $engine_slug ) {
+	return ( new WP_RTC_Engine_Registry( new WP_RTC_Table_Storage() ) )->get_engine( $engine_slug );
 };
 
-$wp_sync_bench_workload = array(
+$wp_rtc_bench_workload = array(
 	'scenario'      => 'concurrency-probe',
 	'post_content'  => (string) get_post_field( 'post_content', $post_id ),
 	'paragraphs'    => $paragraphs,
@@ -64,9 +64,9 @@ $wp_sync_bench_workload = array(
 	// read-driven observed state is the only truth in this mode.
 	'multi_process' => true,
 );
-$profile                = WP_Sync_Bench_Profiles::for_engine( $engine_slug, $post_id, $wp_sync_bench_workload );
+$profile               = WP_RTC_Bench_Profiles::for_engine( $engine_slug, $post_id, $wp_rtc_bench_workload );
 
-$cursors = $profile->bootstrap( $wp_sync_bench_fresh_engine(), $room );
+$cursors = $profile->bootstrap( $wp_rtc_bench_fresh_engine(), $room );
 $cursor  = (int) ( $cursors[ $worker ] ?? 0 );
 
 $latency_us       = array();
@@ -80,7 +80,7 @@ $dispositions     = array(
 );
 
 for ( $i = 0; $i < $requests; $i++ ) {
-	$engine   = $wp_sync_bench_fresh_engine();
+	$engine   = $wp_rtc_bench_fresh_engine();
 	$response = $engine->get_updates_since( $room, $worker, $cursor, $profile->read_context() );
 	$cursor   = (int) ( $response['end_cursor'] ?? $cursor );
 	$profile->observe( $worker, $response );
@@ -101,7 +101,7 @@ for ( $i = 0; $i < $requests; $i++ ) {
 		exit( 1 );
 	}
 
-	$engine       = $wp_sync_bench_fresh_engine();
+	$engine       = $wp_rtc_bench_fresh_engine();
 	$start        = hrtime( true );
 	$result       = $engine->handle_updates( $room, $worker, $cursor, $updates, array() );
 	$latency_us[] = ( hrtime( true ) - $start ) / 1e3;
@@ -115,7 +115,7 @@ for ( $i = 0; $i < $requests; $i++ ) {
 	// Same guard as the single-process runner: a disposition list that does
 	// not match the submitted updates one-to-one would corrupt the per-edit
 	// bookkeeping, so abort loudly instead of reporting numbers.
-	WP_Sync_Bench_Runner::assert_disposition_cardinality( $result, $updates, 'concurrency-worker ingest' );
+	WP_RTC_Bench_Runner::assert_disposition_cardinality( $result, $updates, 'concurrency-worker ingest' );
 
 	foreach ( (array) ( $result['dispositions'] ?? array() ) as $disposition ) {
 		$status = $disposition['status'] ?? 'unknown';

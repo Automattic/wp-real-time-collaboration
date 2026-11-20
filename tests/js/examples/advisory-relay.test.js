@@ -78,7 +78,7 @@ beforeAll( async () => {
 		env: {
 			...process.env,
 			PORT: String( port ),
-			WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET: SECRET,
+			WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET: SECRET,
 		},
 		stdio: [ 'ignore', 'pipe', 'inherit' ],
 	} );
@@ -121,8 +121,8 @@ function openTab(
 ) {
 	return new Promise( ( resolve, reject ) => {
 		const ws = new WebSocket( url, [
-			'wp-sync',
-			`wp-sync-token.${ token }`,
+			'wp-rtc',
+			`wp-rtc-token.${ token }`,
 		] );
 		sockets.push( ws );
 		ws.frames = [];

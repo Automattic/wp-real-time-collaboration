@@ -17,7 +17,7 @@ if ( ! class_exists( 'WP_WebSocket_Token_Controller' ) ) {
 	 * WebSocket server consumes the token (single use) and requires that the
 	 * token's user matches the user authenticated by the logged_in cookie.
 	 *
-	 * In ACCESS-TOKEN mode (a `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` is configured,
+	 * In ACCESS-TOKEN mode (a `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` is configured,
 	 * see WP_WebSocket_Access_Token) the same route returns a signed, expiring
 	 * access token instead, which a server verifies with the shared secret and
 	 * no database — the credential a host's own relay needs. The request
@@ -33,7 +33,7 @@ if ( ! class_exists( 'WP_WebSocket_Token_Controller' ) ) {
 		 * @since 7.4.0
 		 * @var string
 		 */
-		const REST_NAMESPACE = 'wp-sync/v1';
+		const REST_NAMESPACE = 'wp-rtc/v1';
 
 		/**
 		 * Transient prefix for stored tokens.
@@ -41,7 +41,7 @@ if ( ! class_exists( 'WP_WebSocket_Token_Controller' ) ) {
 		 * @since 7.4.0
 		 * @var string
 		 */
-		const TOKEN_TRANSIENT_PREFIX = 'wp_sync_ws_token_';
+		const TOKEN_TRANSIENT_PREFIX = 'wp_rtc_ws_token_';
 
 		/**
 		 * Token time-to-live in seconds.

@@ -131,7 +131,7 @@ export async function waitForSyncQuiet( page: Page ): Promise< void > {
 	const MAX_MS = 10000;
 	let lastRequestAt = Date.now();
 	const onRequest = ( request: { url: () => string } ) => {
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			lastRequestAt = Date.now();
 		}
 	};

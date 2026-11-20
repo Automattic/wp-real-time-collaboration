@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name: Gutenberg Test Plugin, Editor Without Revision Comparison
- * Description: E2E fixture: makes the editor look like a standalone Gutenberg's, which does not export the revision comparison the conflict review dialogs are built on. It removes those names from the editor package's private APIs before the sync-engines bundle reads them, so the dialogs must fall back to their plain text comparison. Active only during the test that opens a conflict card without the revision comparison.
+ * Description: E2E fixture: makes the editor look like a standalone Gutenberg's, which does not export the revision comparison the conflict review dialogs are built on. It removes those names from the editor package's private APIs before the plugin script reads them, so the dialogs must fall back to their plain text comparison. Active only during the test that opens a conflict card without the revision comparison.
  * Version: 0.0.0-fixture
- * Author: Gutenberg Sync Engines e2e fixtures
+ * Author: WP Real-Time Collaboration e2e fixtures
  * License: GPL-2.0-or-later
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,7 +19,7 @@ add_action(
 		/*
 		 * The names are the bundled Gutenberg's one addition to the editor
 		 * package (AGENTS.md, "The gutenberg/ subtree"). The script runs
-		 * right after the editor package loads. The sync-engines bundle
+		 * right after the editor package loads. The plugin script
 		 * depends on that package, so it always loads later and finds the
 		 * names gone.
 		 */

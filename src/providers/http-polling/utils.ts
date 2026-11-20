@@ -9,7 +9,7 @@ import apiFetch from '@wordpress/api-fetch';
 import type { SyncPayload, SyncResponse } from './types';
 
 // The REST path the polling manager posts to.
-const syncApiPath = '/wp-sync/v1/updates';
+const syncApiPath = '/wp-rtc/v1/updates';
 
 /**
  * Post a sync update and receive updates the client is missing.

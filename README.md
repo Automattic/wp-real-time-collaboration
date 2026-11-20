@@ -96,8 +96,8 @@ tables and every session; deleting it drops them. See
 The plugin owns the whole server side: the engine and transport
 contracts and registries, room names and permissions, the REST routes,
 and the settings printed for the browser (`includes/server/`). Its
-engine and transports register through the `wp_sync_engines` and
-`wp_sync_transports` PHP filters, so other code can add its own.
+engine and transports register through the `wp_rtc_engines` and
+`wp_rtc_transports` PHP filters, so other code can add its own.
 
 The plugin touches Gutenberg in three places. In PHP it answers the
 `wp_is_collaboration_enabled` filter, which switches collaboration on.

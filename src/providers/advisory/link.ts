@@ -5,7 +5,7 @@ import type { DiscoveredPeer } from './signaling';
 
 /**
  * The advisory channel comes in two shapes, chosen on the settings screen
- * (`gutenberg_sync_engines_advisory_channel`):
+ * (`wp_rtc_advisory_channel`):
  *
  * - `webrtc-advisory` (default): a browser-to-browser mesh, one WebRTC
  *   data channel per discovered tab, negotiated through the heartbeat.

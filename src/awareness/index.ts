@@ -1,7 +1,7 @@
 /**
  * Bootstraps slow awareness when the site has turned it on.
  *
- * The server passes the mode in `window._gutenbergSyncEnginesSettings`:
+ * The server passes the mode in `window._wpRtcSettings`:
  * `awarenessIntervalMs` (0 keeps the framework's live cursors) and
  * `awarenessChannel` (`sync` rides the sync transport's awareness state;
  * `heartbeat` rides WordPress Heartbeat, a separate request stream).
@@ -37,7 +37,7 @@ export function bootstrapSlowAwareness(): void {
 	// The badge layer needs no editor slot: it draws into the canvas
 	// document itself, so it mounts on a plugin-owned root.
 	const host = document.createElement( 'div' );
-	host.className = 'gutenberg-sync-engines-awareness';
+	host.className = 'wp-rtc-awareness';
 	document.body.appendChild( host );
 	createRoot( host ).render( createElement( PresenceBadges ) );
 

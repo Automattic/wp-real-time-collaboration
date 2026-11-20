@@ -22,7 +22,7 @@ export const USER = process.env.WP_USERNAME ?? 'admin';
 export const PASS = process.env.WP_PASSWORD ?? 'password';
 
 export const SETTINGS_PAGE =
-	'/wp-admin/options-general.php?page=gutenberg-sync-engines';
+	'/wp-admin/options-general.php?page=wp-rtc';
 
 // The plugin's own setting that turns real-time collaboration on.
 export const COLLABORATION_SETTING = 'wp_rtc_enabled';
@@ -50,7 +50,7 @@ export function parseCliOptions( argv = process.argv.slice( 2 ) ) {
 }
 
 /**
- * Attaches wire-traffic counters for `/wp-sync/v1/` requests and WebSocket
+ * Attaches wire-traffic counters for `/wp-rtc/v1/` requests and WebSocket
  * frames to a page. Counters are cumulative; phases diff snapshots.
  *
  * @param {import('@playwright/test').Page} page Target page.
@@ -73,7 +73,7 @@ export function attachCounters( page ) {
 		wsBytesReceived: 0,
 	};
 	// Decode before matching: on plain-permalink sites REST routes travel
-	// URL-encoded (`index.php?rest_route=%2Fwp-sync%2Fv1%2Fupdates`).
+	// URL-encoded (`index.php?rest_route=%2Fwp-rtc%2Fv1%2Fupdates`).
 	const decoded = ( url ) => {
 		try {
 			return decodeURIComponent( url );
@@ -81,7 +81,7 @@ export function attachCounters( page ) {
 			return url;
 		}
 	};
-	const isSync = ( url ) => decoded( url ).includes( 'wp-sync/v1' );
+	const isSync = ( url ) => decoded( url ).includes( 'wp-rtc/v1' );
 	// An engine's commits can ride the autosave endpoint — count
 	// them as sync traffic (they replaced transport proposal rows). The
 	// commit shape is identified by its body, so editor-native autosaves
@@ -91,7 +91,7 @@ export function attachCounters( page ) {
 		( request.postDataBuffer()?.includes( 'proposal_id' ) ?? false );
 	page.on( 'request', ( request ) => {
 		const url = decoded( request.url() );
-		if ( ! url.includes( 'wp-sync/v1' ) && ! isCommit( request ) ) {
+		if ( ! url.includes( 'wp-rtc/v1' ) && ! isCommit( request ) ) {
 			return;
 		}
 		c.requests += 1;
@@ -247,9 +247,9 @@ function transportDelivery( transport ) {
  */
 export async function configureSettings( page, engine, transport ) {
 	await page.goto( `${ BASE }${ SETTINGS_PAGE }` );
-	const engineSelect = page.locator( '#wp_sync_engine' );
+	const engineSelect = page.locator( '#wp_rtc_engine' );
 	const transportSelect = page.locator(
-		'input[name="gutenberg_sync_engines_delivery"]:checked'
+		'input[name="wp_rtc_delivery"]:checked'
 	);
 	if ( ! ( await engineSelect.count() ) ) {
 		throw new Error(
@@ -278,7 +278,7 @@ export async function configureSettings( page, engine, transport ) {
 				: transportDelivery( wanted.transport );
 		await page
 			.locator(
-				`input[name="gutenberg_sync_engines_delivery"][value="${ delivery }"]`
+				`input[name="wp_rtc_delivery"][value="${ delivery }"]`
 			)
 			.check();
 		await page.click( '#submit' );
@@ -290,7 +290,7 @@ export async function configureSettings( page, engine, transport ) {
 			...wanted,
 			delivery: await page
 				.locator(
-					'input[name="gutenberg_sync_engines_delivery"]:checked'
+					'input[name="wp_rtc_delivery"]:checked'
 				)
 				.inputValue(),
 		},
@@ -305,10 +305,10 @@ export async function configureSettings( page, engine, transport ) {
  */
 export async function restoreSettings( page, previous ) {
 	await page.goto( `${ BASE }${ SETTINGS_PAGE }` );
-	await page.locator( '#wp_sync_engine' ).selectOption( previous.engine );
+	await page.locator( '#wp_rtc_engine' ).selectOption( previous.engine );
 	await page
 		.locator(
-			`input[name="gutenberg_sync_engines_delivery"][value="${
+			`input[name="wp_rtc_delivery"][value="${
 				previous.delivery ?? transportDelivery( previous.transport )
 			}"]`
 		)
@@ -405,14 +405,14 @@ export const kb = ( bytes ) => ( bytes / 1024 ).toFixed( 1 );
 /**
  * A REST path as a rest_route URL (works under every permalink structure).
  *
- * @param {string} path REST route path (e.g. /wp-sync/v1/updates).
+ * @param {string} path REST route path (e.g. /wp-rtc/v1/updates).
  * @return {string} Absolute URL.
  */
 export const restUrl = ( path ) =>
 	`${ BASE }/index.php?rest_route=${ encodeURIComponent( path ) }`;
 
 /**
- * Tags every /wp-sync/ request from the context with the community RTC
+ * Tags every /wp-rtc/ request from the context with the community RTC
  * performance harness's headers (X-RTC-Test, X-RTC-Scenario), so the
  * plugin's diagnostics request log attributes rows to the current phase.
  *
@@ -422,9 +422,9 @@ export const restUrl = ( path ) =>
 export async function installScenarioTagging( context, phase ) {
 	const isSync = ( url ) => {
 		try {
-			return decodeURIComponent( url ).includes( 'wp-sync/v1' );
+			return decodeURIComponent( url ).includes( 'wp-rtc/v1' );
 		} catch {
-			return url.includes( 'wp-sync/v1' );
+			return url.includes( 'wp-rtc/v1' );
 		}
 	};
 	await context.route(
@@ -512,7 +512,7 @@ export async function runBaseline( rest, room, polls ) {
 	}
 	if ( rest ) {
 		for ( let i = 0; i < polls; i++ ) {
-			await rest.post( '/wp-sync/v1/updates', {
+			await rest.post( '/wp-rtc/v1/updates', {
 				body: {
 					rooms: [
 						{
@@ -633,7 +633,7 @@ export async function waitForSyncTraffic( page, counters, label ) {
 		if ( Date.now() > deadline ) {
 			throw new Error(
 				`Window ${ label } never started syncing (no ` +
-					'/wp-sync/v1/ data traffic in 30s). Is ' +
+					'/wp-rtc/v1/ data traffic in 30s). Is ' +
 					'collaboration enabled, are both plugins ' +
 					'active, and — for websocket — is the daemon ' +
 					'reachable?'

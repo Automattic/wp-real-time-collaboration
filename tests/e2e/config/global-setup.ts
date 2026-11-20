@@ -97,7 +97,7 @@ async function globalSetup( config: FullConfig ) {
 		method: 'POST',
 		path: '/wp/v2/settings',
 		data: {
-			gutenberg_sync_engines_polling_interval: 1,
+			wp_rtc_polling_interval: 1,
 		},
 	} );
 

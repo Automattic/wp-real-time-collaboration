@@ -8,7 +8,7 @@
  *
  *   node tests/debugging/replay/replay.mjs fixture.json [--speed=1] [--json=out.json]
  *
- * Each captured frame is re-sent to POST /wp-json/wp-sync/v1/updates at its
+ * Each captured frame is re-sent to POST /wp-json/wp-rtc/v1/updates at its
  * captured offset (scaled by `speed`), retargeted at a fresh post seeded
  * from the fixture's `base_title`/`base_content` so engines that validate
  * against server state see the document the session actually started from.
@@ -19,7 +19,7 @@
  * Requests carry the community harness's tags (X-RTC-Test / X-RTC-Scenario
  * / X-RTC-Approach), so a site with this plugin's diagnostics enabled logs
  * server-side metrics per request — the tool prints that report after the
- * replay (see includes/diagnostics/class-gutenberg-sync-engines-request-log.php).
+ * replay (see includes/diagnostics/class-wp-rtc-request-log.php).
  *
  * Arguments (--key=value flags):
  *
@@ -234,7 +234,7 @@ async function main() {
 	// engine measures rejection paths, not merges.
 	if ( fixture.engine ) {
 		const settings = await rest( nonce, 'GET', '/wp/v2/settings' );
-		const activeEngine = settings.data?.wp_sync_engine ?? null;
+		const activeEngine = settings.data?.wp_rtc_engine ?? null;
 		if ( activeEngine && activeEngine !== fixture.engine ) {
 			const message =
 				`Fixture was captured under engine "${ fixture.engine }" but the site runs ` +
@@ -337,7 +337,7 @@ async function main() {
 			const { status, data } = await rest(
 				nonce,
 				'POST',
-				'/wp-sync/v1/updates',
+				'/wp-rtc/v1/updates',
 				requestBody,
 				tagHeaders
 			);
@@ -450,7 +450,7 @@ async function main() {
 	} else {
 		console.log(
 			'  (no server-side request log — the site is not local/development ' +
-				'or lacks GUTENBERG_SYNC_ENGINES_DIAGNOSTICS)'
+				'or lacks WP_RTC_DIAGNOSTICS)'
 		);
 		summary.serverReport = null;
 	}

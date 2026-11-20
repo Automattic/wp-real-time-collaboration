@@ -20,7 +20,7 @@ import { genesisSyncId } from '../../js/engines/intent-log/genesis-sync-id.js';
 /**
  * Two-client collaboration through the intent-log sync engine.
  *
- * These specs flip the site's `wp_sync_engine` option to `intent-log` (the
+ * These specs flip the site's `wp_rtc_engine` option to `intent-log` (the
  * server announces it; clients resolve the intent-log adapter) and exercise
  * the full stack: capture bridge → session → polling transport →
  * WP_Intent_Log_Engine → back. The suite restores the default engine when
@@ -55,14 +55,14 @@ async function setSyncEngine(
 		const settings = await requestUtils.rest( {
 			path: '/wp/v2/settings',
 		} );
-		if ( 'intent-log' !== settings.wp_sync_engine ) {
+		if ( 'intent-log' !== settings.wp_rtc_engine ) {
 			return;
 		}
 	}
 	await requestUtils.rest( {
 		method: 'POST',
 		path: '/wp/v2/settings',
-		data: { wp_sync_engine: engine },
+		data: { wp_rtc_engine: engine },
 	} );
 }
 
@@ -1033,10 +1033,10 @@ test.describe( 'Collaboration - intent-log engine @engine-intent-log', () => {
 
 			// Both panes show their version as text. Neither renders blocks,
 			// which is what needs the revision comparison.
-			const panes = dialog.locator( '.gse-review-block-diff' );
+			const panes = dialog.locator( '.wp-rtc-review-block-diff' );
 			await expect( panes ).toHaveCount( 2 );
 			await expect(
-				panes.locator( '.gse-review-plain-diff' )
+				panes.locator( '.wp-rtc-review-plain-diff' )
 			).toHaveCount( 2 );
 			await expect(
 				panes.locator( '.block-editor-block-list__layout' )
@@ -1410,7 +1410,7 @@ test.describe( 'Collaboration - intent-log engine @engine-intent-log', () => {
 
 		// Cleanup: the flag persists per browser profile.
 		await page1.evaluate( () =>
-			window.localStorage.removeItem( 'wp_sync_debug' )
+			window.localStorage.removeItem( 'wp_rtc_debug' )
 		);
 	} );
 
@@ -1691,10 +1691,12 @@ test.describe( 'Collaboration - intent-log engine @engine-intent-log', () => {
 			// shows the proposed title first and the current one second.
 			let decided = '';
 			for ( const page of [ page1, page2 ] ) {
-				const item = page.locator( '.gse-review-panel__item' ).first();
+				const item = page
+					.locator( '.wp-rtc-review-panel__item' )
+					.first();
 				if ( await item.count() ) {
 					const [ proposed, current ] = await item
-						.locator( '.gse-review-panel__value' )
+						.locator( '.wp-rtc-review-panel__value' )
 						.allTextContents();
 					decided = current;
 					if ( 'Use proposed' === decision ) {

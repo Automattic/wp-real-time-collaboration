@@ -36,7 +36,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 	 *
 	 * Auth: the handshake requires a valid WordPress logged_in cookie, an
 	 * allowed Origin, and a one-time short-lived token minted via the
-	 * `wp-sync/v1/ws-token` REST endpoint whose user must match the cookie
+	 * `wp-rtc/v1/ws-token` REST endpoint whose user must match the cookie
 	 * user. In access-token mode (WP_WebSocket_Access_Token) the offered credential is
 	 * instead a signed access token, verified here with the shared secret and no
 	 * database read, and the cookie is optional: the same credential a
@@ -105,7 +105,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 
 		/**
 		 * Default maximum number of concurrent connections. Filterable via
-		 * 'wp_sync_websocket_max_connections'.
+		 * 'wp_rtc_websocket_max_connections'.
 		 *
 		 * @since 7.4.0
 		 * @var int
@@ -114,7 +114,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 
 		/**
 		 * Default maximum number of concurrent connections per client IP.
-		 * Filterable via 'wp_sync_websocket_max_connections_per_ip'.
+		 * Filterable via 'wp_rtc_websocket_max_connections_per_ip'.
 		 *
 		 * @since 7.4.0
 		 * @var int
@@ -135,14 +135,14 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 * The base WebSocket subprotocol the client offers and the server
 		 * echoes on accept.
 		 */
-		const SUBPROTOCOL = 'wp-sync';
+		const SUBPROTOCOL = 'wp-rtc';
 
 		/**
 		 * Prefix of the subprotocol offer that carries the one-time auth
 		 * token (the only handshake header a browser page can set — see
 		 * authenticate_handshake()).
 		 */
-		const TOKEN_PROTOCOL_PREFIX = 'wp-sync-token.';
+		const TOKEN_PROTOCOL_PREFIX = 'wp-rtc-token.';
 
 		/**
 		 * Maximum number of sync messages allowed per socket within the
@@ -301,7 +301,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 * @return array|null Counters, or null when measurement is disabled.
 		 */
 		public function benchmark_snapshot(): ?array {
-			if ( '1' !== getenv( 'GSE_BENCH_METRICS' ) ) {
+			if ( '1' !== getenv( 'WP_RTC_BENCH_METRICS' ) ) {
 				return null;
 			}
 			global $wpdb;
@@ -537,7 +537,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			 *
 			 * @param int $max_connections Maximum concurrent connections.
 			 */
-			$max_connections = (int) apply_filters( 'wp_sync_websocket_max_connections', self::DEFAULT_MAX_CONNECTIONS );
+			$max_connections = (int) apply_filters( 'wp_rtc_websocket_max_connections', self::DEFAULT_MAX_CONNECTIONS );
 
 			if ( count( $this->clients ) >= $max_connections ) {
 				$this->log( 'Connection refused: total connection cap reached' );
@@ -556,7 +556,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			 *
 			 * @param int $max_connections_per_ip Maximum concurrent connections per IP.
 			 */
-			$max_connections_per_ip = (int) apply_filters( 'wp_sync_websocket_max_connections_per_ip', self::DEFAULT_MAX_CONNECTIONS_PER_IP );
+			$max_connections_per_ip = (int) apply_filters( 'wp_rtc_websocket_max_connections_per_ip', self::DEFAULT_MAX_CONNECTIONS_PER_IP );
 
 			if ( '' !== $ip ) {
 				$ip_connections = 0;
@@ -815,7 +815,7 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 			 *
 			 * @param string[] $origins Allowed origins (scheme://host[:port]).
 			 */
-			$allowed_origins = apply_filters( 'wp_sync_websocket_allowed_origins', $default_origins );
+			$allowed_origins = apply_filters( 'wp_rtc_websocket_allowed_origins', $default_origins );
 
 			if ( ! is_array( $allowed_origins ) || ! in_array( $origin, $allowed_origins, true ) ) {
 				return '';
@@ -1753,10 +1753,10 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 *
 		 * @since 0.0.2
 		 *
-		 * @return WP_Sync_Awareness The awareness reader and writer.
+		 * @return WP_RTC_Awareness The awareness reader and writer.
 		 */
-		private function awareness(): WP_Sync_Awareness {
-			return new WP_Sync_Awareness( $this->sync->get_storage() );
+		private function awareness(): WP_RTC_Awareness {
+			return new WP_RTC_Awareness( $this->sync->get_storage() );
 		}
 
 		/**
@@ -1938,12 +1938,12 @@ if ( ! class_exists( 'WP_WebSocket_Sync_Server' ) ) {
 		 */
 		private function log( string $message ): void {
 			if ( defined( 'WP_CLI' ) && WP_CLI && class_exists( 'WP_CLI' ) ) {
-				WP_CLI::log( '[wp-sync-ws] ' . $message );
+				WP_CLI::log( '[wp-rtc-ws] ' . $message );
 				return;
 			}
 
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[wp-sync-ws] ' . $message );
+			error_log( '[wp-rtc-ws] ' . $message );
 		}
 	}
 }

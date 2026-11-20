@@ -93,7 +93,7 @@
  * tests env: npm run env:tests start; this repo's wp-env configs mount
  * the mu-plugin), Playwright's chromium,
  * and — for the server-side columns — the diagnostics request log
- * (local/development sites, or GUTENBERG_SYNC_ENGINES_DIAGNOSTICS).
+ * (local/development sites, or WP_RTC_DIAGNOSTICS).
  * Environment: WP_BASE_URL / WP_USERNAME / WP_PASSWORD as usual.
  */
 import fs from 'node:fs';
@@ -314,7 +314,7 @@ const METRICS = opts.metrics
 			.filter( Boolean )
 	: ALL_METRICS;
 
-const POLLING_INTERVAL_SETTING = 'gutenberg_sync_engines_polling_interval';
+const POLLING_INTERVAL_SETTING = 'wp_rtc_polling_interval';
 
 /**
  * Tags EVERY same-site request from a MEASURED page with the community
@@ -693,7 +693,7 @@ async function openEditorWindow( context, measured, postId, index ) {
 	page.on( 'response', ( response ) => {
 		if (
 			response.status() >= 400 &&
-			decodeURIComponent( response.url() ).includes( '/wp-sync/v1/' )
+			decodeURIComponent( response.url() ).includes( '/wp-rtc/v1/' )
 		) {
 			requestErrors++;
 			if ( errors.length < 20 ) {
@@ -1456,7 +1456,7 @@ async function main() {
 	const socketChecks = await sampleSocketProcesses( SOCKET_METRICS );
 	if ( socketChecks.some( ( entry ) => entry.error ) ) {
 		throw new Error(
-			'WebSocket measurement check failed before site changes. Enable GSE_BENCH_METRICS=1 on each selected server.'
+			'WebSocket measurement check failed before site changes. Enable WP_RTC_BENCH_METRICS=1 on each selected server.'
 		);
 	}
 

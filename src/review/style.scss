@@ -1,34 +1,34 @@
 // The conflict review dialogs' styles, loaded on the editor screen beside
-// the plugin bundle (build/sync-engines.css). The in-canvas cards render
+// the plugin bundle (build/wp-rtc.css). The in-canvas cards render
 // inside the editor iframe, where this stylesheet does not load, so they
 // carry their own styles inline (CANVAS_CSS in the card components).
 
 @use "@wordpress/base-styles/colors" as *;
 @use "@wordpress/base-styles/variables" as *;
 
-.gse-review-merge-dialog {
-	.gse-review-merge-dialog__description {
+.wp-rtc-review-merge-dialog {
+	.wp-rtc-review-merge-dialog__description {
 		color: $gray-700;
 		margin: 0 0 $grid-unit-15;
 	}
 
-	.gse-review-merge-dialog__notice {
+	.wp-rtc-review-merge-dialog__notice {
 		margin: 0 0 $grid-unit-15;
 	}
 
-	.gse-review-merge-dialog__panes {
+	.wp-rtc-review-merge-dialog__panes {
 		display: grid;
 		gap: $grid-unit-15;
 		grid-template-columns: 1fr 1fr;
 		margin-bottom: $grid-unit-20;
 	}
 
-	.gse-review-merge-dialog__pane {
+	.wp-rtc-review-merge-dialog__pane {
 		display: flex;
 		flex-direction: column;
 	}
 
-	.gse-review-merge-dialog__pane-label {
+	.wp-rtc-review-merge-dialog__pane-label {
 		font-size: $helptext-font-size;
 		font-weight: 600;
 		margin: 0 0 $grid-unit-05;
@@ -38,7 +38,7 @@
 	// Holds a pane's read-only block canvas (see block-diff-pane.js). The
 	// padding leaves room for the diff outlines drawn just outside the
 	// blocks' boxes.
-	.gse-review-merge-dialog__pane-content {
+	.wp-rtc-review-merge-dialog__pane-content {
 		background: $gray-100;
 		border-radius: $radius-small;
 		flex-grow: 1;
@@ -49,7 +49,7 @@
 	}
 
 	// Trim the canvas's outer margins so the pane hugs its blocks.
-	.gse-review-block-diff {
+	.wp-rtc-review-block-diff {
 		.block-editor-block-list__layout > :first-child {
 			margin-top: 0;
 		}
@@ -59,7 +59,7 @@
 		}
 	}
 
-	.gse-review-merge-dialog__pane .components-button {
+	.wp-rtc-review-merge-dialog__pane .components-button {
 		align-self: flex-start;
 	}
 
@@ -67,56 +67,56 @@
 	// per-cell diff highlighting (see table-diff-grid.js); the same
 	// classes are mirrored in the conflict card's canvas CSS. The wrapper
 	// scrolls horizontally when a wide table overflows its pane.
-	.gse-review-table-diff__wrapper {
+	.wp-rtc-review-table-diff__wrapper {
 		overflow-x: auto;
 	}
 
-	.gse-review-table-diff {
+	.wp-rtc-review-table-diff {
 		border-collapse: collapse;
 		width: 100%;
 	}
 
-	.gse-review-table-diff__cell {
+	.wp-rtc-review-table-diff__cell {
 		border: $border-width solid $gray-300;
 		padding: $grid-unit-05 $grid-unit-10;
 		text-align: left;
 		vertical-align: top;
 	}
 
-	.gse-review-table-diff__cell--added,
-	.gse-review-table-diff__cell--changed {
+	.wp-rtc-review-table-diff__cell--added,
+	.wp-rtc-review-table-diff__cell--changed {
 		background: rgba(74, 184, 102, 0.25);
 	}
 
-	.gse-review-table-diff__cell--contested {
+	.wp-rtc-review-table-diff__cell--contested {
 		background: rgba(240, 184, 73, 0.4);
 	}
 
-	.gse-review-merge-dialog__merged-editor {
+	.wp-rtc-review-merge-dialog__merged-editor {
 		border: $border-width solid $gray-600;
 		border-radius: $radius-small;
 
-		.gse-review-merge-dialog__merged-toolbar {
+		.wp-rtc-review-merge-dialog__merged-toolbar {
 			border-bottom: $border-width solid $gray-200;
 			// Reserve the toolbar's height so it appearing with the block
 			// selection does not jump the layout.
 			min-height: $grid-unit-60;
 		}
 
-		.gse-review-merge-dialog__merged-canvas {
+		.wp-rtc-review-merge-dialog__merged-canvas {
 			max-height: 16em;
 			overflow-y: auto;
 			padding: $grid-unit-10 $grid-unit-15;
 		}
 	}
 
-	.gse-review-merge-dialog__help {
+	.wp-rtc-review-merge-dialog__help {
 		color: $gray-700;
 		font-size: $helptext-font-size;
 		margin: $grid-unit-05 0 0;
 	}
 
-	.gse-review-merge-dialog__actions {
+	.wp-rtc-review-merge-dialog__actions {
 		display: flex;
 		gap: $grid-unit-10;
 		justify-content: flex-end;
@@ -124,24 +124,24 @@
 	}
 }
 
-.gse-review-kses-dialog {
+.wp-rtc-review-kses-dialog {
 	// The "changed while you were reviewing" notice, shared with the
 	// merge dialogs.
-	.gse-review-merge-dialog__notice {
+	.wp-rtc-review-merge-dialog__notice {
 		margin: 0 0 $grid-unit-15;
 	}
 
-	.gse-review-kses-dialog__description {
+	.wp-rtc-review-kses-dialog__description {
 		color: $gray-700;
 		margin: 0 0 $grid-unit-15;
 	}
 
-	.gse-review-kses-dialog__pane {
+	.wp-rtc-review-kses-dialog__pane {
 		display: flex;
 		flex-direction: column;
 	}
 
-	.gse-review-kses-dialog__pane-label {
+	.wp-rtc-review-kses-dialog__pane-label {
 		font-size: $helptext-font-size;
 		font-weight: 600;
 		margin: 0 0 $grid-unit-05;
@@ -151,7 +151,7 @@
 	// Wraps the revisions code diff showing the held markup (as inert
 	// text). The inner element is its own scroll container; cap its
 	// height here.
-	.gse-review-kses-dialog__code-diff {
+	.wp-rtc-review-kses-dialog__code-diff {
 		border: $border-width solid $gray-200;
 		border-radius: $radius-small;
 		overflow: hidden;
@@ -161,11 +161,11 @@
 		}
 	}
 
-	.gse-review-kses-dialog__editor {
+	.wp-rtc-review-kses-dialog__editor {
 		margin-top: $grid-unit-15;
 	}
 
-	.gse-review-kses-dialog__editor-textarea {
+	.wp-rtc-review-kses-dialog__editor-textarea {
 		border: $border-width solid $gray-600;
 		border-radius: $radius-small;
 		box-sizing: border-box;
@@ -175,7 +175,7 @@
 		width: 100%;
 	}
 
-	.gse-review-kses-dialog__actions {
+	.wp-rtc-review-kses-dialog__actions {
 		display: flex;
 		gap: $grid-unit-10;
 		justify-content: flex-end;
@@ -186,25 +186,25 @@
 // The text comparison the dialogs fall back to when the editor does not
 // export its revision comparison (see plain-text-diff.jsx). The marks
 // mirror the conflict card's canvas CSS.
-.gse-review-plain-diff {
+.wp-rtc-review-plain-diff {
 	font-family: inherit;
 	font-size: inherit;
 	margin: 0;
 	white-space: pre-wrap;
 	word-break: break-word;
 
-	.gse-review-diff__added {
+	.wp-rtc-review-diff__added {
 		background: rgba(74, 184, 102, 0.25);
 		text-decoration: none;
 	}
 
-	.gse-review-diff__removed {
+	.wp-rtc-review-diff__removed {
 		background: rgba(204, 24, 24, 0.2);
 		text-decoration: line-through;
 	}
 }
 
-.gse-review-plain-diff--code {
+.wp-rtc-review-plain-diff--code {
 	font-family: monospace;
 	font-size: 13px;
 	max-height: 16em;
@@ -213,13 +213,13 @@
 }
 
 // The sidebar panel for conflicts that have no block to present on.
-.gse-review-panel {
-	.gse-review-panel__description {
+.wp-rtc-review-panel {
+	.wp-rtc-review-panel__description {
 		color: $gray-700;
 		margin: 0 0 $grid-unit-15;
 	}
 
-	.gse-review-panel__item {
+	.wp-rtc-review-panel__item {
 		border-top: $border-width solid $gray-200;
 		padding: $grid-unit-15 0;
 
@@ -228,19 +228,19 @@
 		}
 	}
 
-	.gse-review-panel__heading {
+	.wp-rtc-review-panel__heading {
 		font-weight: 600;
 		margin: 0 0 $grid-unit-10;
 	}
 
-	.gse-review-panel__label {
+	.wp-rtc-review-panel__label {
 		color: $gray-700;
 		font-size: $helptext-font-size;
 		margin: 0 0 $grid-unit-05;
 		text-transform: uppercase;
 	}
 
-	.gse-review-panel__value {
+	.wp-rtc-review-panel__value {
 		background: $gray-100;
 		border-radius: $radius-small;
 		margin: 0 0 $grid-unit-10;
@@ -251,12 +251,12 @@
 		word-break: break-word;
 	}
 
-	.gse-review-panel__actions {
+	.wp-rtc-review-panel__actions {
 		display: flex;
 		gap: $grid-unit-10;
 	}
 
-	.gse-review-panel__hint {
+	.wp-rtc-review-panel__hint {
 		color: $gray-700;
 		font-size: $helptext-font-size;
 		margin: $grid-unit-10 0 0;

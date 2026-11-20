@@ -36,7 +36,7 @@ export async function sampleSocketProcesses( endpoints ) {
 			} catch {
 				return {
 					endpoint,
-					error: 'WebSocket process counters unavailable. Enable GSE_BENCH_METRICS=1 on the selected server.',
+					error: 'WebSocket process counters unavailable. Enable WP_RTC_BENCH_METRICS=1 on the selected server.',
 				};
 			}
 		} )

@@ -155,11 +155,11 @@ describe( 'advisory channel over the websocket link', () => {
 		// subprotocol offer, never the URL.
 		expect( apiFetch ).toHaveBeenCalledWith( {
 			method: 'POST',
-			path: '/wp-sync/v1/ws-token',
+			path: '/wp-rtc/v1/ws-token',
 			data: { room: ROOM },
 		} );
 		expect( ws.url ).toBe( URL );
-		expect( ws.protocols ).toEqual( [ 'wp-sync', 'wp-sync-token.t0ken' ] );
+		expect( ws.protocols ).toEqual( [ 'wp-rtc', 'wp-rtc-token.t0ken' ] );
 		expect( channel.getAdvisoryDebugState() ).toMatchObject( {
 			channel: 'websocket-advisory',
 			socket: 'connecting',

@@ -9,8 +9,8 @@
  *   1. Ensures wp-env is running (starts it if not) and derives the tests
  *      site URL from the generated compose file, so autoPort drift or a
  *      FOREIGN wp-env on :8889 cannot silently retarget the run.
- *   2. Per combo: selects the engine (`wp_sync_engine`) and transport
- *      (`gutenberg_sync_engines_transport`) on the tests site via wp-cli,
+ *   2. Per combo: selects the engine (`wp_rtc_engine`) and transport
+ *      (`wp_rtc_transport`) on the tests site via wp-cli,
  *      empties every room (room lineage is stamped per engine;
  *      stale collection rooms 409 over websocket where healing can't run),
  *      and — for websocket combos — runs the `wp collaboration sync-server`
@@ -46,15 +46,15 @@ const __filename = fileURLToPath( import.meta.url );
 const FUZZER_ROOT = path.dirname( __filename );
 const REPO_ROOT = path.resolve( FUZZER_ROOT, '../..' );
 
-const ENGINE_OPTION = 'wp_sync_engine';
-const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
+const ENGINE_OPTION = 'wp_rtc_engine';
+const TRANSPORT_OPTION = 'wp_rtc_transport';
 const WS_PORT = Number.parseInt( process.env.RTC_FUZZ_WS_PORT || '8787', 10 );
 const WS_DAEMON_CONTAINER = 'rtc-fuzz-ws-daemon';
 // The DEV env's afterStart hook auto-starts its own daemon under this name
 // (tests/e2e/bin/rtc-dev.mjs); it serves the DEV database but holds host
 // port 8787, so websocket combos must displace it. `npm run env start` (or
 // `npm run rtc:ws`) brings it back after a fuzz run.
-const DEV_WS_DAEMON_CONTAINER = 'wp-sync-ws-daemon';
+const DEV_WS_DAEMON_CONTAINER = 'wp-rtc-ws-daemon';
 // The fuzzer targets the TESTS environment (a single-site wp-env: services
 // are plain `cli`/`wordpress`, port from WP_ENV_PORT).
 const TESTS_CONFIG = '.wp-env.tests.json';
@@ -720,7 +720,7 @@ async function main() {
 			fix: 'cd gutenberg && npm install --ignore-scripts && npm run build',
 		},
 		{
-			relativePath: 'build/sync-engines.js',
+			relativePath: 'build/wp-rtc.js',
 			what: "plugin's client bundle is not built",
 			fix: 'npm run build',
 		},

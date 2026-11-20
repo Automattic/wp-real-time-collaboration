@@ -17,12 +17,12 @@ if ( ! class_exists( 'WP_WebSocket_Connection' ) ) {
 	 * close, which is acceptable for this experimental transport.
 	 *
 	 * The socket itself, and the HTTP request head every framing parses the
-	 * same way, live in WP_Sync_Connection.
+	 * same way, live in WP_RTC_Connection.
 	 *
 	 * @since 7.4.0
 	 * @access private
 	 */
-	class WP_WebSocket_Connection extends WP_Sync_Connection {
+	class WP_WebSocket_Connection extends WP_RTC_Connection {
 		/**
 		 * WebSocket handshake GUID from RFC 6455.
 		 *

@@ -6,7 +6,7 @@
  * alone (no cookie, no database read), which is what lets a host run its
  * own relay. The plugin's daemon accepts access tokens too.
  *
- * @package gutenberg-sync-engines
+ * @package WPRealTimeCollaboration
  *
  * @group collaboration
  */
@@ -34,11 +34,11 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 
 	public function set_up() {
 		parent::set_up();
-		add_filter( 'wp_sync_websocket_access_token_secret', array( $this, 'secret' ) );
+		add_filter( 'wp_rtc_websocket_access_token_secret', array( $this, 'secret' ) );
 	}
 
 	public function tear_down() {
-		remove_filter( 'wp_sync_websocket_access_token_secret', array( $this, 'secret' ) );
+		remove_filter( 'wp_rtc_websocket_access_token_secret', array( $this, 'secret' ) );
 		global $wp_rest_server;
 		$wp_rest_server = null;
 		parent::tear_down();
@@ -90,7 +90,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 	}
 
 	public function test_access_token_mode_is_off_without_a_secret() {
-		remove_filter( 'wp_sync_websocket_access_token_secret', array( $this, 'secret' ) );
+		remove_filter( 'wp_rtc_websocket_access_token_secret', array( $this, 'secret' ) );
 
 		$this->assertFalse( WP_WebSocket_Access_Token::is_enabled() );
 		$refused = WP_WebSocket_Access_Token::verify( $this->forge( $this->claims( time() ) ) );
@@ -256,7 +256,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 	 * can set. A valid token in an Authorization header is not looked at.
 	 */
 	public function test_the_daemon_ignores_a_token_in_an_authorization_header() {
-		$server = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_Sync_Table_Storage() ), '127.0.0.1', 8797 );
+		$server = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( new WP_RTC_Table_Storage() ), '127.0.0.1', 8797 );
 		$auth   = new ReflectionMethod( WP_WebSocket_Sync_Server::class, 'authenticate_handshake' );
 		$auth->setAccessible( true );
 		$origin = wp_parse_url( home_url() );
@@ -269,7 +269,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 			array(
 				'headers' => array(
 					'origin'                 => $origin,
-					'sec-websocket-protocol' => 'wp-sync',
+					'sec-websocket-protocol' => 'wp-rtc',
 					'authorization'          => 'Bearer ' . $access_token,
 				),
 				'method'  => 'GET',
@@ -285,7 +285,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 	}
 
 	public function test_the_daemon_accepts_a_access_token_without_a_cookie_and_keeps_the_socket_through_revalidation() {
-		$storage = new WP_Sync_Table_Storage();
+		$storage = new WP_RTC_Table_Storage();
 		$server  = new WP_WebSocket_Sync_Server( new WP_RTC_HTTP_Polling_Sync_Server( $storage ), '127.0.0.1', 8797 );
 		$auth    = new ReflectionMethod( WP_WebSocket_Sync_Server::class, 'authenticate_handshake' );
 		$auth->setAccessible( true );
@@ -295,7 +295,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 			return array(
 				'headers' => array(
 					'origin'                 => $origin,
-					'sec-websocket-protocol' => 'wp-sync, wp-sync-token.' . $access_token,
+					'sec-websocket-protocol' => 'wp-rtc, wp-rtc-token.' . $access_token,
 				),
 				'method'  => 'GET',
 				'path'    => '/',
@@ -328,9 +328,9 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 
 		// Access-token mode off: an access token is just a token nobody minted, and the
 		// cookie path (which needs a cookie) refuses.
-		remove_filter( 'wp_sync_websocket_access_token_secret', array( $this, 'secret' ) );
+		remove_filter( 'wp_rtc_websocket_access_token_secret', array( $this, 'secret' ) );
 		$this->assertWPError( $auth->invoke( $server, $request( $access_token, $origin ) ) );
-		add_filter( 'wp_sync_websocket_access_token_secret', array( $this, 'secret' ) );
+		add_filter( 'wp_rtc_websocket_access_token_secret', array( $this, 'secret' ) );
 
 		// The sweep: an access token socket with no cookie stays open while its
 		// user keeps the capability; a cookie socket without a cookie,
@@ -385,7 +385,7 @@ class Tests_Collaboration_WpWebSocketAccessToken extends WP_UnitTestCase {
 			do_action( 'rest_api_init', $wp_rest_server );
 			( new WP_WebSocket_Token_Controller() )->register_routes();
 		}
-		$request = new WP_REST_Request( 'POST', '/wp-sync/v1/ws-token' );
+		$request = new WP_REST_Request( 'POST', '/wp-rtc/v1/ws-token' );
 		$request->set_body_params( $params );
 		return rest_get_server()->dispatch( $request );
 	}

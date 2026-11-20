@@ -13,18 +13,18 @@
     "WP_REDIS_CLIENT": "predis",
     "WP_REDIS_DISABLE_BANNERS": true,
     "WP_REDIS_DISABLE_METRICS": true,
-    "WP_SYNC_WEBSOCKET_HOST": "localhost",
+    "WP_RTC_WEBSOCKET_HOST": "localhost",
     "WP_COLLABORATION_TRANSPORT": "http-polling"
   },
   "lifecycleScripts": {
-    "afterStart": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:start || echo 'Redis did not start: the Redis object cache is unavailable until it does (npm run doctor)'",
-    "afterDestroy": "GSE_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:destroy"
+    "afterStart": "WP_RTC_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:start || echo 'Redis did not start: the Redis object cache is unavailable until it does (npm run doctor)'",
+    "afterDestroy": "WP_RTC_WP_ENV_CONFIG=.wp-env.tests.json npm run redis:destroy"
   },
   "mappings": {
     "wp-content/plugins/wp-real-time-collaboration": ".",
     "wp-content/plugins/gutenberg": "./tests/e2e/plugins/gutenberg-stub",
     "wp-content/plugins/gutenberg-test-plugins": "./gutenberg/packages/e2e-tests/plugins",
-    "wp-content/plugins/sync-engines-test-plugins": "./tests/e2e/plugins",
-    "wp-content/mu-plugins/gutenberg-sync-engines-bench-log.php": "./tests/benchmarks/host/mu-bench-log.php"
+    "wp-content/plugins/wp-rtc-test-plugins": "./tests/e2e/plugins",
+    "wp-content/mu-plugins/wp-rtc-bench-log.php": "./tests/benchmarks/host/mu-bench-log.php"
   }
 }

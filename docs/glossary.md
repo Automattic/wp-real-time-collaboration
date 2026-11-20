@@ -35,7 +35,7 @@ use these terms freely; none of them is standard outside this project
   decision to poll sooner.
 - **Access token** — a signed, two-minute pass WordPress hands an editor
   tab for its socket handshake when a
-  `WP_SYNC_WEBSOCKET_ACCESS_TOKEN_SECRET` is configured: it names the
+  `WP_RTC_WEBSOCKET_ACCESS_TOKEN_SECRET` is configured: it names the
   user, the install, the site, and the rooms the tab may follow, and any
   server sharing the secret can check it without asking WordPress. It is
   what lets a host run its own relay (`examples/advisory-relay/`)
@@ -92,7 +92,7 @@ use these terms freely; none of them is standard outside this project
   burst of typing that the engine waits for before sending.
 - **CAS (compare-and-swap)** — changing a stored value only if nobody
   changed it since you read it, as one step. The advisory channel uses it
-  (`WP_Sync_Atomic_Option`) for each tab's waiting handshake messages,
+  (`WP_RTC_Atomic_Option`) for each tab's waiting handshake messages,
   so two senders cannot overwrite each other.
 - **Floor** — the oldest row a room still keeps after old rows are
   deleted. A client whose cursor is below the floor must start again

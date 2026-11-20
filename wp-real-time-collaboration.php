@@ -10,9 +10,9 @@
  * Author:            WordPress Contributors
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       gutenberg-sync-engines
+ * Text Domain:       wp-real-time-collaboration
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,7 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * hook creates the tables, `uninstall.php` drops them, and neither needs
  * the collaboration framework. The file guards its own class declaration.
  */
-require_once __DIR__ . '/includes/storage/class-wp-sync-table-schema.php';
+require_once __DIR__ . '/includes/storage/class-wp-rtc-table-schema.php';
 
 /*
  * The plugin's server functions load this early for the same reason: the
@@ -34,7 +34,7 @@ require_once __DIR__ . '/includes/storage/class-wp-sync-table-schema.php';
  */
 require_once __DIR__ . '/includes/server/functions.php';
 
-if ( ! function_exists( 'gutenberg_sync_engines_activate' ) ) {
+if ( ! function_exists( 'wp_rtc_activate' ) ) {
 	/**
 	 * Sets a site up for collaboration when this plugin is activated:
 	 * creates the storage tables and switches real-time collaboration on.
@@ -59,16 +59,16 @@ if ( ! function_exists( 'gutenberg_sync_engines_activate' ) ) {
 	 *                           the whole network.
 	 * @return void
 	 */
-	function gutenberg_sync_engines_activate( $network_wide = false ) {
+	function wp_rtc_activate( $network_wide = false ) {
 		if ( $network_wide && is_multisite() ) {
-			WP_Sync_Table_Schema::for_each_site( 'gutenberg_sync_engines_activate_site' );
+			WP_RTC_Table_Schema::for_each_site( 'wp_rtc_activate_site' );
 			return;
 		}
-		gutenberg_sync_engines_activate_site();
+		wp_rtc_activate_site();
 	}
 }
 
-if ( ! function_exists( 'gutenberg_sync_engines_activate_site' ) ) {
+if ( ! function_exists( 'wp_rtc_activate_site' ) ) {
 	/**
 	 * The per-site activation steps: storage tables, then the setting
 	 * that switches collaboration on.
@@ -77,13 +77,13 @@ if ( ! function_exists( 'gutenberg_sync_engines_activate_site' ) ) {
 	 *
 	 * @return void
 	 */
-	function gutenberg_sync_engines_activate_site() {
-		WP_Sync_Table_Schema::install();
+	function wp_rtc_activate_site() {
+		WP_RTC_Table_Schema::install();
 		update_option( 'wp_rtc_enabled', '1' );
 	}
 }
 
-if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
+if ( ! function_exists( 'wp_rtc_initialize_site' ) ) {
 	/**
 	 * Sets up a site created on a network where this plugin is
 	 * network-active: the activation hook ran before the site existed, so
@@ -96,7 +96,7 @@ if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
 	 * @param WP_Site $new_site The site just created.
 	 * @return void
 	 */
-	function gutenberg_sync_engines_initialize_site( $new_site ) {
+	function wp_rtc_initialize_site( $new_site ) {
 		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
@@ -104,7 +104,7 @@ if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
 			return;
 		}
 		switch_to_blog( (int) $new_site->id );
-		gutenberg_sync_engines_activate_site();
+		wp_rtc_activate_site();
 		restore_current_blog();
 	}
 }
@@ -114,7 +114,7 @@ if ( ! function_exists( 'gutenberg_sync_engines_initialize_site' ) ) {
  * returns early from this file, and activating that copy should still turn
  * collaboration on.
  */
-register_activation_hook( __FILE__, 'gutenberg_sync_engines_activate' );
+register_activation_hook( __FILE__, 'wp_rtc_activate' );
 
 /*
  * In a git worktree, wp-env mounts this plugin TWICE (under the checkout's
@@ -126,23 +126,23 @@ register_activation_hook( __FILE__, 'gutenberg_sync_engines_activate' );
  * unconditional top-level functions at COMPILE time, before this return
  * could run.)
  */
-if ( function_exists( 'gutenberg_sync_engines_bootstrap' ) ) {
+if ( function_exists( 'wp_rtc_bootstrap' ) ) {
 	return;
 }
 
-define( 'GUTENBERG_SYNC_ENGINES_VERSION', '0.0.2' );
-define( 'GUTENBERG_SYNC_ENGINES_PATH', plugin_dir_path( __FILE__ ) );
-define( 'GUTENBERG_SYNC_ENGINES_URL', plugin_dir_url( __FILE__ ) );
-define( 'GUTENBERG_SYNC_ENGINES_FILE', __FILE__ );
+define( 'WP_RTC_VERSION', '0.0.2' );
+define( 'WP_RTC_PATH', plugin_dir_path( __FILE__ ) );
+define( 'WP_RTC_URL', plugin_dir_url( __FILE__ ) );
+define( 'WP_RTC_FILE', __FILE__ );
 
 // Before anything reads $wpdb->sync_updates / $wpdb->sync_room_meta.
-WP_Sync_Table_Schema::register_tables();
+WP_RTC_Table_Schema::register_tables();
 
 if ( is_multisite() ) {
-	add_action( 'wp_initialize_site', 'gutenberg_sync_engines_initialize_site', 10, 1 );
+	add_action( 'wp_initialize_site', 'wp_rtc_initialize_site', 10, 1 );
 }
 
-if ( ! function_exists( 'gutenberg_sync_engines_load_bundled_gutenberg' ) ) {
+if ( ! function_exists( 'wp_rtc_load_bundled_gutenberg' ) ) {
 	/**
 	 * Loads the bundled Gutenberg plugin (the collaborative-editing framework)
 	 * when no other copy of Gutenberg is present, so the release zip works on
@@ -162,12 +162,12 @@ if ( ! function_exists( 'gutenberg_sync_engines_load_bundled_gutenberg' ) ) {
 	 *
 	 * @return void
 	 */
-	function gutenberg_sync_engines_load_bundled_gutenberg() {
+	function wp_rtc_load_bundled_gutenberg() {
 		if ( defined( 'GUTENBERG_VERSION' ) || function_exists( 'gutenberg_pre_init' ) ) {
 			return; // Gutenberg is already loaded.
 		}
 
-		$entry = GUTENBERG_SYNC_ENGINES_PATH . 'gutenberg/gutenberg.php';
+		$entry = WP_RTC_PATH . 'gutenberg/gutenberg.php';
 		if ( ! file_exists( $entry ) ) {
 			return;
 		}
@@ -192,27 +192,11 @@ if ( ! function_exists( 'gutenberg_sync_engines_load_bundled_gutenberg' ) ) {
 		require_once $entry;
 	}
 }
-gutenberg_sync_engines_load_bundled_gutenberg();
+wp_rtc_load_bundled_gutenberg();
 
-require_once GUTENBERG_SYNC_ENGINES_PATH . 'includes/class-gutenberg-sync-engines-plugin.php';
+require_once WP_RTC_PATH . 'includes/class-wp-rtc-plugin.php';
 
-if ( ! function_exists( 'gutenberg_sync_engines_storage' ) ) {
-	/**
-	 * The sync storage the plugin's engines, transports, and tools use.
-	 *
-	 * A short name for wp_rtc_get_storage(), where the `wp_rtc_storage`
-	 * filter lets a site substitute another backend everywhere at once.
-	 *
-	 * @since 0.4.0
-	 *
-	 * @return WP_RTC_Storage Storage implementation.
-	 */
-	function gutenberg_sync_engines_storage() {
-		return wp_rtc_get_storage();
-	}
-}
-
-if ( ! function_exists( 'gutenberg_sync_engines_bootstrap' ) ) {
+if ( ! function_exists( 'wp_rtc_bootstrap' ) ) {
 	/**
 	 * Boots the plugin once all plugins are loaded, so the collaborative-editing
 	 * framework (shipped in Gutenberg / WordPress core) is already available to
@@ -222,8 +206,8 @@ if ( ! function_exists( 'gutenberg_sync_engines_bootstrap' ) ) {
 	 *
 	 * @return void
 	 */
-	function gutenberg_sync_engines_bootstrap() {
-		Gutenberg_Sync_Engines_Plugin::instance()->boot();
+	function wp_rtc_bootstrap() {
+		WP_RTC_Plugin::instance()->boot();
 	}
 }
-add_action( 'plugins_loaded', 'gutenberg_sync_engines_bootstrap' );
+add_action( 'plugins_loaded', 'wp_rtc_bootstrap' );

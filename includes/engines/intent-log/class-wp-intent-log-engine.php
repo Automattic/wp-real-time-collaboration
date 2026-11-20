@@ -44,7 +44,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 	 * authoring model. Client-sent actorId values are ignored.
 	 *
 	 * Compaction: a checkpoint snapshot row is appended once
-	 * `wp_sync_intent_log_checkpoint_interval` intent rows (default 500)
+	 * `wp_rtc_intent_log_checkpoint_interval` intent rows (default 500)
 	 * accumulate since the previous checkpoint; history below the previous
 	 * checkpoint is then trimmed and recorded as the room floor. Clients
 	 * whose cursor falls below the floor bootstrap again from the retained
@@ -64,7 +64,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 	 * @since 7.2.0
 	 * @access private
 	 */
-	class WP_Intent_Log_Engine implements WP_Sync_Engine {
+	class WP_Intent_Log_Engine implements WP_RTC_Engine {
 		/**
 		 * Engine slug.
 		 *
@@ -263,7 +263,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 
 		/**
 		 * Acquires the per-room ingest lock (Core-style options-row lock;
-		 * see WP_Sync_Room_Lock for why not GET_LOCK).
+		 * see WP_RTC_Room_Lock for why not GET_LOCK).
 		 *
 		 * @since 7.2.0
 		 *
@@ -272,7 +272,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 */
 		private function acquire_room_lock( string $room ) {
 			// 5s budget; a plan is milliseconds, so contention clears fast.
-			$token = WP_Sync_Room_Lock::acquire( $this->room_lock_name( $room ), 5.0 );
+			$token = WP_RTC_Room_Lock::acquire( $this->room_lock_name( $room ), 5.0 );
 			if ( is_wp_error( $token ) ) {
 				// Budget exhausted: the client retries on its normal poll
 				// cadence.
@@ -291,7 +291,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @param string $room Room identifier.
 		 */
 		private function release_room_lock( string $room ): void {
-			WP_Sync_Room_Lock::release(
+			WP_RTC_Room_Lock::release(
 				$this->room_lock_name( $room ),
 				(string) ( $this->room_lock_tokens[ $room ] ?? '' )
 			);
@@ -310,7 +310,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @return string Lock name.
 		 */
 		private function room_lock_name( string $room ): string {
-			return WP_Sync_Room_Lock::name_for_room( $room );
+			return WP_RTC_Room_Lock::name_for_room( $room );
 		}
 
 		/**
@@ -344,7 +344,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$lock_wait_ms = round( ( microtime( true ) - $lock_started ) * 1000, 1 );
 			if ( is_wp_error( $lock ) ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: ingest lock timeout for {$room} after {$lock_wait_ms}ms" );
+				do_action( 'qm/debug', "wp-rtc: ingest lock timeout for {$room} after {$lock_wait_ms}ms" );
 				return $lock;
 			}
 			try {
@@ -460,7 +460,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$decoded = self::decode_updates( $updates, $actor_id, $head_seq );
 			if ( $decoded['refused'] > 0 ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: {$decoded['refused']} malformed row(s) refused in {$room}" );
+				do_action( 'qm/debug', "wp-rtc: {$decoded['refused']} malformed row(s) refused in {$room}" );
 			}
 			$stored = $this->store_refusals( $room, $client_id, $decoded['refusals'], $state );
 			if ( is_wp_error( $stored ) ) {
@@ -653,7 +653,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				}
 				$cancel_dispositions[ $cancel['cancelId'] ] = array( 'status' => 'applied' );
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', 'wp-sync: canceled ' . count( $targets ) . " queued intent(s) in {$room}" );
+				do_action( 'qm/debug', 'wp-rtc: canceled ' . count( $targets ) . " queued intent(s) in {$room}" );
 			}
 
 			return $cancel_dispositions;
@@ -966,15 +966,15 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			$plan_counts['approval'] = array_sum( array_map( 'count', $requires_approval ) );
 			if ( $plan_counts['escalated'] > 0 ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: {$plan_counts['escalated']} intent(s) escalated for review in {$room}" );
+				do_action( 'qm/debug', "wp-rtc: {$plan_counts['escalated']} intent(s) escalated for review in {$room}" );
 			}
 			if ( $plan_counts['approval'] > 0 ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: {$plan_counts['approval']} intent(s) parked for approval in {$room} (author lacks unfiltered_html)" );
+				do_action( 'qm/debug', "wp-rtc: {$plan_counts['approval']} intent(s) parked for approval in {$room} (author lacks unfiltered_html)" );
 			}
 			if ( $plan_counts['stale'] > 0 ) {
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: {$plan_counts['stale']} stale-base intent(s) voided in {$room} (client below retention horizon)" );
+				do_action( 'qm/debug', "wp-rtc: {$plan_counts['stale']} stale-base intent(s) voided in {$room} (client below retention horizon)" );
 			}
 			if ( ! empty( $context['debug'] ) ) {
 				$this->debug_stash[ $room ] = array(
@@ -1015,7 +1015,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 					if ( ! self::may_decide( $state['proposals_open'][ $proposal_id ], $resolution['resolution'] ) ) {
 						$refused_decisions[ $index ] = true;
 						// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-						do_action( 'qm/debug', "wp-sync: refused a review decision in {$room} (the sender may not decide this item)" );
+						do_action( 'qm/debug', "wp-rtc: refused a review decision in {$room} (the sender may not decide this item)" );
 						continue;
 					}
 					$stored = $this->add_row(
@@ -1718,7 +1718,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 			 * @param int    $interval Interval in intent rows.
 			 * @param string $room     Room identifier.
 			 */
-			$interval = (int) apply_filters( 'wp_sync_intent_log_checkpoint_interval', 500, $room );
+			$interval = (int) apply_filters( 'wp_rtc_intent_log_checkpoint_interval', 500, $room );
 			if ( $interval < 1 || $window_intent_rows < $interval ) {
 				return false;
 			}
@@ -1790,7 +1790,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				return true;
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-			do_action( 'qm/debug', "wp-sync: checkpoint at seq {$head_seq} for {$room}" );
+			do_action( 'qm/debug', "wp-rtc: checkpoint at seq {$head_seq} for {$room}" );
 			$this->storage->set_room_meta(
 				$room,
 				'intent_log_checkpoint',
@@ -1807,7 +1807,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				$this->storage->remove_updates_before_cursor( $room, (int) $previous['cursor'] );
 				$this->storage->set_room_meta( $room, 'intent_log_floor', (int) $previous['cursor'] );
 				// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-				do_action( 'qm/debug', "wp-sync: trimmed history below cursor {$previous['cursor']} for {$room}" );
+				do_action( 'qm/debug', "wp-rtc: trimmed history below cursor {$previous['cursor']} for {$room}" );
 			}
 			return true;
 		}
@@ -2131,7 +2131,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 				if ( isset( $this->room_lock_tokens[ $room ] ) ) {
 					$this->storage->reset_room( $room );
 					// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-					do_action( 'qm/debug', "wp-sync: reset room {$room} (written by an older protocol version)" );
+					do_action( 'qm/debug', "wp-rtc: reset room {$room} (written by an older protocol version)" );
 				}
 				$genesis        = null;
 				$log            = array();
@@ -2231,7 +2231,7 @@ if ( ! class_exists( 'WP_Intent_Log_Engine' ) ) {
 		 * @return array Property name => raw scalar value.
 		 */
 		private static function genesis_props( WP_Post $post ): array {
-			return WP_Sync_Post_Genesis_Props::for_post( $post );
+			return WP_RTC_Post_Genesis_Props::for_post( $post );
 		}
 
 		/**

@@ -34,7 +34,7 @@ shared editing session.
   `admin/` (the settings screen), `storage/`, `diagnostics/`
   (dev-only).
 - `src/` — client TypeScript; `src/index.ts` builds
-  `build/sync-engines.js`: `engines/` (the intent-log core, its session,
+  `build/wp-rtc.js`: `engines/` (the intent-log core, its session,
   and the comparison of two documents), `replica/` (one room's state in
   the browser: the documents and the one list of everything the server
   has not answered), `shared/`,
@@ -203,7 +203,7 @@ Test traps:
   `enable()`, then `tail()`, `log()`, `table()`, `intents('p1')`,
   `doc()`, `proposals()`, `cursor()`, `export()`, `help()`. Enabling it
   also makes the engine add a `_debug` section to its answers (gated
-  by `SCRIPT_DEBUG` or the `wp_sync_debug_enabled` filter).
+  by `SCRIPT_DEBUG` or the `wp_rtc_debug_enabled` filter).
 - Query Monitor's `qm/debug` action receives lock timeouts, edits held
   back or thrown away, repairs, snapshots, trimming and engine
   mismatches.
@@ -316,7 +316,7 @@ before a big change. A durable lesson from an issue goes here.
 - **The first copy of a post's blocks the server builds (genesis) must
   set `isValid: true`** on every block, or the editor renders them as
   invalid-content recovery blocks.
-- **`src/awareness/registry.ts` must register the `gseBlock` presence
+- **`src/awareness/registry.ts` must register the `wpRtcBlock` presence
   field in every mode.** A peer can send the field at any time, and
   core-data throws on an unknown field.
 - **The block name for slow awareness is sent with the presence data
@@ -386,7 +386,7 @@ before a big change. A durable lesson from an issue goes here.
   the folder's name, AND maps `.` to
   `wp-content/plugins/wp-real-time-collaboration`. A checkout whose
   folder has that name is mounted once. Activating both copies is a
-  fatal `Cannot redeclare gutenberg_sync_engines_bootstrap()`. Keep the
+  fatal `Cannot redeclare wp_rtc_bootstrap()`. Keep the
   DIRECTORY-NAME copy active: `wp-env start` re-activates it on every
   start, so the reverse arrangement aborts the next start. `npm run
   rtc:ws` enforces this.
@@ -409,7 +409,7 @@ before a big change. A durable lesson from an issue goes here.
   docs; the release script lists every merged commit anyway.
 - **A change to a default, an option name, a filter, a transport slug,
   a REST route or a row type updates the settings screen's text
-  (`includes/admin/class-gutenberg-sync-engines-settings.php`) or
+  (`includes/admin/class-wp-rtc-settings.php`) or
   `docs/protocol.md` in the same commit.** `npm run lint:docs` (CI)
   checks that every path, option, filter, class and constant the docs
   name exists in the code, that links and anchors resolve, that

@@ -58,7 +58,7 @@ describe( 'a tab editing alone', () => {
 		// WordPress heartbeat. Together they tell the tab whether anyone
 		// else is in the post. Nobody else is.
 		Object.assign( window, {
-			_gutenbergSyncEnginesSettings: {
+			_wpRtcSettings: {
 				advisory: { room: ROOM, token: 'tab-token' },
 			},
 			wp: { heartbeat: { interval: jest.fn() } },
@@ -101,7 +101,7 @@ describe( 'a tab editing alone', () => {
 		pollingManager.unregisterRoom( ROOM, { sendDisconnectSignal: false } );
 		resetSignalingForTesting();
 		Object.assign( window, {
-			_gutenbergSyncEnginesSettings: undefined,
+			_wpRtcSettings: undefined,
 			wp: undefined,
 		} );
 		jest.clearAllTimers();

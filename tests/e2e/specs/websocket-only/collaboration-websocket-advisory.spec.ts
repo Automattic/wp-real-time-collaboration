@@ -24,8 +24,8 @@ import { test, expect } from '../../config/collaboration-fixtures';
  */
 
 const REPO_ROOT = path.resolve( __dirname, '../../../..' );
-const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
-const ADVISORY_OPTION = 'gutenberg_sync_engines_advisory_channel';
+const TRANSPORT_OPTION = 'wp_rtc_transport';
+const ADVISORY_OPTION = 'wp_rtc_advisory_channel';
 
 function wpCli( ...args: string[] ): string {
 	const result = spawnSync(
@@ -93,7 +93,7 @@ async function countSyncRequests( page: Page, windowMs: number ) {
 	const onRequest = ( request: { url: () => string } ) => {
 		// Matched without slashes: without pretty permalinks the route is
 		// URL-encoded inside `?rest_route=`.
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			count++;
 		}
 	};

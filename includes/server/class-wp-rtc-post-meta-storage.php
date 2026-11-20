@@ -2,7 +2,7 @@
 /**
  * WP_RTC_Post_Meta_Storage class
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 /**
@@ -22,7 +22,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 	 * @since 7.0.0
 	 * @var string
 	 */
-	const POST_TYPE = 'wp_sync_storage';
+	const POST_TYPE = 'wp_rtc_storage';
 
 	/**
 	 * Meta key for awareness state.
@@ -30,7 +30,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 	 * @since 7.0.0
 	 * @var string
 	 */
-	const AWARENESS_META_KEY = 'wp_sync_awareness_state';
+	const AWARENESS_META_KEY = 'wp_rtc_awareness_state';
 
 	/**
 	 * Meta key for sync updates.
@@ -38,7 +38,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 	 * @since 7.0.0
 	 * @var string
 	 */
-	const SYNC_UPDATE_META_KEY = 'wp_sync_update_data';
+	const SYNC_UPDATE_META_KEY = 'wp_rtc_update_data';
 
 	/**
 	 * Meta key for the room's engine lineage stamp.
@@ -46,7 +46,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 	 * @since 7.2.0
 	 * @var string
 	 */
-	const ENGINE_META_KEY = 'wp_sync_engine';
+	const ENGINE_META_KEY = 'wp_rtc_engine';
 
 	/**
 	 * Cache of cursors by room.
@@ -358,7 +358,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 			$wpdb->prepare(
 				"SELECT meta_value FROM $wpdb->postmeta WHERE post_id = %d AND meta_key = %s ORDER BY meta_id DESC LIMIT 1",
 				$post_id,
-				'wp_sync_room_meta_' . $key
+				'wp_rtc_room_meta_' . $key
 			)
 		);
 
@@ -390,7 +390,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 			return false;
 		}
 
-		$meta_key = 'wp_sync_room_meta_' . $key;
+		$meta_key = 'wp_rtc_room_meta_' . $key;
 
 		// Direct queries for cache hygiene (see other accessors).
 		$wpdb->delete(
@@ -764,7 +764,7 @@ class WP_RTC_Post_Meta_Storage implements WP_RTC_Storage {
 				self::SYNC_UPDATE_META_KEY,
 				self::ENGINE_META_KEY,
 				self::AWARENESS_META_KEY,
-				$wpdb->esc_like( 'wp_sync_room_meta_' ) . '%'
+				$wpdb->esc_like( 'wp_rtc_room_meta_' ) . '%'
 			)
 		);
 

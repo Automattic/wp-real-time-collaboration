@@ -46,7 +46,7 @@ import {
  * the timer cadence; nothing is lost.
  */
 
-const DATA_CHANNEL_LABEL = 'wp-sync-advisory';
+const DATA_CHANNEL_LABEL = 'wp-rtc-advisory';
 const ANSWER_TIMEOUT_MS = 15000;
 const SEEN_SIGNAL_IDS_MAX = 500;
 const DISCONNECT_GRACE_MS = 5000;

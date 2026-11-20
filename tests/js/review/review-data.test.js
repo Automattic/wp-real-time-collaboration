@@ -166,7 +166,7 @@ describe( 'conflictsTargetingBlock', () => {
 
 describe( 'canApproveUnfilteredHtml', () => {
 	afterEach( () => {
-		delete window._gutenbergSyncEnginesSettings;
+		delete window._wpRtcSettings;
 	} );
 
 	it( 'is not allowed when the plugin settings are missing', () => {
@@ -174,22 +174,22 @@ describe( 'canApproveUnfilteredHtml', () => {
 	} );
 
 	it( 'is not allowed when the settings carry no flag', () => {
-		window._gutenbergSyncEnginesSettings = {};
+		window._wpRtcSettings = {};
 		expect( canApproveUnfilteredHtml() ).toBe( false );
 	} );
 
 	it( 'is not allowed when the server says no', () => {
-		window._gutenbergSyncEnginesSettings = { canUnfilteredHtml: false };
+		window._wpRtcSettings = { canUnfilteredHtml: false };
 		expect( canApproveUnfilteredHtml() ).toBe( false );
 	} );
 
 	it( 'is not allowed for a value that is not exactly true', () => {
-		window._gutenbergSyncEnginesSettings = { canUnfilteredHtml: '1' };
+		window._wpRtcSettings = { canUnfilteredHtml: '1' };
 		expect( canApproveUnfilteredHtml() ).toBe( false );
 	} );
 
 	it( 'is allowed when the server says yes', () => {
-		window._gutenbergSyncEnginesSettings = { canUnfilteredHtml: true };
+		window._wpRtcSettings = { canUnfilteredHtml: true };
 		expect( canApproveUnfilteredHtml() ).toBe( true );
 	} );
 } );

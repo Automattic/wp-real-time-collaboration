@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="Gutenberg Sync Engines">
+<ruleset name="WP Real-Time Collaboration">
 	<description>PHP coding standards, mirroring wordpress-develop.</description>
 
 	<!-- What to scan. -->
@@ -51,7 +51,7 @@
 	<rule ref="WordPress.WP.AlternativeFunctions">
 		<exclude-pattern>/tests/*</exclude-pattern>
 		<exclude-pattern>/includes/transports/websocket/*</exclude-pattern>
-		<exclude-pattern>/includes/transports/class-wp-sync-connection.php</exclude-pattern>
+		<exclude-pattern>/includes/transports/class-wp-rtc-connection.php</exclude-pattern>
 	</rule>
 
 	<!-- Test fixtures and benchmark profiles colocate small helper
@@ -71,7 +71,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="gutenberg-sync-engines"/>
+				<element value="wp-real-time-collaboration"/>
 				<element value="gutenberg"/>
 				<element value="default"/>
 			</property>
@@ -85,18 +85,13 @@
 		<exclude-pattern>/tests/*</exclude-pattern>
 		<properties>
 			<property name="prefixes" type="array">
-				<element value="gutenberg_sync_engines"/>
-				<element value="Gutenberg_Sync_Engines"/>
-				<!-- Engine/transport classes implement framework contracts and
-				     keep their framework-canonical WP_* names. -->
-				<element value="WP_Intent_Log"/>
-				<element value="WP_HTTP_Polling"/>
-				<element value="WP_HTTP_Long_Polling"/>
-				<element value="WP_WebSocket"/>
-				<element value="WP_Sync"/>
 				<!-- Names the plugin as a whole owns. -->
 				<element value="WP_RTC"/>
 				<element value="wp_rtc"/>
+				<!-- The intent-log engine and the WebSocket transport keep
+				     their own class prefixes. -->
+				<element value="WP_Intent_Log"/>
+				<element value="WP_WebSocket"/>
 			</property>
 		</properties>
 	</rule>

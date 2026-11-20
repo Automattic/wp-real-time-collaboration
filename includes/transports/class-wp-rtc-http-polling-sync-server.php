@@ -2,7 +2,7 @@
 /**
  * WP_RTC_HTTP_Polling_Sync_Server class
  *
- * @package GutenbergSyncEngines
+ * @package WPRealTimeCollaboration
  */
 
 /**
@@ -10,8 +10,8 @@
  *
  * The transport owns movement: routes, authentication, room permission
  * checks, cursors, awareness, and request/response shape. The MEANING of
- * update payloads is owned by the room's engine (WP_Sync_Engine, resolved
- * through WP_Sync_Engine_Registry) — this class never interprets update
+ * update payloads is owned by the room's engine (WP_RTC_Engine, resolved
+ * through WP_RTC_Engine_Registry) — this class never interprets update
  * data, so engines are swappable without transport changes.
  *
  * Engine mismatch protection: a client may stamp the engine it is
@@ -24,7 +24,7 @@
  * @since 7.0.0
  * @access private
  */
-class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
+class WP_RTC_HTTP_Polling_Sync_Server implements WP_RTC_Transport {
 	/**
 	 * Transport slug (matches the client transport registration).
 	 *
@@ -47,7 +47,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 * @since 7.0.0
 	 * @var string
 	 */
-	const REST_NAMESPACE = 'wp-sync/v1';
+	const REST_NAMESPACE = 'wp-rtc/v1';
 
 	/**
 	 * Awareness timeout in seconds. Clients that haven't updated
@@ -71,7 +71,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	/**
 	 * Room meta key of the room's generation token (see room_generation()).
 	 * Write-once per room lifetime, which is why the table storage may
-	 * serve it from the object cache (`WP_Sync_Table_Storage::GENERATION_KEY`
+	 * serve it from the object cache (`WP_RTC_Table_Storage::GENERATION_KEY`
 	 * names the same key).
 	 *
 	 * @since 0.0.1
@@ -114,46 +114,46 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 * Engine registry used to resolve the engine for each room.
 	 *
 	 * @since 7.2.0
-	 * @var WP_Sync_Engine_Registry
+	 * @var WP_RTC_Engine_Registry
 	 */
-	protected WP_Sync_Engine_Registry $engines;
+	protected WP_RTC_Engine_Registry $engines;
 
 	/**
 	 * Constructor.
 	 *
 	 * @since 7.0.0
 	 *
-	 * @param WP_RTC_Storage                                $storage  Storage backend for sync updates.
-	 * @param WP_Sync_Engine_Registry|null                  $engines  Engine registry. Defaults to a
-	 *                                                                registry over the given storage.
-	 * @param Gutenberg_Sync_Engines_Advisory_Presence|null $presence Presence lane deciding room
+	 * @param WP_RTC_Storage                $storage  Storage backend for sync updates.
+	 * @param WP_RTC_Engine_Registry|null   $engines  Engine registry. Defaults to a
+	 *                                                 registry over the given storage.
+	 * @param WP_RTC_Advisory_Presence|null $presence Presence lane deciding room
 	 *                                                                lifetime. Defaults to the
 	 *                                                                plugin's when available.
 	 */
-	public function __construct( WP_RTC_Storage $storage, ?WP_Sync_Engine_Registry $engines = null, ?Gutenberg_Sync_Engines_Advisory_Presence $presence = null ) {
-		if ( null === $presence && class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
-			$presence = new Gutenberg_Sync_Engines_Advisory_Presence( $storage );
+	public function __construct( WP_RTC_Storage $storage, ?WP_RTC_Engine_Registry $engines = null, ?WP_RTC_Advisory_Presence $presence = null ) {
+		if ( null === $presence && class_exists( 'WP_RTC_Advisory_Presence' ) ) {
+			$presence = new WP_RTC_Advisory_Presence( $storage );
 		}
 		$this->presence  = $presence;
 		$this->storage   = $storage;
-		$this->engines   = $engines ?? new WP_Sync_Engine_Registry( $storage );
-		$this->awareness = new WP_Sync_Awareness( $storage );
+		$this->engines   = $engines ?? new WP_RTC_Engine_Registry( $storage );
+		$this->awareness = new WP_RTC_Awareness( $storage );
 	}
 
 	/**
 	 * Who is in a room, over whichever store serves this request.
 	 *
 	 * @since 0.0.2
-	 * @var WP_Sync_Awareness
+	 * @var WP_RTC_Awareness
 	 */
-	protected WP_Sync_Awareness $awareness;
+	protected WP_RTC_Awareness $awareness;
 
 	/**
 	 * The presence lane deciding room lifetime (join/leave resets), or
 	 * null when the plugin's presence class is unavailable.
 	 *
 	 * @since 0.0.1
-	 * @var Gutenberg_Sync_Engines_Advisory_Presence|null
+	 * @var WP_RTC_Advisory_Presence|null
 	 */
 	protected $presence;
 
@@ -162,9 +162,9 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 *
 	 * @since 0.0.1
 	 *
-	 * @return Gutenberg_Sync_Engines_Advisory_Presence|null
+	 * @return WP_RTC_Advisory_Presence|null
 	 */
-	public function get_presence(): ?Gutenberg_Sync_Engines_Advisory_Presence {
+	public function get_presence(): ?WP_RTC_Advisory_Presence {
 		return $this->presence;
 	}
 
@@ -265,7 +265,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 				'required' => false,
 				'type'     => 'integer',
 			),
-			// The tab's presence token (Gutenberg_Sync_Engines_Advisory_Presence):
+			// The tab's presence token (WP_RTC_Advisory_Presence):
 			// a tab's first request with it is its join, which under the
 			// default policy resets a per-post room nobody else is in.
 			'presence_token'  => array(
@@ -299,7 +299,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 			// The advisory channel's signaling probe (per-tab token and
 			// handshake messages), answered alongside the rooms so an
 			// active poll loop is a faster carrier than the heartbeat.
-			// See Gutenberg_Sync_Engines_Advisory_Presence.
+			// See WP_RTC_Advisory_Presence.
 			'advisory' => array(
 				'type'     => 'object',
 				'required' => false,
@@ -413,8 +413,8 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 		}
 
 		$probe = $request->get_param( 'advisory' );
-		if ( is_array( $probe ) && class_exists( 'Gutenberg_Sync_Engines_Advisory_Presence' ) ) {
-			$answer = ( new Gutenberg_Sync_Engines_Advisory_Presence( $this->storage ) )->answer_probe( $probe );
+		if ( is_array( $probe ) && class_exists( 'WP_RTC_Advisory_Presence' ) ) {
+			$answer = ( new WP_RTC_Advisory_Presence( $this->storage ) )->answer_probe( $probe );
 			if ( null !== $answer ) {
 				$response['advisory'] = $answer;
 			}
@@ -464,7 +464,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 		$mismatch = $this->check_engine_mismatch( $engine, $room, $room_request, $updates );
 		if ( is_wp_error( $mismatch ) ) {
 			// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-			do_action( 'qm/debug', "wp-sync: engine mismatch for {$room} (client speaks another engine)" );
+			do_action( 'qm/debug', "wp-rtc: engine mismatch for {$room} (client speaks another engine)" );
 			return $mismatch;
 		}
 
@@ -565,7 +565,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 * @return string Generation token.
 	 */
 	private function derive_room_generation( string $room ): string {
-		if ( $this->storage instanceof WP_Sync_Table_Storage ) {
+		if ( $this->storage instanceof WP_RTC_Table_Storage ) {
 			$first_row = (int) $this->storage->peek_room( $room )['first_cursor'];
 			if ( $first_row > 0 ) {
 				return 'g' . $first_row;
@@ -607,9 +607,9 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 *
 	 * @since 7.2.0
 	 *
-	 * @return WP_Sync_Engine_Registry Engine registry.
+	 * @return WP_RTC_Engine_Registry Engine registry.
 	 */
-	public function get_engine_registry(): WP_Sync_Engine_Registry {
+	public function get_engine_registry(): WP_RTC_Engine_Registry {
 		return $this->engines;
 	}
 
@@ -700,7 +700,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 		 *
 		 * @param bool $allowed Defaults to SCRIPT_DEBUG.
 		 */
-		return (bool) apply_filters( 'wp_sync_debug_enabled', $default );
+		return (bool) apply_filters( 'wp_rtc_debug_enabled', $default );
 	}
 
 	/**
@@ -733,13 +733,13 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 	 *
 	 * @since 7.2.0
 	 *
-	 * @param WP_Sync_Engine       $engine       Engine resolved for the room.
+	 * @param WP_RTC_Engine        $engine       Engine resolved for the room.
 	 * @param string               $room         Room identifier.
 	 * @param array<string, mixed> $room_request The room's request payload.
 	 * @param array<int, mixed>    $updates      Updates the client wants to store.
 	 * @return true|WP_Error True when consistent, WP_Error on mismatch.
 	 */
-	private function check_engine_mismatch( WP_Sync_Engine $engine, string $room, array $room_request, array $updates ) {
+	private function check_engine_mismatch( WP_RTC_Engine $engine, string $room, array $room_request, array $updates ) {
 		$mismatch = null;
 
 		if ( isset( $room_request['engine'] ) && $room_request['engine'] !== $engine->get_slug() ) {
@@ -755,7 +755,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 			if ( null !== $lineage && $lineage !== $engine->get_slug() ) {
 				if ( $this->reset_switched_room( $room, $room_request, $engine->get_slug() ) ) {
 					// phpcs:ignore WordPress.NamingConventions.ValidHookName.UseUnderscores, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Query Monitor's debug hook.
-					do_action( 'qm/debug', "wp-sync: reset room {$room} (lineage {$lineage} superseded by {$engine->get_slug()})" );
+					do_action( 'qm/debug', "wp-rtc: reset room {$room} (lineage {$lineage} superseded by {$engine->get_slug()})" );
 					$lineage = null;
 				} else {
 					$mismatch = $lineage;
@@ -827,7 +827,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 			// Under the room's lock, so a reset never runs in the middle
 			// of a commit. A lock that is not free in time: no reset.
 			$storage = $this->storage;
-			$reset   = WP_Sync_Room_Lock::run_for_room(
+			$reset   = WP_RTC_Room_Lock::run_for_room(
 				$room,
 				static function () use ( $storage, $room ) {
 					return (bool) $storage->reset_room( $room );
@@ -863,7 +863,7 @@ class WP_RTC_HTTP_Polling_Sync_Server implements WP_Sync_Transport {
 		 *
 		 * @param int $granularity Rounding step in seconds. Default 10.
 		 */
-		$granularity = (int) apply_filters( 'wp_sync_awareness_timestamp_granularity', self::AWARENESS_TIMESTAMP_GRANULARITY );
+		$granularity = (int) apply_filters( 'wp_rtc_awareness_timestamp_granularity', self::AWARENESS_TIMESTAMP_GRANULARITY );
 		if ( $granularity < 1 ) {
 			$granularity = 1;
 		}

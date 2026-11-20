@@ -25,9 +25,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit( 1 );
 }
 
-require_once __DIR__ . '/class-wp-sync-bench-memory-storage.php';
-require_once __DIR__ . '/class-wp-sync-bench-workload.php';
-require_once __DIR__ . '/class-wp-sync-bench-runner.php';
+require_once __DIR__ . '/class-wp-rtc-bench-memory-storage.php';
+require_once __DIR__ . '/class-wp-rtc-bench-workload.php';
+require_once __DIR__ . '/class-wp-rtc-bench-runner.php';
 
 /**
  * Parses `key=value` (or `--key=value`) tokens into an options map.
@@ -35,8 +35,8 @@ require_once __DIR__ . '/class-wp-sync-bench-runner.php';
  * @param array $tokens Argument tokens.
  * @return array Options map.
  */
-if ( ! function_exists( 'wp_sync_bench_parse_args' ) ) {
-	function wp_sync_bench_parse_args( array $tokens ): array {
+if ( ! function_exists( 'wp_rtc_bench_parse_args' ) ) {
+	function wp_rtc_bench_parse_args( array $tokens ): array {
 		$options = array();
 		foreach ( $tokens as $arg ) {
 			if ( preg_match( '/^-{0,2}([a-z0-9-]+)=(.*)$/', (string) $arg, $m ) ) {
@@ -48,52 +48,52 @@ if ( ! function_exists( 'wp_sync_bench_parse_args' ) ) {
 }
 
 // wp-cli eval-file exposes positional tokens as $args; fall back to $argv.
-$wp_sync_bench_opts = wp_sync_bench_parse_args(
+$wp_rtc_bench_opts = wp_rtc_bench_parse_args(
 	isset( $args ) && is_array( $args ) ? $args : ( $argv ?? array() )
 );
 
-$engine_slug = $wp_sync_bench_opts['engine'] ?? 'intent-log';
-$scenario    = $wp_sync_bench_opts['scenario'] ?? 'mixed-newsroom';
-$rounds      = (int) ( $wp_sync_bench_opts['rounds'] ?? 200 );
-$clients     = (int) ( $wp_sync_bench_opts['clients'] ?? 4 );
-$paragraphs  = (int) ( $wp_sync_bench_opts['paragraphs'] ?? 8 );
-$seed        = (int) ( $wp_sync_bench_opts['seed'] ?? 42 );
-$reps        = max( 1, (int) ( $wp_sync_bench_opts['reps'] ?? 3 ) );
-$warmup      = max( 0, min( (int) ( $wp_sync_bench_opts['warmup'] ?? 1 ), $reps - 1 ) );
+$engine_slug = $wp_rtc_bench_opts['engine'] ?? 'intent-log';
+$scenario    = $wp_rtc_bench_opts['scenario'] ?? 'mixed-newsroom';
+$rounds      = (int) ( $wp_rtc_bench_opts['rounds'] ?? 200 );
+$clients     = (int) ( $wp_rtc_bench_opts['clients'] ?? 4 );
+$paragraphs  = (int) ( $wp_rtc_bench_opts['paragraphs'] ?? 8 );
+$seed        = (int) ( $wp_rtc_bench_opts['seed'] ?? 42 );
+$reps        = max( 1, (int) ( $wp_rtc_bench_opts['reps'] ?? 3 ) );
+$warmup      = max( 0, min( (int) ( $wp_rtc_bench_opts['warmup'] ?? 1 ), $reps - 1 ) );
 // fill=N pads every genesis paragraph to ~N chars — the document-size
 // sweep axis (unset = the scenario default).
-$fill = isset( $wp_sync_bench_opts['fill'] ) ? max( 0, (int) $wp_sync_bench_opts['fill'] ) : null;
+$fill = isset( $wp_rtc_bench_opts['fill'] ) ? max( 0, (int) $wp_rtc_bench_opts['fill'] ) : null;
 
-if ( ! array_key_exists( $scenario, WP_Sync_Bench_Workload::scenarios() ) ) {
+if ( ! array_key_exists( $scenario, WP_RTC_Bench_Workload::scenarios() ) ) {
 	fwrite( STDERR, "Unknown scenario: {$scenario}\n" );
-	fwrite( STDERR, 'Scenarios: ' . implode( ', ', array_keys( WP_Sync_Bench_Workload::scenarios() ) ) . "\n" );
+	fwrite( STDERR, 'Scenarios: ' . implode( ', ', array_keys( WP_RTC_Bench_Workload::scenarios() ) ) . "\n" );
 	exit( 1 );
 }
 // Engines are resolved through the framework's registry (the
-// `wp_sync_engines` filter), so any engine registered by an active plugin —
+// `wp_rtc_engines` filter), so any engine registered by an active plugin —
 // including third-party ones — is benchmarkable by slug. HOW each engine is
 // driven is the authoring profile's job, resolved per slug through
-// WP_Sync_Bench_Profiles (extensible via the
-// `wp_sync_bench_authoring_profiles` filter); engines without a dedicated
+// WP_RTC_Bench_Profiles (extensible via the
+// `wp_rtc_bench_authoring_profiles` filter); engines without a dedicated
 // profile fall back to relay-convention opaque updates.
-$wp_sync_bench_engine_slugs = ( new WP_Sync_Engine_Registry( new WP_Sync_Bench_Memory_Storage() ) )->get_engine_slugs();
-if ( ! in_array( $engine_slug, $wp_sync_bench_engine_slugs, true ) ) {
+$wp_rtc_bench_engine_slugs = ( new WP_RTC_Engine_Registry( new WP_RTC_Bench_Memory_Storage() ) )->get_engine_slugs();
+if ( ! in_array( $engine_slug, $wp_rtc_bench_engine_slugs, true ) ) {
 	fwrite( STDERR, "Unknown engine: {$engine_slug}\n" );
-	fwrite( STDERR, 'Registered engines: ' . ( $wp_sync_bench_engine_slugs ? implode( ', ', $wp_sync_bench_engine_slugs ) : '(none — is the engine plugin active?)' ) . "\n" );
+	fwrite( STDERR, 'Registered engines: ' . ( $wp_rtc_bench_engine_slugs ? implode( ', ', $wp_rtc_bench_engine_slugs ) : '(none — is the engine plugin active?)' ) . "\n" );
 	exit( 1 );
 }
 
 /**
  * Times the environment's database round-trips so the intent-log service
  * time can be decomposed: its handle_updates() holds a Core-style
- * options-row lock (WP_Sync_Room_Lock, the GET_LOCK replacement) for the
+ * options-row lock (WP_RTC_Room_Lock, the GET_LOCK replacement) for the
  * length of the request, so each timed request includes one
  * claim/release pair of DB writes that a lock-free engine would not pay.
  *
  * @return array db_rtt and lock_pair p50, in milliseconds.
  */
-if ( ! function_exists( 'wp_sync_bench_calibrate' ) ) {
-	function wp_sync_bench_calibrate(): array {
+if ( ! function_exists( 'wp_rtc_bench_calibrate' ) ) {
+	function wp_rtc_bench_calibrate(): array {
 		global $wpdb;
 
 		$db_rtt    = array();
@@ -105,16 +105,16 @@ if ( ! function_exists( 'wp_sync_bench_calibrate' ) ) {
 			$db_rtt[] = ( hrtime( true ) - $start ) / 1e3;
 
 			$start = hrtime( true );
-			$token = WP_Sync_Room_Lock::acquire( $lock_name, 0.0 );
+			$token = WP_RTC_Room_Lock::acquire( $lock_name, 0.0 );
 			if ( ! is_wp_error( $token ) ) {
-				WP_Sync_Room_Lock::release( $lock_name, $token );
+				WP_RTC_Room_Lock::release( $lock_name, $token );
 			}
 			$lock_pair[] = ( hrtime( true ) - $start ) / 1e3;
 		}
 
 		return array(
-			'db_rtt_p50_ms'    => WP_Sync_Bench_Runner::summary( $db_rtt )['p50'],
-			'lock_pair_p50_ms' => WP_Sync_Bench_Runner::summary( $lock_pair )['p50'],
+			'db_rtt_p50_ms'    => WP_RTC_Bench_Runner::summary( $db_rtt )['p50'],
+			'lock_pair_p50_ms' => WP_RTC_Bench_Runner::summary( $lock_pair )['p50'],
 		);
 	}
 }
@@ -124,83 +124,83 @@ if ( ! function_exists( 'wp_sync_bench_calibrate' ) ) {
 // move between reps, and timing gets independent samples. Warmup reps run
 // the same load but are excluded from timing (autoload, opcache, and the
 // first lock acquisition all land in rep 0).
-$wp_sync_bench_workload = WP_Sync_Bench_Workload::build( $scenario, $seed, $rounds, $clients, $paragraphs, $fill );
+$wp_rtc_bench_workload = WP_RTC_Bench_Workload::build( $scenario, $seed, $rounds, $clients, $paragraphs, $fill );
 
 // The set_meta op's keys must be registered BEFORE genesis is primed:
 // synced meta is registered meta, and registration is what puts the
 // `meta.<key>` registers (and the CRDT's nested meta map) in every
 // engine's genesis seed.
-WP_Sync_Bench_Workload::register_bench_meta();
+WP_RTC_Bench_Workload::register_bench_meta();
 
-$wp_sync_bench_series       = array(
+$wp_rtc_bench_series       = array(
 	'service_us'     => array(),
 	'read_us'        => array(),
 	'idle_poll_us'   => array(),
 	'join_us'        => array(),
 	'materialize_us' => array(),
 );
-$wp_sync_bench_rep_means    = array();
-$wp_sync_bench_fingerprints = array();
-$wp_sync_bench_memory       = array(
+$wp_rtc_bench_rep_means    = array();
+$wp_rtc_bench_fingerprints = array();
+$wp_rtc_bench_memory       = array(
 	'ingest_peak_bytes'      => null,
 	'materialize_peak_bytes' => null,
 );
-$report                     = null;
-for ( $wp_sync_bench_rep = 0; $wp_sync_bench_rep < $reps; $wp_sync_bench_rep++ ) {
-	$storage = new WP_Sync_Bench_Memory_Storage();
-	$engine  = ( new WP_Sync_Engine_Registry( $storage ) )->get_engine( $engine_slug );
+$report                    = null;
+for ( $wp_rtc_bench_rep = 0; $wp_rtc_bench_rep < $reps; $wp_rtc_bench_rep++ ) {
+	$storage = new WP_RTC_Bench_Memory_Storage();
+	$engine  = ( new WP_RTC_Engine_Registry( $storage ) )->get_engine( $engine_slug );
 
 	$post_id = wp_insert_post(
 		array(
 			'post_type'    => 'post',
 			'post_status'  => 'draft',
 			'post_title'   => 'Sync benchmark',
-			'post_content' => $wp_sync_bench_workload['post_content'],
+			'post_content' => $wp_rtc_bench_workload['post_content'],
 		)
 	);
 
-	$report = WP_Sync_Bench_Runner::run( $engine, $storage, (int) $post_id, $wp_sync_bench_workload );
+	$report = WP_RTC_Bench_Runner::run( $engine, $storage, (int) $post_id, $wp_rtc_bench_workload );
 	wp_delete_post( (int) $post_id, true );
 
 	$series = array();
-	foreach ( array_keys( $wp_sync_bench_series ) as $metric ) {
+	foreach ( array_keys( $wp_rtc_bench_series ) as $metric ) {
 		$series[ $metric ] = $report[ $metric . '_series' ];
 		unset( $report[ $metric . '_series' ] );
 	}
 
 	// Counted metrics must be identical across reps (deterministic workload);
 	// a mismatch means engine nondeterminism and is worth surfacing.
-	$wp_sync_bench_fingerprints[] = (string) wp_json_encode(
+	$wp_rtc_bench_fingerprints[] = (string) wp_json_encode(
 		array( $report['quality']['dispositions'], $report['storage'], $report['payload_bytes'] )
 	);
 
-	if ( $wp_sync_bench_rep >= $warmup ) {
+	if ( $wp_rtc_bench_rep >= $warmup ) {
 		foreach ( $series as $metric => $samples ) {
-			$wp_sync_bench_series[ $metric ] = array_merge( $wp_sync_bench_series[ $metric ], $samples );
+			$wp_rtc_bench_series[ $metric ] = array_merge( $wp_rtc_bench_series[ $metric ], $samples );
 		}
-		$wp_sync_bench_rep_means[] = count( $series['service_us'] ) > 0
+		$wp_rtc_bench_rep_means[] = count( $series['service_us'] ) > 0
 			? array_sum( $series['service_us'] ) / count( $series['service_us'] ) / 1000
 			: 0.0;
 		// Peak memory: the max across measured reps (warmup absorbs the
 		// autoload/opcache spike, like the timing warmup).
-		foreach ( $wp_sync_bench_memory as $wp_sync_bench_mem_key => $wp_sync_bench_mem_value ) {
-			$rep_value = $report['memory'][ $wp_sync_bench_mem_key ] ?? null;
+		foreach ( $wp_rtc_bench_memory as $wp_rtc_bench_mem_key => $wp_rtc_bench_mem_value ) {
+			$rep_value = $report['memory'][ $wp_rtc_bench_mem_key ] ?? null;
 			if ( null !== $rep_value ) {
-				$wp_sync_bench_memory[ $wp_sync_bench_mem_key ] = max( (int) $wp_sync_bench_mem_value, (int) $rep_value );
+				$wp_rtc_bench_memory[ $wp_rtc_bench_mem_key ] = max( (int) $wp_rtc_bench_mem_value, (int) $rep_value );
 			}
 		}
 	}
 }
 
 // Timing across measured reps: pooled percentiles + spread of rep means.
-foreach ( $wp_sync_bench_series as $metric => $samples ) {
-	$report[ $metric ] = WP_Sync_Bench_Runner::summary( $samples );
+foreach ( $wp_rtc_bench_series as $metric => $samples ) {
+	$report[ $metric ] = WP_RTC_Bench_Runner::summary( $samples );
 }
 // No materialize convention on this engine (e.g. an opaque relay).
-if ( array() === $wp_sync_bench_series['materialize_us'] ) {
+if ( array() === $wp_rtc_bench_series['materialize_us'] ) {
 	$report['materialize_us'] = null;
 }
-$report['memory'] = $wp_sync_bench_memory;
+$report['memory'] = $wp_rtc_bench_memory;
 
 /*
  * The hosting cost card: only wall-clock scenarios (1 round = N seconds)
@@ -210,17 +210,17 @@ $report['memory'] = $wp_sync_bench_memory;
  * session to per-user-hour units a capacity plan can multiply out.
  */
 $report['hosting'] = null;
-if ( ! empty( $wp_sync_bench_workload['seconds_per_round'] ) ) {
-	$wp_sync_bench_counts = $report['request_counts'];
-	$session_seconds      = $rounds * (int) $wp_sync_bench_workload['seconds_per_round'];
-	$client_seconds       = max( 1, (int) $wp_sync_bench_counts['reads_session'] );
-	$session_requests     = $wp_sync_bench_counts['ingests'] + $wp_sync_bench_counts['reads_session'] + $wp_sync_bench_counts['saves_session'];
-	$cpu_seconds          = (
-		$report['service_us']['mean'] * $wp_sync_bench_counts['ingests']
-		+ $report['read_us']['mean'] * $wp_sync_bench_counts['reads_session']
-		+ ( null !== $report['materialize_us'] ? $report['materialize_us']['mean'] * $wp_sync_bench_counts['saves_session'] : 0 )
+if ( ! empty( $wp_rtc_bench_workload['seconds_per_round'] ) ) {
+	$wp_rtc_bench_counts = $report['request_counts'];
+	$session_seconds     = $rounds * (int) $wp_rtc_bench_workload['seconds_per_round'];
+	$client_seconds      = max( 1, (int) $wp_rtc_bench_counts['reads_session'] );
+	$session_requests    = $wp_rtc_bench_counts['ingests'] + $wp_rtc_bench_counts['reads_session'] + $wp_rtc_bench_counts['saves_session'];
+	$cpu_seconds         = (
+		$report['service_us']['mean'] * $wp_rtc_bench_counts['ingests']
+		+ $report['read_us']['mean'] * $wp_rtc_bench_counts['reads_session']
+		+ ( null !== $report['materialize_us'] ? $report['materialize_us']['mean'] * $wp_rtc_bench_counts['saves_session'] : 0 )
 	) / 1000;
-	$wire_bytes           = $report['wire']['request_bytes'] + $report['wire']['response_bytes'];
+	$wire_bytes          = $report['wire']['request_bytes'] + $report['wire']['response_bytes'];
 
 	/*
 	 * Modeled queueing: the harness executes requests one at a time, but
@@ -233,17 +233,17 @@ if ( ! empty( $wp_sync_bench_workload['seconds_per_round'] ) ) {
 	 * peak concurrent worker demand is reported instead. MODELED, not
 	 * measured — `npm run bench -- --concurrency=N` measures it for real.
 	 */
-	$wp_sync_bench_histogram  = WP_Sync_Bench_Workload::ingest_concurrency_histogram( $wp_sync_bench_workload['rounds'] );
-	$wp_sync_bench_serialized = 'intent-log' === $engine_slug;
-	$wp_sync_bench_wait_ms    = 0.0;
-	$wp_sync_bench_wait_max   = 0.0;
-	$wp_sync_bench_hist_edits = 0;
-	foreach ( $wp_sync_bench_histogram as $wp_sync_bench_k => $wp_sync_bench_n ) {
-		$wp_sync_bench_hist_edits += $wp_sync_bench_k * $wp_sync_bench_n;
-		if ( $wp_sync_bench_serialized ) {
+	$wp_rtc_bench_histogram  = WP_RTC_Bench_Workload::ingest_concurrency_histogram( $wp_rtc_bench_workload['rounds'] );
+	$wp_rtc_bench_serialized = 'intent-log' === $engine_slug;
+	$wp_rtc_bench_wait_ms    = 0.0;
+	$wp_rtc_bench_wait_max   = 0.0;
+	$wp_rtc_bench_hist_edits = 0;
+	foreach ( $wp_rtc_bench_histogram as $wp_rtc_bench_k => $wp_rtc_bench_n ) {
+		$wp_rtc_bench_hist_edits += $wp_rtc_bench_k * $wp_rtc_bench_n;
+		if ( $wp_rtc_bench_serialized ) {
 			// Sum of waits in a K-deep convoy: (0+1+…+K-1) x service.
-			$wp_sync_bench_wait_ms += $wp_sync_bench_n * ( $wp_sync_bench_k * ( $wp_sync_bench_k - 1 ) / 2 ) * $report['service_us']['mean'];
-			$wp_sync_bench_wait_max = max( $wp_sync_bench_wait_max, ( $wp_sync_bench_k - 1 ) * $report['service_us']['p90'] );
+			$wp_rtc_bench_wait_ms += $wp_rtc_bench_n * ( $wp_rtc_bench_k * ( $wp_rtc_bench_k - 1 ) / 2 ) * $report['service_us']['mean'];
+			$wp_rtc_bench_wait_max = max( $wp_rtc_bench_wait_max, ( $wp_rtc_bench_k - 1 ) * $report['service_us']['p90'] );
 		}
 	}
 
@@ -261,42 +261,42 @@ if ( ! empty( $wp_sync_bench_workload['seconds_per_round'] ) ) {
 		'storage_bytes_at_rest'       => $report['storage']['bytes'],
 		'join_payload_bytes'          => $report['payload_bytes']['join_response_p50'],
 		'queueing_model'              => array(
-			'ingest_concurrency'      => $wp_sync_bench_histogram,
-			'serialized_ingest'       => $wp_sync_bench_serialized,
-			'modeled_wait_ms_mean'    => $wp_sync_bench_hist_edits > 0
-				? round( $wp_sync_bench_wait_ms / $wp_sync_bench_hist_edits, 4 )
+			'ingest_concurrency'      => $wp_rtc_bench_histogram,
+			'serialized_ingest'       => $wp_rtc_bench_serialized,
+			'modeled_wait_ms_mean'    => $wp_rtc_bench_hist_edits > 0
+				? round( $wp_rtc_bench_wait_ms / $wp_rtc_bench_hist_edits, 4 )
 				: 0.0,
-			'modeled_wait_ms_worst'   => round( $wp_sync_bench_wait_max, 4 ),
-			'peak_concurrent_workers' => array() === $wp_sync_bench_histogram ? 0 : max( array_keys( $wp_sync_bench_histogram ) ),
+			'modeled_wait_ms_worst'   => round( $wp_rtc_bench_wait_max, 4 ),
+			'peak_concurrent_workers' => array() === $wp_rtc_bench_histogram ? 0 : max( array_keys( $wp_rtc_bench_histogram ) ),
 		),
 	);
 }
 
-$wp_sync_bench_mean = array_sum( $wp_sync_bench_rep_means ) / count( $wp_sync_bench_rep_means );
-$wp_sync_bench_var  = 0.0;
-foreach ( $wp_sync_bench_rep_means as $m ) {
-	$wp_sync_bench_var += ( $m - $wp_sync_bench_mean ) ** 2;
+$wp_rtc_bench_mean = array_sum( $wp_rtc_bench_rep_means ) / count( $wp_rtc_bench_rep_means );
+$wp_rtc_bench_var  = 0.0;
+foreach ( $wp_rtc_bench_rep_means as $m ) {
+	$wp_rtc_bench_var += ( $m - $wp_rtc_bench_mean ) ** 2;
 }
-$wp_sync_bench_stddev = count( $wp_sync_bench_rep_means ) > 1
-	? sqrt( $wp_sync_bench_var / ( count( $wp_sync_bench_rep_means ) - 1 ) )
+$wp_rtc_bench_stddev = count( $wp_rtc_bench_rep_means ) > 1
+	? sqrt( $wp_rtc_bench_var / ( count( $wp_rtc_bench_rep_means ) - 1 ) )
 	: 0.0;
 
 $report['timing'] = array(
 	'timer'                     => 'hrtime',
 	'reps'                      => $reps,
 	'warmup_reps'               => $warmup,
-	'measured_reps'             => count( $wp_sync_bench_rep_means ),
+	'measured_reps'             => count( $wp_rtc_bench_rep_means ),
 	'rep_mean_ms'               => array_map(
 		static function ( $m ) {
 			return round( $m, 4 );
 		},
-		$wp_sync_bench_rep_means
+		$wp_rtc_bench_rep_means
 	),
-	'rep_mean_stddev_ms'        => round( $wp_sync_bench_stddev, 4 ),
-	'deterministic_across_reps' => 1 === count( array_unique( $wp_sync_bench_fingerprints ) ),
+	'rep_mean_stddev_ms'        => round( $wp_rtc_bench_stddev, 4 ),
+	'deterministic_across_reps' => 1 === count( array_unique( $wp_rtc_bench_fingerprints ) ),
 );
 
-$report['calibration'] = wp_sync_bench_calibrate();
+$report['calibration'] = wp_rtc_bench_calibrate();
 
 global $wp_version, $wpdb;
 $opcache_status = false;
@@ -320,7 +320,7 @@ $report['config'] = array(
 	'clients'    => $clients,
 	'paragraphs' => $paragraphs,
 	'fill'       => $fill,
-	'doc_bytes'  => strlen( (string) $wp_sync_bench_workload['post_content'] ),
+	'doc_bytes'  => strlen( (string) $wp_rtc_bench_workload['post_content'] ),
 	'seed'       => $seed,
 	'reps'       => $reps,
 	'warmup'     => $warmup,
@@ -463,13 +463,13 @@ if ( null !== $report['hosting'] ) {
 }
 if ( 'opaque-relay' === ( $report['profile'] ?? '' ) ) {
 	printf(
-		"note: engine '%s' has no dedicated authoring profile — driven with relay-convention opaque updates ('update'/'compaction'); if the engine rejects them, the dispositions/storage counts above reflect that. An engine plugin can register a profile via the wp_sync_bench_authoring_profiles filter.\n",
+		"note: engine '%s' has no dedicated authoring profile — driven with relay-convention opaque updates ('update'/'compaction'); if the engine rejects them, the dispositions/storage counts above reflect that. An engine plugin can register a profile via the wp_rtc_bench_authoring_profiles filter.\n",
 		$engine_slug
 	);
 }
 
-if ( ! empty( $wp_sync_bench_opts['json'] ) ) {
-	file_put_contents( (string) $wp_sync_bench_opts['json'], wp_json_encode( $report ) );
-	printf( "wrote %s\n", $wp_sync_bench_opts['json'] );
+if ( ! empty( $wp_rtc_bench_opts['json'] ) ) {
+	file_put_contents( (string) $wp_rtc_bench_opts['json'], wp_json_encode( $report ) );
+	printf( "wrote %s\n", $wp_rtc_bench_opts['json'] );
 }
 echo "\n";

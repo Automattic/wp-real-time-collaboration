@@ -67,12 +67,12 @@ async function reloadAccepting( page: Page ) {
 for ( const engine of ENGINES ) {
 	test.describe( `Unsaved changes policy (${ engine }) @engine-${ engine }`, () => {
 		test.beforeEach( async ( { requestUtils } ) => {
-			await setSettings( requestUtils, { wp_sync_engine: engine } );
+			await setSettings( requestUtils, { wp_rtc_engine: engine } );
 		} );
 
 		test.afterEach( async ( { requestUtils } ) => {
 			await setSettings( requestUtils, {
-				gutenberg_sync_engines_unsaved_changes: 'discard',
+				wp_rtc_unsaved_changes: 'discard',
 			} );
 		} );
 
@@ -159,7 +159,7 @@ for ( const engine of ENGINES ) {
 			requestUtils,
 		} ) => {
 			await setSettings( requestUtils, {
-				gutenberg_sync_engines_unsaved_changes: 'keep',
+				wp_rtc_unsaved_changes: 'keep',
 			} );
 			const post = await requestUtils.createPost( {
 				title: 'Unsaved changes: keep',

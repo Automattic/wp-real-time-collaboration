@@ -1,6 +1,6 @@
 # HTTP polling transport
 
-The default sync transport: a periodic `POST /wp-sync/v1/updates` that
+The default sync transport: a periodic `POST /wp-rtc/v1/updates` that
 carries typed updates and presence for every open post in one request.
 The transport is engine-neutral: it moves `{ type, data }` updates
 without reading them and leaves their meaning to the active engine.

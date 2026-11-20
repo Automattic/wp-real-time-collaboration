@@ -9,7 +9,7 @@ export default function DiffText( { parts } ) {
 	return parts.map( ( part, index ) => {
 		if ( part.added ) {
 			return (
-				<ins key={ index } className="gse-review-diff__added">
+				<ins key={ index } className="wp-rtc-review-diff__added">
 					{ part.value }
 				</ins>
 			);
@@ -17,7 +17,7 @@ export default function DiffText( { parts } ) {
 
 		if ( part.removed ) {
 			return (
-				<del key={ index } className="gse-review-diff__removed">
+				<del key={ index } className="wp-rtc-review-diff__removed">
 					{ part.value }
 				</del>
 			);

@@ -15,6 +15,6 @@ const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
 module.exports = {
 	...defaultConfig,
 	entry: {
-		'sync-engines': './src/index.ts',
+		'wp-rtc': './src/index.ts',
 	},
 };

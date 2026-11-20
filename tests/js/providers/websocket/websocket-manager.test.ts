@@ -173,7 +173,7 @@ describe( 'websocket manager', () => {
 		// The token rides the subprotocol offer, never the URL
 		// (query strings land in server/proxy access logs).
 		expect( ws.url ).not.toContain( 't0ken' );
-		expect( ws.protocols ).toEqual( [ 'wp-sync', 'wp-sync-token.t0ken' ] );
+		expect( ws.protocols ).toEqual( [ 'wp-rtc', 'wp-rtc-token.t0ken' ] );
 
 		ws.open();
 		expect( onStatusChange ).toHaveBeenCalledWith( {
@@ -372,9 +372,7 @@ describe( 'websocket manager', () => {
 
 	it( "stamps this tab's presence token on its post's room frames", async () => {
 		setup();
-		(
-			window as { _gutenbergSyncEnginesSettings?: unknown }
-		 )._gutenbergSyncEnginesSettings = {
+		( window as { _wpRtcSettings?: unknown } )._wpRtcSettings = {
 			advisory: { room: 'postType/post:1', token: 'tab-token' },
 		};
 		try {
@@ -390,8 +388,7 @@ describe( 'websocket manager', () => {
 			const frame = JSON.parse( ws.sent[ 0 ] );
 			expect( frame.rooms[ 0 ].presence_token ).toBe( 'tab-token' );
 		} finally {
-			delete ( window as { _gutenbergSyncEnginesSettings?: unknown } )
-				._gutenbergSyncEnginesSettings;
+			delete ( window as { _wpRtcSettings?: unknown } )._wpRtcSettings;
 		}
 	} );
 

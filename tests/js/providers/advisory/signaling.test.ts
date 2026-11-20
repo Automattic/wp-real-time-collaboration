@@ -31,9 +31,9 @@ jest.mock( '@wordpress/hooks', () => ( {
 type Signaling = typeof import('../../../../src/providers/advisory/signaling');
 
 function setSettings( advisory: Record< string, unknown > | null ): void {
-	(
-		window as { _gutenbergSyncEnginesSettings?: unknown }
-	 )._gutenbergSyncEnginesSettings = advisory ? { advisory } : {};
+	( window as { _wpRtcSettings?: unknown } )._wpRtcSettings = advisory
+		? { advisory }
+		: {};
 }
 
 describe( 'advisory signaling', () => {
@@ -50,8 +50,7 @@ describe( 'advisory signaling', () => {
 			room: 'postType/post:7',
 			token: 'tok-b',
 			othersPresent: false,
-			leaveUrl:
-				'https://example.test/wp-json/gutenberg-sync-engines/v1/advisory/leave',
+			leaveUrl: 'https://example.test/wp-json/wp-rtc/v1/advisory/leave',
 			nonce: 'nonce-1',
 		} );
 		for ( const key of Object.keys( hooks ) ) {

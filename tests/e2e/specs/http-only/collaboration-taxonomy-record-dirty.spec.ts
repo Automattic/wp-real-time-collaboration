@@ -73,7 +73,7 @@ test.describe( 'Collaboration - synced taxonomy records', () => {
 		const waitForCategorySyncExchange = ( target: Page ) =>
 			target.waitForResponse(
 				( response ) =>
-					response.url().includes( 'wp-sync' ) &&
+					response.url().includes( 'wp-rtc' ) &&
 					response.status() === 200 &&
 					( response.request().postData() ?? '' ).includes(
 						'taxonomy/category'

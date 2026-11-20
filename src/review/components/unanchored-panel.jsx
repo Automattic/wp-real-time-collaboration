@@ -19,7 +19,7 @@ import {
 
 const EMPTY_CONFLICTS = [];
 
-const PLUGIN_NAME = 'gutenberg-sync-engines-conflicts';
+const PLUGIN_NAME = 'wp-rtc-conflicts';
 const PANEL_NAME = 'conflicts';
 
 // The editor keys a plugin's panel by both names.
@@ -112,7 +112,7 @@ function headingOf( conflict ) {
 export function UnanchoredConflictsBody( { conflicts, canApprove, onDecide } ) {
 	return (
 		<>
-			<p className="gse-review-panel__description">
+			<p className="wp-rtc-review-panel__description">
 				{ __(
 					'These changes could not be merged automatically and have no block to show them on.'
 				) }
@@ -129,27 +129,30 @@ export function UnanchoredConflictsBody( { conflicts, canApprove, onDecide } ) {
 					: plainText( conflict.current );
 
 				return (
-					<div className="gse-review-panel__item" key={ conflict.id }>
-						<p className="gse-review-panel__heading">
+					<div
+						className="wp-rtc-review-panel__item"
+						key={ conflict.id }
+					>
+						<p className="wp-rtc-review-panel__heading">
 							{ headingOf( conflict ) }
 						</p>
-						<p className="gse-review-panel__label">
+						<p className="wp-rtc-review-panel__label">
 							{ __( 'Proposed' ) }
 						</p>
-						<pre className="gse-review-panel__value">
+						<pre className="wp-rtc-review-panel__value">
 							{ proposed }
 						</pre>
 						{ '' !== current && (
 							<>
-								<p className="gse-review-panel__label">
+								<p className="wp-rtc-review-panel__label">
 									{ __( 'Current' ) }
 								</p>
-								<pre className="gse-review-panel__value">
+								<pre className="wp-rtc-review-panel__value">
 									{ current }
 								</pre>
 							</>
 						) }
-						<div className="gse-review-panel__actions">
+						<div className="wp-rtc-review-panel__actions">
 							{ mayAccept && (
 								<Button
 									__next40pxDefaultSize
@@ -179,7 +182,7 @@ export function UnanchoredConflictsBody( { conflicts, canApprove, onDecide } ) {
 							</Button>
 						</div>
 						{ ! mayAccept && (
-							<p className="gse-review-panel__hint">
+							<p className="wp-rtc-review-panel__hint">
 								{ __(
 									'Only someone allowed to publish unfiltered HTML can approve this.'
 								) }
@@ -226,7 +229,7 @@ export default function UnanchoredConflictsPanel() {
 		<PluginDocumentSettingPanel
 			name={ PANEL_NAME }
 			title={ __( 'Changes to review' ) }
-			className="gse-review-panel"
+			className="wp-rtc-review-panel"
 		>
 			<UnanchoredConflictsBody
 				conflicts={ conflicts }

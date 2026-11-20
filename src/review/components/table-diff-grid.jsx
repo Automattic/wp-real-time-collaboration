@@ -2,7 +2,7 @@
 import { useMemo } from '@wordpress/element';
 import { diffGridAgainstBase } from './merge-table-grids';
 
-const CELL_CLASS = 'gse-review-table-diff__cell';
+const CELL_CLASS = 'wp-rtc-review-table-diff__cell';
 
 /**
  * A cell's class names: the base cell class plus its highlight modifier.
@@ -138,13 +138,13 @@ export default function TableDiffGrid( {
 		);
 	}, [ grid, baseGrid, model ] );
 
-	let tableClassName = 'gse-review-table-diff';
+	let tableClassName = 'wp-rtc-review-table-diff';
 	if ( compact ) {
-		tableClassName += ' gse-review-table-diff--compact';
+		tableClassName += ' wp-rtc-review-table-diff--compact';
 	}
 
 	return (
-		<div className="gse-review-table-diff__wrapper">
+		<div className="wp-rtc-review-table-diff__wrapper">
 			<table className={ tableClassName } aria-label={ label }>
 				{ display.head.length > 0 && (
 					<thead>

@@ -54,9 +54,9 @@ import {
  * the socket, or one whose peer has not, keeps the timer cadence.
  */
 
-const WS_TOKEN_API_PATH = '/wp-sync/v1/ws-token';
-const SUBPROTOCOL = 'wp-sync';
-const TOKEN_PROTOCOL_PREFIX = 'wp-sync-token.';
+const WS_TOKEN_API_PATH = '/wp-rtc/v1/ws-token';
+const SUBPROTOCOL = 'wp-rtc';
+const TOKEN_PROTOCOL_PREFIX = 'wp-rtc-token.';
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 

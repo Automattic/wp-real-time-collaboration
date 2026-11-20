@@ -89,12 +89,9 @@ const PATH_PATTERN =
 const ROOT_FILE_PATTERN =
 	/^\.?[A-Za-z0-9_.-]+\.(?:md|json|php|js|mjs|ts|yml|sh|dist|lock)$/;
 const NAME_PATTERNS = [
-	/^gutenberg_sync_engines_[a-z0-9_]+$/,
-	/^wp_sync_[a-z0-9_]+$/,
 	/^wp_rtc_[a-z0-9_]+$/,
-	/^WP_SYNC_[A-Z0-9_]+$/,
+	/^\/?wp-rtc\/v1(?:\/[a-z0-9\/-]+)?$/,
 	/^WP_[A-Z][A-Za-z0-9_]+$/,
-	/^Gutenberg_Sync_Engines_[A-Za-z0-9_]+$/,
 	/^sync\.[A-Za-z.]+$/,
 ];
 const RETIRED_CONTEXT =

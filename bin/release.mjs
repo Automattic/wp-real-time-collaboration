@@ -8,7 +8,7 @@
  *   1. Refuses to run on a dirty working tree.
  *   2. Bumps the version in package.json + package-lock.json (npm version).
  *   3. Stamps the new version into the plugin header and the
- *      GUTENBERG_SYNC_ENGINES_VERSION constant, and replaces any `n.e.x.t`
+ *      WP_RTC_VERSION constant, and replaces any `n.e.x.t`
  *      placeholders in tracked source files.
  *   4. Turns the changelog's "Unreleased" section into the new version's
  *      section: the hand-written highlights (if any) stay on top, and
@@ -145,7 +145,7 @@ let entry = readFileSync( entryPath, 'utf8' );
 const stamped = entry
 	.replace( /^( \* Version:\s+).*$/m, `$1${ version }` )
 	.replace(
-		/(define\( 'GUTENBERG_SYNC_ENGINES_VERSION', ')[^']*(' \);)/,
+		/(define\( 'WP_RTC_VERSION', ')[^']*(' \);)/,
 		`$1${ version }$2`
 	);
 if ( stamped === entry ) {

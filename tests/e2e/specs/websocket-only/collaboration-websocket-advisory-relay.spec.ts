@@ -25,9 +25,9 @@ import { test, expect } from '../../config/collaboration-fixtures';
  */
 
 const REPO_ROOT = path.resolve( __dirname, '../../../..' );
-const TRANSPORT_OPTION = 'gutenberg_sync_engines_transport';
-const ADVISORY_OPTION = 'gutenberg_sync_engines_advisory_channel';
-const ADVISORY_URL_OPTION = 'gutenberg_sync_engines_advisory_websocket_url';
+const TRANSPORT_OPTION = 'wp_rtc_transport';
+const ADVISORY_OPTION = 'wp_rtc_advisory_channel';
+const ADVISORY_URL_OPTION = 'wp_rtc_advisory_websocket_url';
 const FIXTURE_PLUGIN = 'gutenberg-test-plugin-advisory-relay-access-token';
 const RELAY_URL = 'ws://localhost:8790';
 
@@ -75,11 +75,11 @@ async function socketUrl( page: Page ): Promise< string | undefined > {
 	return await page.evaluate( () => {
 		const settings = (
 			window as Window & {
-				_gutenbergSyncEnginesSettings?: {
+				_wpRtcSettings?: {
 					advisory?: { socketUrl?: string };
 				};
 			}
-		 )._gutenbergSyncEnginesSettings;
+		 )._wpRtcSettings;
 		return settings?.advisory?.socketUrl;
 	} );
 }
@@ -110,7 +110,7 @@ async function countSyncRequests( page: Page, windowMs: number ) {
 	const onRequest = ( request: { url: () => string } ) => {
 		// Matched without slashes: without pretty permalinks the route is
 		// URL-encoded inside `?rest_route=`.
-		if ( request.url().includes( 'wp-sync' ) ) {
+		if ( request.url().includes( 'wp-rtc' ) ) {
 			count++;
 		}
 	};

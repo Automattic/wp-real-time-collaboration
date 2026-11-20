@@ -59,7 +59,7 @@ const peer = (
 		name: `User ${ clientId }`,
 		avatar_urls: { '48': `https://a/${ clientId }` },
 	},
-	gseBlock: block,
+	wpRtcBlock: block,
 	...extra,
 } );
 

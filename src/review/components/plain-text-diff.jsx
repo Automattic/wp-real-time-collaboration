@@ -67,9 +67,9 @@ export default function PlainTextDiff( { from, to, isCode = false } ) {
 		return diffWords( String( from ?? '' ), String( to ?? '' ) );
 	}, [ from, to, isCode ] );
 
-	let className = 'gse-review-plain-diff';
+	let className = 'wp-rtc-review-plain-diff';
 	if ( isCode ) {
-		className += ' gse-review-plain-diff--code';
+		className += ' wp-rtc-review-plain-diff--code';
 	}
 
 	return (

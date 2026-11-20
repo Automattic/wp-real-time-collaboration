@@ -16,7 +16,7 @@ edit-to-visible latency as a user experiences it.
   Trials are spaced with deterministic jitter so arrivals sample the polling
   phase instead of locking to it. Reported as min/p50/p90/max/mean over the
   measured trials.
-- **Wire traffic per collaborator** — every `/wp-sync/v1/` request (count,
+- **Wire traffic per collaborator** — every `/wp-rtc/v1/` request (count,
   request/response body bytes) or WebSocket frame per window, during two
   phases: *editing* (the trial loop) and *idle* (both windows open, nobody
   typing). The idle phase is the steady-state carrying cost per collaborator
@@ -30,11 +30,11 @@ edit-to-visible latency as a user experiences it.
   `WP_COLLABORATION_TRANSPORT` constant/env override on the site, or a
   failed negotiation.
 - **Server-side per-request metrics** (community-harness conventions) —
-  every `/wp-sync/` request the windows make is tagged with the
+  every `/wp-rtc/` request the windows make is tagged with the
   [WordPress/distributed-rtc-performance-testing](https://github.com/WordPress/distributed-rtc-performance-testing)
   harness's headers (`X-RTC-Test`, `X-RTC-Scenario: editing|idle`), so a
   site with this plugin's diagnostics request log (local/development
-  wp-env, or the `GUTENBERG_SYNC_ENGINES_DIAGNOSTICS` constant) records
+  wp-env, or the `WP_RTC_DIAGNOSTICS` constant) records
   dispatch wall/CPU time, `db_queries`, `db_time_ms` (needs
   `SAVEQUERIES`), peak memory, and concurrency per request. The benchmark
   clears that log up front and folds per-scenario aggregates into the
@@ -84,7 +84,7 @@ require it to catch up without a reload. The JSON report includes the
 recovery time separately from normal edit latency.
 
 Two caveats on the server-side lane. The scenario tagging intercepts
-`/wp-sync/` HTTP requests through Playwright routing, adding a small
+`/wp-rtc/` HTTP requests through Playwright routing, adding a small
 per-request overhead inside the measured latency — identical across
 phases, but latency comparisons against pre-tagging runs carry that delta
 (single-digit ms; negligible at polling cadence). And it covers HTTP
@@ -109,7 +109,7 @@ running anyway. This benchmark targets the TESTS env
 (`.wp-env.tests.json`, its own wp-env project), where the same two pieces
 apply manually:
 
-1. The config sets `WP_SYNC_WEBSOCKET_HOST` to `localhost` (already in this
+1. The config sets `WP_RTC_WEBSOCKET_HOST` to `localhost` (already in this
    repo's config) so the announced socket URL shares the site's cookie
    domain — the daemon authenticates the browser's `logged_in` cookie, and
    cookies for `localhost:<port>` are not sent to the default `127.0.0.1`.
@@ -127,7 +127,7 @@ apply manually:
    ```
 
    (Stop the dev env's auto-started daemon first if it holds port 8787:
-   `docker rm -f wp-sync-ws-daemon`. `curl localhost:8787/health` from the
+   `docker rm -f wp-rtc-ws-daemon`. `curl localhost:8787/health` from the
    HOST should answer `OK` — if it doesn't, the browser can't connect
    either and clients retry silently with no visible error.)
 

@@ -94,7 +94,7 @@ describe( 'MergeDialogBody, one block', () => {
 		// The reviewer is told why the current pane shows nothing. The
 		// notice is also spoken, so the text appears twice in the page.
 		expect(
-			document.querySelector( '.gse-review-merge-dialog__notice' )
+			document.querySelector( '.wp-rtc-review-merge-dialog__notice' )
 		).toHaveTextContent( /started from is no longer available/ );
 	} );
 
@@ -103,7 +103,7 @@ describe( 'MergeDialogBody, one block', () => {
 		await act( async () => {} );
 
 		expect(
-			document.querySelector( '.gse-review-merge-dialog__notice' )
+			document.querySelector( '.wp-rtc-review-merge-dialog__notice' )
 		).toBeNull();
 	} );
 
@@ -334,7 +334,7 @@ describe( 'MergeDialogBody, a Custom HTML block inside a container', () => {
 		await act( async () => {} );
 
 		const [ proposedPane, currentPane ] = container.querySelectorAll(
-			'.gse-review-merge-dialog__pane-content'
+			'.wp-rtc-review-merge-dialog__pane-content'
 		);
 		expect( proposedPane ).toHaveTextContent( 'Proposed markup' );
 		expect( currentPane ).toHaveTextContent( 'Current markup' );

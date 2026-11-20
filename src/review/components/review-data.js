@@ -10,7 +10,7 @@ import { useOpenConflicts, useResolveConflict } from '../conflicts';
 const EMPTY_CONFLICTS = [];
 
 // One notice however many decisions are refused.
-const STALE_NOTICE_ID = 'gutenberg-sync-engines-review-stale';
+const STALE_NOTICE_ID = 'wp-rtc-review-stale';
 
 /**
  * Whether the current user may approve content held for unfiltered-HTML
@@ -23,7 +23,7 @@ const STALE_NOTICE_ID = 'gutenberg-sync-engines-review-stale';
  * @return {boolean} Whether approval is available.
  */
 export function canApproveUnfilteredHtml() {
-	return true === window._gutenbergSyncEnginesSettings?.canUnfilteredHtml;
+	return true === window._wpRtcSettings?.canUnfilteredHtml;
 }
 
 /**

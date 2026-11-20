@@ -65,13 +65,13 @@ describe( 'ConflictBlockBody', () => {
 		// contested cell holding the current version's value, marked
 		// contested.
 		expect( screen.getByText( 'Team' ) ).toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 		expect( screen.getByText( 'API access' ) ).toHaveClass(
-			'gse-review-table-diff__cell--added'
+			'wp-rtc-review-table-diff__cell--added'
 		);
 		expect( screen.getByText( '$7' ) ).toHaveClass(
-			'gse-review-table-diff__cell--contested'
+			'wp-rtc-review-table-diff__cell--contested'
 		);
 	} );
 

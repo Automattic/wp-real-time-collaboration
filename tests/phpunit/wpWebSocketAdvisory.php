@@ -7,7 +7,7 @@
  * followers about rows its once-a-second scan finds — without writing to
  * storage or treating a dropped socket as a closed tab.
  *
- * @package gutenberg-sync-engines
+ * @package WPRealTimeCollaboration
  *
  * @group collaboration
  */
@@ -26,7 +26,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	private $server;
 
 	/**
-	 * @var WP_Sync_Table_Storage
+	 * @var WP_RTC_Table_Storage
 	 */
 	private $storage;
 
@@ -71,7 +71,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 		wp_set_current_user( self::$editor_id );
-		$this->storage     = new WP_Sync_Table_Storage();
+		$this->storage     = new WP_RTC_Table_Storage();
 		$this->sync        = new WP_RTC_HTTP_Polling_Sync_Server( $this->storage );
 		$this->server      = new WP_WebSocket_Sync_Server( $this->sync, '127.0.0.1', 8798 );
 		$this->connections = array();
@@ -435,7 +435,7 @@ class Tests_Collaboration_WpWebSocketAdvisory extends WP_UnitTestCase {
 	 * @return array<int, array> Entries.
 	 */
 	private function awareness_by_client( string $room ): array {
-		$entries = ( new WP_Sync_Awareness( $this->storage ) )->entries( $room, WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
+		$entries = ( new WP_RTC_Awareness( $this->storage ) )->entries( $room, WP_RTC_HTTP_Polling_Sync_Server::AWARENESS_TIMEOUT );
 		return array_column( $entries, null, 'client_id' );
 	}
 

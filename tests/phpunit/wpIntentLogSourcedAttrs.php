@@ -53,7 +53,7 @@ class Tests_Collaboration_WpIntentLogSourcedAttrs extends WP_UnitTestCase {
 	}
 
 	private function engine(): WP_Intent_Log_Engine {
-		return new WP_Intent_Log_Engine( new WP_Sync_Table_Storage() );
+		return new WP_Intent_Log_Engine( new WP_RTC_Table_Storage() );
 	}
 
 	/**
